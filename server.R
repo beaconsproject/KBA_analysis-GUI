@@ -5,7 +5,7 @@ server = function(input, output) {
   })
   
   poly_sf_reactive <- reactiveVal()
-  
+  upstream_reactive <- reactiveVal()
   ################################################################################################
   # Set catchments
   ################################################################################################
@@ -31,12 +31,35 @@ server = function(input, output) {
     }
     return(i)
   })
-
+  ################################################################################################
+  # Set streams
+  ################################################################################################
+  streams <- reactive({
+    req(input$upload_stream)
+    infile <- input$upload_stream
+    if (length(infile$datapath) > 1) { # Check if multiple files are uploaded
+      dir <- unique(dirname(infile$datapath))  # Get the temp directory
+      outfiles <- file.path(dir, infile$name)  # Create new file path with original names
+      
+      # Strip the base name (without extension) of the first file
+      name <- tools::file_path_sans_ext(infile$name[1])  
+      purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y)) 
+      # Attempt to read the shapefile after renaming
+      shp_path <- file.path(dir, paste0(name, ".shp"))
+      if (file.exists(shp_path)) {
+        i <- sf::st_read(shp_path)  # Use sf::st_read() to read the Shapefile
+      } else {
+        stop("Shapefile (.shp) is missing.")
+      }
+    } else {
+      stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
+    }
+    return(i)
+  })
   # Observe when the dataset is loaded and update the selectInput choices
   observe({
     req(catchments())  # Ensure the catchments data is available
     catchment_data <- catchments()
-    
     # Assuming catchment_data is a dataframe or sf object, extract column names
     colnames <- names(catchment_data)
     
@@ -138,10 +161,10 @@ server = function(input, output) {
   
     # show pop-up ...
     showModal(modalDialog(
-      title = "Running Builder. Conservation areas/ network will be displayed shortly in red. Please be patient.",
-      easyClose = TRUE,
-      footer = modalButton("OK")))
-    
+      title = "Run BUILDER",
+      "Conservation areas/ network will be displayed shortly in red. Please wait...",
+      footer = NULL
+    ))
     builder_tab <- builder(catchments_sf = catchments(),
                            seeds = seed, 
                            neighbours = nghbrs,
@@ -187,23 +210,171 @@ server = function(input, output) {
       addLayersControl(position = "topright",
                        overlayGroups = c("Catchments", "Conservation areas"),
                        options = layersControlOptions(collapsed = FALSE)) 
+    
+    # Close the modal once processing is done
+    removeModal()
   })
   
-  # Generate shapefile download when button is clicked
+  observeEvent(input$calc_dci, {
+    req(input$set_grid)
+    req(!is.null(poly_sf_reactive()))
+    showModal(modalDialog(
+      title = "Processing",
+      "Calculating DCI. UPstream areas will be dispayed in blue on the map. Please wait...",
+      footer = NULL
+    ))
+    
+    poly_sf <- poly_sf_reactive()
+    tab_reactive <-reactiveVal(2)
+    
+    poly_sf$group_id <- group_conservation_areas(poly_sf, as.numeric(input$set_grid))  
+    #*****st_write(poly_sf,"./output/potential_KBAs_grouped.shp") 
+    
+    # Identify the attributes file and read it
+    attributefile <- list.files(file.path(input$set_wd,"Builder_output"), pattern = "Unique_BAs_attributes")
+    attributeStats <- read.csv(file.path(input$set_wd, "Builder_output", attributefile))
+    
+    # Rename column in attributeStats in order to join it with poly_sf
+    attributeStats <- attributeStats %>%
+      rename(network = PBx)
+    
+    # Join metrics
+    poly_sf <- poly_sf %>%
+      left_join(attributeStats %>%
+                  dplyr::select(network , Area_PB, AWI_PB)) %>%
+      mutate(Area_PB = as.integer(Area_PB/1000000))
+    
+    # Rename attributes in poly_sf  
+    poly_sf <- poly_sf %>%
+      rename(area_km2 = Area_PB)
+    poly_sf <- poly_sf %>% 
+      rename(AWI = AWI_PB) 
+    
+    # UPSTREAM AREA (up_km2) AND UPSTREAM INTACTNESS (up_AWI) can be found in the Builder output - see file "*_HYDROLOGY_METRICS.csv"
+    # Identify the Hydro metrics file and read it
+    hydrofile <- list.files(file.path(input$set_wd, "Builder_output"), pattern = "HYDROLOGY_METRICS")
+    hydroStats <- read.csv(file.path(input$set_wd, "Builder_output", hydrofile))
+    
+    upfile <- list.files(file.path(input$set_wd, "Builder_output"), pattern = "UPSTREAM_CATCHMENTS_COLUMN")
+    upstream <- read.csv(file.path(input$set_wd, "Builder_output", upfile))
+    
+    # Rename column in hydroStats in order to join it with poly_sf
+    hydroStats <- hydroStats %>%
+      rename(network = PBx)
+    
+    # Join metrics
+    poly_sf <- poly_sf %>%
+      left_join(hydroStats %>%
+                  dplyr::select(network , UpstreamArea, UpstreamAWI)) %>%
+      mutate(UpstreamArea = as.integer(UpstreamArea/1000000))
+    
+    # Rename attributes in poly_sf  
+    poly_sf <- poly_sf %>%
+      rename(up_km2 = UpstreamArea)
+    poly_sf <- poly_sf %>% 
+      rename(up_AWI = UpstreamAWI) 
+    
+    #Generate upstream area polygons
+    upfile <- list.files(file.path(input$set_wd, "Builder_output"), pattern = "UPSTREAM_CATCHMENTS_COLUMN")
+    upstream <- read.csv(file.path(input$set_wd, "Builder_output", upfile))
+    upstream_list <-as_tibble(upstream[,-1])
+    upstream_area <- dissolve_catchments_from_table(catchments(), upstream_list, "network")  
+    
+    upstream_reactive(upstream_area)
+    # Export upstream area shapefile
+    #*st_write(upstream_area,file.path(wd,'output','upstream_area.shp'))
+    
+    # DENDRITIC CONNECTIVITY (DCI) - CALCULATE AND ADD TO TABLE
+    # A measure of longitudinal hydrological connectivity within each conservation area with values ranging from 
+    # 0 (low connectivity) to 1 (fully connected).
+    
+    ### MAP
+    upstream_area_4326 <- st_transform(upstream_area, 4326)
+    leafletProxy("map") %>%
+      addPolygons(data=upstream_area_4326, fillColor = "blue", fillOpacity=0.4, weight=0.1, group="Upstream areas", options = leafletOptions(pane = "layer1")) %>%
+      addLayersControl(position = "topright",
+                       overlayGroups = c("Catchments", "Conservation areas", "Upstream areas"),
+                       options = layersControlOptions(collapsed = FALSE)) 
+    
+    # Calculate DCI and add the values as a new column (attribute = dci).
+    poly_sf$dci <- calc_dci(conservation_area_sf = poly_sf, 
+                            stream_sf = streams())
+    poly_sf_reactive(poly_sf)
+    
+    # Close the modal once processing is done
+    removeModal()
+  })  
+
+  observeEvent(input$reduce_cas, {
+    req(!is.null(poly_sf_reactive()))
+    req(!is.null(upstream_reactive()))
+    # REDUCE NUMBER OF CONSERVATION AREAS
+    # Select the top conservation area from each group based on smallest upstream area, largest DCI, and largest upstream intactness
+    #st_write(poly_sf,file.path(wd,'output','benchmark_attributes.shp')) #specify output folder and shapefile name
+    poly_sf_filtered <- poly_sf %>%
+      group_by(group_id) %>%
+      arrange(-dci, up_km2, -up_AWI) %>% # Attribute order indicates their importance when selecting the 'best'from each group. '-' indicates largest to smallest.
+      filter(row_number()==1)
+
+    showModal(modalDialog(
+      title = pastes0("Number of filtered conservation areas:", as.character(nrow(poly_sf_filtered))),
+      easyClose = TRUE,
+      footer = modalButton("OK"))
+    )
+    
+    ### MAP
+    poly_sf_filtered_4326 <- st_transform(poly_sf_filtered, 4326)
+    leafletProxy("map") %>%
+      addPolygons(data=poly_sf_filtered_4326, fillColor = "red", fillOpacity=0.4, weight=0.1, group="Conservation areas filtered", options = leafletOptions(pane = "layer1")) %>%
+      addLayersControl(position = "topright",
+                       overlayGroups = c("Catchments", "Conservation areas", "Conservation areas filtered", "Upstream areas"),
+                       options = layersControlOptions(collapsed = FALSE))  %>%
+      hideGroup(c("Conservation areas"))
+    
+  }) 
+  ###################################################################
+  ###################################################################
+  ## Download
+  ###################################################################
+  ###################################################################
+  # Function to dynamically create the shapefile
+  write_shapefile <- function(data, file, filename) {
+    shapefile_path <- file.path(tempdir(), filename)
+    st_write(data, shapefile_path, append = FALSE)
+    # Optionally zip the shapefile if required
+    zip::zipr(zipfile = file, files = list.files(tempdir(), pattern = filename, full.names = TRUE))
+  }
+  
+  # Download handler for first shapefile (Builder)
   output$download_shapefile <- downloadHandler(
     filename = function() {
-      paste("sf_shapefile", Sys.Date(), ".zip", sep = "")
+      paste("KBA_CAs_Builder-", Sys.Date(), ".zip", sep = "")
     },
     content = function(file) {
-      # Create a temporary directory to store shapefile components
-      tempdir <- tempdir()
-      shapefile_path <- file.path(tempdir, "sf_shapefile.shp")
-      
-      # Write the sf object to a shapefile
-      st_write(poly_sf_reactive(), shapefile_path)
-      
-      # Zip the shapefile components (e.g., .shp, .shx, .dbf)
-      zip::zipr(zipfile = file, files = list.files(tempdir, pattern = "sf_shapefile", full.names = TRUE))
+      poly_sf <- poly_sf_reactive() # Reactive data for Builder
+      write_shapefile(poly_sf, file, "KBA_CAs_builder.shp")
+    }
+  )
+  
+  # Download handler for second shapefile (Attributes)
+  output$download_shapefile2 <- downloadHandler(
+    filename = function() {
+      paste("KBA_CAs_Attributes-", Sys.Date(), ".zip", sep = "")
+    },
+    content = function(file) {
+      poly_sf_with_attributes <- poly_sf_reactive() # Reactive data with attributes
+      write_shapefile(poly_sf_with_attributes, file, "KBA_CAs_att.shp")
+    }
+  )
+  
+  # Download handler for third shapefile (Filtered)
+  output$download_shapefile3 <- downloadHandler(
+    filename = function() {
+      paste("KBA_CAs_Filtered-", Sys.Date(), ".zip", sep = "")
+    },
+    content = function(file) {
+      filtered_sf <- filtered_sf_reactive() # Reactive data for filtered conservation areas
+      write_shapefile(filtered_sf, file, "KBA_CAs_filtered.shp")
     }
   )
 }
