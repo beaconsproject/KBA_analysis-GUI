@@ -1,2 +1,2 @@
 # KBA_analysis-GUI
-Using beaconstools to Design KBAs
+Using beaconstools to design KBAs
