@@ -31,7 +31,7 @@ ui = dashboardPage(skin="blue",
                        textInput("set_wd", "Specify output directory", value = "C:/temp/KBA"),
                        textInput("set_strahler", "Specify Strahler index to create seedlist", value = 1),
                        textInput("set_areatarget", "Specify area target for building conservation areas (sq.m)", value = 10000000000),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_seed", label = "seedlist", multiple = FALSE)),
+                       div(style = "margin-top: -20px;",fileInput(inputId = "upload_seed", label = "Use test seedlist", multiple = FALSE)),
                        actionButton("runBuilderInput", "Create Builder input", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
                      ),
                      conditionalPanel(
