@@ -29,6 +29,8 @@ ui = dashboardPage(skin="blue",
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  
                        textInput("set_wd", "Specify output directory", value = "C:/temp/KBA"),
+                       textInput("set_strahler", "Specify Strahler index to create seedlist", value = 1),
+                       textInput("set_areatarget", "Specify area target for building conservation areas (sq.m)", value = 10000000000),
                        actionButton("runBuilderInput", "Create Builder input", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
                      ),
                      conditionalPanel(
@@ -40,8 +42,6 @@ ui = dashboardPage(skin="blue",
                        div(style = "margin-top: -20px;",selectInput("zoneColname", label = div(style = "font-size:13px;", "Select zone attribute"), choices = c("MDAzone", "ecoMDAzone", "ecoZone"), selected = "ecoMDAzone")),
                        div(style = "margin-top: -20px;",selectInput("areatypeColname", label = div(style = "font-size:13px;margin: 0px;", "Select area_type attribute"), choices = c("landwater", "land", "water"), selected = "landwater")),
                        div(style = "margin-top: -20px;",selectInput("arealandColname", label = div(style = "font-size:13px;margin: 0px;", "Select area_land attribute"), choices = "kba_m2")),
-                       textInput("set_strahler", "Specify Strahler index to create seedlist", value = 1),
-                       textInput("set_areatarget", "Specify area target for building conservation areas (sq.m)", value = 10000000000),
                        actionButton("runBuilder", "Run builder", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:200px")                     
                        ),
                      conditionalPanel(
@@ -49,7 +49,7 @@ ui = dashboardPage(skin="blue",
                        textInput("set_grid", "1. Set grid cell size", value = 10000),
                        actionButton(inputId = "calc_dci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("2. Calculate hydrology metrics")), class = "btn-warning", style="width:250px"),
                        tags$br(),
-                       actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("3. Reduce de number of conservation areas")), class = "btn-warning", style="width:250px"),
+                       actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("3. Reduce de number of KBAs")), class = "btn-warning", style="width:250px"),
                        tags$br(),
                        actionButton("runRep", "4. Run representation analysis", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                        tags$br()#,
@@ -126,6 +126,14 @@ ui = dashboardPage(skin="blue",
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabDCI'",
                                                    includeMarkdown("./Rmd/representation_doc.md")
+                                                 ),
+                                                 conditionalPanel(
+                                                   condition = "input.tabs == 'tabKBA'",
+                                                   includeMarkdown("./Rmd/filterKBA_doc.md")
+                                                 ),
+                                                 conditionalPanel(
+                                                   condition = "input.tabs == 'tabNET'",
+                                                   includeMarkdown("./Rmd/buildNet_doc.md")
                                                  )
                                         )
                                  ),
