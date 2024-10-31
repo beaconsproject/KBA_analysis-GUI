@@ -31,6 +31,7 @@ ui = dashboardPage(skin="blue",
                        textInput("set_wd", "Specify output directory", value = "C:/temp/KBA"),
                        textInput("set_strahler", "Specify Strahler index to create seedlist", value = 1),
                        textInput("set_areatarget", "Specify area target for building conservation areas (sq.m)", value = 10000000000),
+                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_seed", label = "seedlist", multiple = FALSE)),
                        actionButton("runBuilderInput", "Create Builder input", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
                      ),
                      conditionalPanel(
@@ -41,7 +42,7 @@ ui = dashboardPage(skin="blue",
                        div(style = "margin-top: -20px;",textInput("CAintact", label = div(style = "font-size:13px;", "Specify CAs intactness (0-1)"), value = "1")),
                        div(style = "margin-top: -20px;",selectInput("zoneColname", label = div(style = "font-size:13px;", "Select zone attribute"), choices = c("MDAzone", "ecoMDAzone", "ecoZone"), selected = "ecoMDAzone")),
                        div(style = "margin-top: -20px;",selectInput("areatypeColname", label = div(style = "font-size:13px;margin: 0px;", "Select area_type attribute"), choices = c("landwater", "land", "water"), selected = "landwater")),
-                       div(style = "margin-top: -20px;",selectInput("arealandColname", label = div(style = "font-size:13px;margin: 0px;", "Select area_land attribute"), choices = "kba_m2")),
+                       div(style = "margin-top: -20px;",selectInput("arealandColname", label = div(style = "font-size:13px;margin: 0px;", "Select area_land attribute"), choices = "Area_land")),
                        actionButton("runBuilder", "Run builder", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:200px")                     
                        ),
                      conditionalPanel(

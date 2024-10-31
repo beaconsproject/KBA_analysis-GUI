@@ -141,7 +141,7 @@ server = function(input, output) {
     # Update the choices of the selectInput elements with column names
     updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = colnames, selected = "ecoMDAzone")
     updateSelectInput(session = getDefaultReactiveDomain(), "intactColname", choices = colnames, selected = "IntactPB")
-    updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="kba_m2")
+    updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="Area_land")
     
   })
   
@@ -266,15 +266,22 @@ server = function(input, output) {
     # Create seed list - input file for Builder that identifies where construction of conservation area is to start
     # intact ranges from 0 to 1 and is the minimum required proporational intactness required for a catchment to be a seed (0.8 = 80%)
     # areatarget_value is in m2 and specifies the desired conservation area size (10,000 km2 = 10000000000 m2)
-    if (!file.exists(file.path(out_dir, "Builder_input/seeds.csv"))) {
-      seed <- catchments() %>%
-        filter(kba_m2 >= 0, STRAHLER == as.numeric(input$set_strahler), eco ==1) %>%
-        seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
+    if (!is.null(input$upload_seed)) {
+      seed_path <- input$upload_seed$datapath
+      seed <- read.csv(seed_path)
       seed_reactive(seed)
-      write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
+      write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE, ) # Convert neighbours table to csv file.
     }else{
-      seed <- read.csv(file.path(out_dir,"Builder_input/seeds.csv"))
-      seed_reactive(seed)
+      if (!file.exists(file.path(out_dir, "Builder_input/seeds.csv"))) {
+        seed <- catchments() %>%
+          filter(kba_m2 >= 0, STRAHLER == as.numeric(input$set_strahler), eco ==1) %>%
+          seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
+        seed_reactive(seed)
+        write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
+      }else{
+        seed <- read.csv(file.path(out_dir,"Builder_input/seeds.csv"))
+        seed_reactive(seed)
+      }
     }
     # Close the modal once processing is done
     removeModal()
@@ -401,7 +408,6 @@ server = function(input, output) {
       ))
       
       poly_sf <- poly_sf_reactive()
-      browser()
       poly_sf$group_id <- group_conservation_areas(poly_sf, as.numeric(input$set_grid))  
 
       # Identify the attributes file and read it
