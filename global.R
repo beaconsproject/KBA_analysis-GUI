@@ -22,6 +22,7 @@ source("./R/utils_KBA.R")
 source("./R/builder_KBA.R")
 
 bnd <- st_read("./www/Canada_WGS84.shp")
+intact <- st_read("./www/KBAIntactAreas_nad83.shp")
 MB <- 1024^2
 
 UPLOAD_SIZE_MB <- 5000
