@@ -129,6 +129,16 @@ server = function(input, output) {
     cmi_tiff <- raster(cmi_path)
     return(cmi_tiff)
   })
+  
+  ################################################################################################
+  # Set intact areas
+  ################################################################################################
+  intact_4326 <- reactive({
+    req(input$upload_planreg)
+    
+    intact_4326<- intact %>% st_intersection(planreg(), sparse = FALSE) %>% st_transform(4326)
+    return(intact_4326)
+  })
 ################################################################################################
 
 # Observe when the dataset is loaded and update the selectInput choices
@@ -540,11 +550,29 @@ server = function(input, output) {
       poly_filtered_reactive(poly_sf_filtered)
     }
     showModal(modalDialog(
-      title = paste0("Number of filtered conservation areas:", as.character(nrow(poly_sf_filtered))),
+      title = paste0("Number of filtered KBAs:", as.character(nrow(poly_sf_filtered))),
       easyClose = TRUE,
       footer = modalButton("OK"))
     )
     
+    showModal(modalDialog(
+      title = "Display KBAs",
+       "Please wait...",
+      footer = NULL
+    ))
+    
+    poly_sf_filtered_4326 <- st_transform(poly_sf_filtered, 4326)
+    stream_4326 <- streams() %>% st_intersection(planreg(), sparse = FALSE) %>% st_transform(4326)
+    leafletProxy("map") %>%
+      addPolygons(data=intact_4326(), fill=T, stroke=F, fillColor='#99CC99', fillOpacity=0.5, group="Intact areas", options = leafletOptions(pane = "layer2")) %>%
+      addPolygons(data=poly_sf_filtered_4326, color='#666666', fillColor = "grey", fillOpacity = 0, weight=1, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
+      addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
+      addLayersControl(position = "topright",
+                       overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Intact areas","Streams"),
+                       options = layersControlOptions(collapsed = FALSE)) %>%
+      hideGroup(c("Streams"))
+    # Close the modal once processing is done
+    removeModal()
   }) 
   ####################################################################################################
   # RUN REPRESENTATION ANALYSIS
@@ -655,9 +683,7 @@ server = function(input, output) {
       poly_filtered_reactive(poly_sf_filtered)
     }
     
-    poly_sf_filtered_4326 <- poly_sf_filtered %>% st_transform(4326)
-    pop = ~paste("KBA:", network)
-    #Prep criteria legend CMI GPP LED
+   #Prep criteria legend CMI GPP LED
     cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
     cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
     cmi_bins.seq <- seq(cmi_minVar, cmi_maxVar, (cmi_maxVar-cmi_minVar)/4)
@@ -700,11 +726,13 @@ server = function(input, output) {
     gpp_4326 <- raster(file.path(input$set_wd, "output/kba_gpp_4326.tif"))
     led_4326 <- raster(file.path(input$set_wd, "output/kba_led_4326.tif"))
     
-    stream_4326 <- streams() %>% st_intersection(planreg(), sparse = FALSE) %>% st_transform(4326)
+    poly_sf_filtered_4326 <- poly_sf_filtered %>% st_transform(4326)
+    pop = ~paste("KBA:", network)
     
     leafletProxy("map") %>%
+      clearGroup("Potential KBAs") %>%
       addPolygons(data=poly_sf_filtered_4326, color='#666666', fillColor = "grey", fillOpacity = 0, weight=1, layerId = poly_sf_filtered_4326$network, popup = pop, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
-      addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
+#      addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
       addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI") %>%
       addLegend(pal = xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
                 position = "bottomright", group="CMI", labFormat = labeller_function)  %>%
@@ -718,7 +746,7 @@ server = function(input, output) {
       addLegend(colors = selected_cols, label = cls,  position=c("bottomleft"), opacity = 1, title = "LCC",
                 group="LCC") %>%
       addLayersControl(position = "topright",
-                       overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Streams", "CMI", "GPP", "LED", "LCC"),
+                       overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Intact areas", "Streams", "CMI", "GPP", "LED", "LCC"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams"))
     
@@ -730,9 +758,9 @@ server = function(input, output) {
   observeEvent(input$filterRep, {
     req(catchments())
     req(poly_filtered_reactive())
-    
+    browser()
     poly_sf_filtered <- poly_filtered_reactive()
-    poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
+    poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 >= input$slideUP)
     
     if(nrow(poly_sf_rep)>0){
       showModal(modalDialog(
@@ -755,7 +783,7 @@ server = function(input, output) {
                   layerId = poly_sf_rep_4326$network, popup = pop, group = "Potential KBAs", 
                   options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
-                       overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Streams", "CMI", "GPP", "LED", "LCC"),
+                       overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Intact areas", "Streams", "CMI", "GPP", "LED", "LCC"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
         hideGroup(c("Streams"))
       
@@ -765,7 +793,7 @@ server = function(input, output) {
       leafletProxy("map") %>%
         clearGroup('Potential KBAs') %>%
         addLayersControl(position = "topright",
-                         overlayGroups = c("Catchments extent", "Planning region", "CMI", "GPP", "LED", "LCC"),
+                         overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "CMI", "GPP", "LED", "LCC"),
                          options = layersControlOptions(collapsed = FALSE))
       
       showModal(modalDialog(
@@ -802,7 +830,7 @@ server = function(input, output) {
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(
         position = "topright",
-        overlayGroups = c("Catchments extent", "Planning region", "Potential KBA", input$KBA, "Upstream", "Streams", "CMI", "GPP", "LED", "LCC"),
+        overlayGroups = c("Catchments extent", "Planning region", "Potential KBA", "Intact areas", input$KBA, "Upstream", "Streams", "CMI", "GPP", "LED", "LCC"),
         options = layersControlOptions(collapsed = FALSE)
       )
     reactive_labelKBA(input$KBA)
@@ -875,11 +903,15 @@ server = function(input, output) {
   }, digits = 1)
   
   ################################################################################################
+  ################################################################################################
   # Build Network
+  ################################################################################################  
+  ################################################################################################
   observeEvent(input$buildNet, {
     req(catchments())
     req(poly_filtered_reactive())
     req(input$set_net)
+    
     showModal(modalDialog(
       title = "Processing",
       "Building network. Please wait...",
@@ -906,7 +938,7 @@ server = function(input, output) {
       }
     
       if(input$forceKBA){
-        potential_kbas <- filter(poly_filtered_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
+        potential_kbas <- filter(poly_filtered_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 >= input$slideUP)
       }else{
         potential_kbas <- poly_filtered_reactive()
       }
@@ -914,128 +946,203 @@ server = function(input, output) {
       if(attr(potential_kbas, "sf_column") != "geometry"){
         potential_kbas$geometry <- potential_kbas$geom
       }
-      # Generate all possible network names using 2 benchmarks per network.
-      network_names <- gen_network_names(in_names = potential_kbas$network, k = as.numeric(input$set_net))
-    
-      #Check and remove overlapping KBAs. 
-      overlaps <- list_overlapping_polygons(conservation_areas_sf = potential_kbas)
-      network_names <- network_names[!network_names %in% overlaps]
-    
-      # Build the list of networks using the conservation area polygons. Each network will become a single feature in the polygon object.
-      networks_sf <- build_network_polygons(conservation_areas_sf = potential_kbas, network_list = network_names)
-    
-      #Recover area
-      kba_in_net <- sep_network_names(networks_sf$network)
-      kba_areas <- setNames(potential_kbas$area_km2 , potential_kbas$network)
-      network_areas <- sapply(kba_in_net, function(kba_names) {
-        sum(kba_areas[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
-      })
-      networks_sf$area_km2 <- network_areas[networks_sf$network]
       
-      #Recover intactness
-      kba_intactarea <- setNames(potential_kbas$area_km2*potential_kbas$up_AWI , potential_kbas$network)
-      network_intact <- sapply(kba_in_net, function(kba_names) {
-        sum(kba_intactarea[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
-      })
-      networks_sf$intact_km2 <- network_areas[networks_sf$network]
+      if(nrow(potential_kbas)>0){
+        # Generate all possible network names using 2 benchmarks per network.
+        network_names <- gen_network_names(in_names = potential_kbas$network, k = as.numeric(input$set_net))
+    
+        #Check and remove overlapping KBAs. 
+        overlaps <- list_overlapping_polygons(conservation_areas_sf = potential_kbas)
+        network_names <- network_names[!network_names %in% overlaps]
+    
+        # Build the list of networks using the conservation area polygons. Each network will become a single feature in the polygon object.
+        networks_sf <- build_network_polygons(conservation_areas_sf = potential_kbas, network_list = network_names)
+    
+        #Recover area
+        kba_in_net <- sep_network_names(networks_sf$network)
+        kba_areas <- setNames(potential_kbas$area_km2 , potential_kbas$network)
+        network_areas <- sapply(kba_in_net, function(kba_names) {
+          sum(kba_areas[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
+        })
+        networks_sf$area_km2 <- network_areas[networks_sf$network]
+      
+        #Recover intactness
+        kba_intactarea <- setNames(potential_kbas$area_km2*potential_kbas$up_AWI , potential_kbas$network)
+        network_intact <- sapply(kba_in_net, function(kba_names) {
+          sum(kba_intactarea[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
+        })
+        networks_sf$intact_km2 <- network_intact[networks_sf$network]
       networks_sf$AWI <- round(networks_sf$intact_km2/networks_sf$area_km2,2)
       
-      #recover upstream area
-      kba_uparea <- setNames(potential_kbas$up_km2  , potential_kbas$network)
-      network_up <- sapply(kba_in_net, function(kba_names) {
-        sum(kba_uparea[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
-      })
-      networks_sf$up_km2 <- network_up[networks_sf$network]
+        #recover upstream area
+        kba_uparea <- setNames(potential_kbas$up_km2  , potential_kbas$network)
+        network_up <- sapply(kba_in_net, function(kba_names) {
+          sum(kba_uparea[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
+        })
+        networks_sf$up_km2 <- network_up[networks_sf$network]
       
-      #Recover upstream AWI
-      kba_upAWI <- setNames(potential_kbas$up_km2*potential_kbas$up_AWI , potential_kbas$network)
-      network_areaintact <- sapply(kba_in_net, function(kba_names) {
-        sum(kba_upAWI[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
-      })
-      networks_sf$upintact_km2 <- network_areaintact[networks_sf$network]
-      networks_sf$up_AWI <- round(networks_sf$upintact_km2/networks_sf$up_km2,2)
+        #Recover upstream AWI
+        kba_upAWI <- setNames(potential_kbas$up_km2*potential_kbas$up_AWI , potential_kbas$network)
+        network_areaintact <- sapply(kba_in_net, function(kba_names) {
+          sum(kba_upAWI[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
+        })
+        networks_sf$upintact_km2 <- network_areaintact[networks_sf$network]
+        networks_sf$up_AWI <- round(networks_sf$upintact_km2/networks_sf$up_km2,2)
       
-      # DCI
-      networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
+        # DCI
+        networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
       
-      # Upstream
-      upstream_sf <- upstream_reactive()
-      upstream_network_list <- lapply(names(kba_in_net), function(network_name) {
-        # Extract the list of KBAs for this network
-        kba_names <- kba_in_net[[network_name]]
-        # Filter upstream_kba_sf to find units matching KBAs in this network
-        upstream_units <- upstream_sf[upstream_sf$network %in% kba_names, ]
-        # Add a network column 
-        upstream_units$network <- network_name
-        return(upstream_units)
-      })
-      upstream_network_sf <- do.call(rbind, upstream_network_list)
-      upstream_network_reactive(upstream_network_sf)
-      st_write(upstream_network_sf, dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = "Network_upstream", driver = "GPKG", append = TRUE)
+        # Upstream
+        upstream_sf <- upstream_reactive()
+        upstream_network_list <- lapply(names(kba_in_net), function(network_name) {
+          # Extract the list of KBAs for this network
+          kba_names <- kba_in_net[[network_name]]
+          # Filter upstream_kba_sf to find units matching KBAs in this network
+          upstream_units <- upstream_sf[upstream_sf$network %in% kba_names, ]
+          # Add a network column 
+          upstream_units$network <- network_name
+          return(upstream_units)
+        })
+        upstream_network_sf <- do.call(rbind, upstream_network_list)
+        upstream_network_reactive(upstream_network_sf)
+        if(!is.null(upstream_network_sf)){
+          st_write(upstream_network_sf, dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = "Network_upstream", driver = "GPKG", append = TRUE)
+        }else{
+          showModal(modalDialog(
+            title = "No upstream area found for those network. Layer KBA_upstream won't be created.",
+            easyClose = TRUE,
+            footer = modalButton("OK"))
+          )
+        }
       
-      #Criteria
-      kba_cmi <- raster(file.path(input$set_wd, "output/kba_cmi.tif"))
-      kba_led <- raster(file.path(input$set_wd, "output/kba_led.tif"))
-      kba_gpp <- raster(file.path(input$set_wd, "output/kba_gpp.tif"))
-      kba_lcc <- raster(file.path(input$set_wd, "output/kba_lcc.tif"))
+        #Criteria
+        kba_cmi <- raster(file.path(input$set_wd, "output/kba_cmi.tif"))
+        kba_led <- raster(file.path(input$set_wd, "output/kba_led.tif"))
+        kba_gpp <- raster(file.path(input$set_wd, "output/kba_gpp.tif"))
+        kba_lcc <- raster(file.path(input$set_wd, "output/kba_lcc.tif"))
 
-      #Prep criteria legend LCC
-      unique_sorted_values <- sort(na.omit(unique(values(kba_lcc))))
-      df_label = data.frame(values=c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), labels=c("Temperate conifer forest", "Taiga conifer forest",
+        #Prep criteria legend LCC
+        unique_sorted_values <- sort(na.omit(unique(values(kba_lcc))))
+        df_label = data.frame(values=c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), labels=c("Temperate conifer forest", "Taiga conifer forest",
                                                                                         "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
                                                                                         "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
                                                                                         "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
-      # calculate dissimilarity metric 
-      network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
+        # calculate dissimilarity metric 
+        network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
                             "_led", as.character(input$slideLED),"_lcc" , as.character(input$slideLCC), "_up", as.character(input$slideUP),
                             "_n",input$set_net)
-      networks_sf$lcc <- calc_dissimilarity(networks_sf, planreg(), kba_lcc, 'categorical', plot_out_dir=file.path(input$set_wd, network_dir,"lcc"), categorical_class_labels = df_label)
+        networks_sf$lcc <- calc_dissimilarity(networks_sf, planreg(), kba_lcc, 'categorical', plot_out_dir=file.path(input$set_wd, network_dir,"lcc"), categorical_class_labels = df_label)
       
-      networks_sf$led <- calc_dissimilarity(networks_sf, planreg(), kba_led, 'continuous', plot_out_dir=file.path(input$set_wd, network_dir,"led"))
+        networks_sf$led <- calc_dissimilarity(networks_sf, planreg(), kba_led, 'continuous', plot_out_dir=file.path(input$set_wd, network_dir,"led"))
       
-      networks_sf$cmi <- calc_dissimilarity(networks_sf, planreg(), kba_cmi, 'continuous', plot_out_dir=file.path(input$set_wd, network_dir,"cmi"))
+        networks_sf$cmi <- calc_dissimilarity(networks_sf, planreg(), kba_cmi, 'continuous', plot_out_dir=file.path(input$set_wd, network_dir,"cmi"))
       
-      networks_sf$gpp <- calc_dissimilarity(networks_sf, planreg(), kba_gpp, 'continuous', plot_out_dir=file.path(input$set_wd, network_dir,"gpp")) 
+        networks_sf$gpp <- calc_dissimilarity(networks_sf, planreg(), kba_gpp, 'continuous', plot_out_dir=file.path(input$set_wd, network_dir,"gpp")) 
       
-      st_write(networks_sf, dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = paste0("Network_cmi", as.character(input$slideCMI),
+        st_write(networks_sf, dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = paste0("Network_cmi", as.character(input$slideCMI),
                                                                                                     "_gpp", as.character(input$slideGPP),
                                                                                                     "_led", as.character(input$slideLED),
                                                                                                     "_lcc", as.character(input$slideLCC),
                                                                                                     "_up", as.character(input$slideUP),
                                                                                                     "_n", input$set_net,
                                                                                                     "_force", as.character(input$forceKBA)), driver = "GPKG", append = TRUE)
-      network_reactive(networks_sf)
-    }else{
-      networks_sf <- st_read(dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = layer_to_check)
-      network_reactive(networks_sf)
-      upstream_networks_sf <- st_read(dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = "Network_upstream")
-      upstream_network_reactive(upstream_networks_sf)
-    }
+        network_reactive(networks_sf)
+      }else{
+        networks_sf <- st_read(dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = layer_to_check)
+        network_reactive(networks_sf)
+        upstream_networks_sf <- st_read(dsn = file.path(input$set_wd, "output/KBA_analysis.gpkg"), layer = "Network_upstream")
+        upstream_network_reactive(upstream_networks_sf)
+      }
     
-    # Extract unique KBA values for selectInput
-    unique_network <- unique(networks_sf$network)
+      # Extract unique KBA values for selectInput
+      unique_network <- unique(networks_sf$network)
     
-    # Update selectInput choices based on filtered KBA values
-    updateSelectInput(getDefaultReactiveDomain(), "network", choices = unique_network)
+      # Update selectInput choices based on filtered KBA values
+      updateSelectInput(getDefaultReactiveDomain(), "network", choices = unique_network)
     
-    networks_4326 <- st_transform(networks_sf, 4326)
-    labelKBA <- reactive_labelKBA()
+      networks_4326 <- st_transform(networks_sf, 4326)
+      labelKBA <- reactive_labelKBA()
     
-    leafletProxy("map") %>%
-      clearGroup(labelKBA) %>%
-      clearGroup("Potential KBA") %>%
-      clearGroup("Upstream") %>%  # Clear previous highlight
-      addPolygons(data = networks_4326, color = '#666666', fillColor = "grey", fillOpacity = 0, weight = 1,
+      leafletProxy("map") %>%
+        clearGroup(labelKBA) %>%
+        clearGroup("Potential KBA") %>%
+        clearGroup("Upstream") %>%  # Clear previous highlight
+        addPolygons(data = networks_4326, color = '#666666', fillColor = "grey", fillOpacity = 0, weight = 1,
                   layerId = networks_4326$network, group = "Potential network", 
                   options = leafletOptions(pane = "layer2")) %>%
-      addLayersControl(position = "topright",
-                       overlayGroups = c("Catchments extent", "Planning region", "Potential network", "Streams", "CMI", "GPP", "LED", "LCC"),
+        addLayersControl(position = "topright",
+                       overlayGroups = c("Catchments extent", "Planning region", "Potential network", "Intact areas", "Streams", "CMI", "GPP", "LED", "LCC"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
-      hideGroup(c("Streams"))
+        hideGroup(c("Streams"))
     
-    # Close the modal once processing is done
-    removeModal()
+      # Close the modal once processing is done
+      removeModal()
+    }else{
+      showModal(modalDialog(
+        title = "No network fulffill criterai threshold.",
+        easyClose = TRUE,
+        footer = modalButton("OK"))
+      )
+    }
   })
+  
+  observeEvent(input$filterNET, {
+    req(catchments())
+    req(network_reactive())
+    network_sf <- network_reactive()
+    network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
+ 
+    # Extract unique KBA values for selectInput
+    unique_NET <- unique(network_sf_rep$network)
+
+    if(nrow(network_sf_rep)>0){
+      showModal(modalDialog(
+        title = "Processing",
+        "Filter KBAs based on dissimilarity metrics threshold. Please wait...",
+        footer = NULL
+      ))
+      # Extract unique KBA values for selectInput
+      unique_net <- unique(network_sf_rep$network)
+      
+      # Update selectInput choices based on filtered KBA values
+      updateSelectInput(getDefaultReactiveDomain(), "network", choices = unique_net)
+      
+      network_sf_rep_4326 <- network_sf_rep %>% st_transform(4326)
+      pop = ~paste("Network:", network)
+      
+      leafletProxy("map") %>%
+        clearGroup('Potential KBAs') %>% 
+        addPolygons(data = network_sf_rep_4326, color = '#666666', fillColor = "grey", fillOpacity = 0, weight = 1,
+                    layerId = network_sf_rep_4326$network, popup = pop, group = "Potential KBAs", 
+                    options = leafletOptions(pane = "layer2")) %>%
+        addLayersControl(position = "topright",
+                         overlayGroups = c("Catchments extent", "Planning region", "Potential network", "Intact areas", "Streams", "CMI", "GPP", "LED", "LCC"),
+                         options = layersControlOptions(collapsed = FALSE)) %>%
+        hideGroup(c("Streams"))
+      
+      # Close the modal once processing is done
+      removeModal()
+    }else{
+      leafletProxy("map") %>%
+        clearGroup('Potential KBAs') %>%
+        addLayersControl(position = "topright",
+                         overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "CMI", "GPP", "LED", "LCC"),
+                         options = layersControlOptions(collapsed = FALSE))
+      
+      showModal(modalDialog(
+        title = "No network reaches those threshold",
+        easyClose = TRUE,
+        footer = modalButton("OK"))
+      )
+    }
+  })
+  
+  
+  
+  
+  
+  
+  
   
   observeEvent(input$network, {
     req(input$network)
@@ -1063,7 +1170,7 @@ server = function(input, output) {
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(
         position = "topright",
-        overlayGroups = c("Catchments extent", "Planning region", "Potential KBA", input$network, "Upstream","Streams", "CMI", "GPP", "LED", "LCC"),
+        overlayGroups = c("Catchments extent", "Planning region", "Potential KBA", "Intact areas", input$network, "Upstream","Streams", "CMI", "GPP", "LED", "LCC"),
         options = layersControlOptions(collapsed = FALSE)
       )
     reactive_labelNET(input$network)
