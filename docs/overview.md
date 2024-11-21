@@ -23,9 +23,6 @@ Simple and standardized conservation area names are encouraged and must not incl
 
 For networks of multiple conservation areas, the individual KBA names are combined using the separator `__`. 
 So a network named `KBA_0001__KBA_0002` would be the combined geometries of the individual conservation areas `KBA_0001` and `KBA_0002`. 
-The function `gen_network_names()` can be used for generating network names using individual conservation area names. 
-Networks generated using `gen_network_names()` are always named in alphabetical order. 
-`sep_networks_names()` splits network names back into their individual components.
 
 
 ### Functionality
@@ -34,5 +31,5 @@ The app demonstrates a KBA networking analysis using KBAs built by `beaconsbuild
     
 ### Output
 
-Multiples files are saved locally by the app. A destination folder must be set at the **Create builder input** stage. This destination folder will hold 
-Builder_input, Builder_output and others related output. Spatial layers are saved in a geopackage named KBA_analysis.gpkg in the output folder. 
+Multiples files are saved locally by the app. A destination folder is set at the **Set input parameters"** stage. This destination folder will hold 
+Builder_input, Builder_output and others related output. Spatial layers are saved in a geopackage named KBA_analysis.gpkg in the output folder. If you are pointing to a directory that was use previously to run the analysis, the app won't overwrite the existing files. On the contrary, the app will use the data already generated, thus acting as a cache. 
