@@ -5,45 +5,60 @@ format: md
 ## Workflow
 
 The following workflow demonstrates a conservation area networking analysis using conservation areas built by `beaconsbuilder`. Comments in the code indicate points where users could instead use polygons of other conservation areas such as the existing protected areas network.
-<center><img src="pics/workflow.png" width="400"></center>
+<center><img src="pics/workflow.png" width="800"></center>
 
 ## Overview
 
-The Overview section provides a description of the app, its functionality, and the demo datasets. You can start using the app by turning on and off the various layers in the map legend.
+The Overview section provides a description of the app and its functionality. 
 
-<center><img src="pics/app.png" width="600"><br>Figure 1. Shiny-based disturbance explorer app.</center>
+<center><img src="pics/app.png" width="600"><br>Figure 1. Shiny-based BEACONs KBA Analysis app.</center>
 
-## Select study area
+## Set input parameters
 
-Click on "Select study area" to change the area of interest dataset. You have two choices:
+Click on "Step 1 - Set input parameters" to start the app. Select an output directory. If you previously used the selected output directory to run the app, existing output will be loaded in the environment. The app doesn't allow overwrite. If the current analysis requires a different set of parameters from the previous one, please select an empty output directory. 
 
-  - Select an existing fundamental drainage area (FDA). This will include all the layers needed to run the app. [*Currently not functional*]
-  - Upload a user-defined study area as a geopackage ('.gpkg'). In this case, the onus is on the user to ensure that all the required layers are included, and that the projection is sest to EPSG:3578 (NAD83 / Yukon Albers). See the **Datasets** tab for more details about required layers.
+Upload required shapefiles (catchments, streams and planning region shapefiles). Shapefile need the following files:
 
-<center><img src="pics/slide1.png" width="600"><br>Figure 1. Shiny-based disturbance explorer app.</center>
+.shp – The main file containing the geometric data (points, lines, or polygons).
+.shx – The index file, which helps in fast access to the geometries.
+.dbf – The attribute data file, which stores the attribute data (e.g., fields in a table corresponding to the geometries).
+.prj – The projection file, which contains the coordinate system information.
 
-## Buffer features
+If you previously ran the representation analysis using the selected output directories, criteria (CMI, GPP, LED, LCC and custom criterion) don't need to be uploaded. A cached version of the clipped TIFF files from the last analysis will be used. 
 
-Click on the "Buffer sizes" tab to apply buffers of influence around linear and areal (polygonal) feature types. Simply edit the values in the "BUFFER_SIZE" column.
 
-In the left sidebar, you can also set a minimum patch size of intactness areas after the buffering on the disturbance features are applied. This function will remove every patch in the study area that are considered not sufficiently large to maintain key ecological processes
-  
-<center><img src="pics/slide1.png" width="600"><br>Figure 1. Shiny-based disturbance explorer app.</center>
+<center><img src="pics/step1.png" width="600"><br>Figure 2. Set input parameters.</center>
 
-### View map
+## Create Builder input
 
-After a few seconds to a minute, two new layers will appear in the map and legend: a "footprint" layer that shows the human influence on the landscape and an "intactness" layer which shows the distribution of intact areas in the landscape.
+The "Step 2 - Create Builder Input" tab consists to generate the neighbour and seedlist tables derived from the catchments shapefile provided. You have two choices:
 
-<center><img src="pics/slide2.png" width="600"><br>Figure 1. Shiny-based disturbance explorer app.</center>
+  - Set the parameters required (column representing intactness in the uploaded catchments shapefile, the intactness threshold and the Strahler index value to applied and the area targeted for building KBAs) by the tool to create the seedlist from the uploaded catchments shapefile. Fields are by default autofill, but can be changed to fulfill user specific need.
 
-### View statistics
+  - Upload a custom seedlist associated to the catchments shapefile provided. The file needs to be a .csv. 
 
-If you click on the "Statistic" tab, you will be able to compare regional estimates of intactness to those provided by Intact Forest Landscapes for the years 2000 and 2020. The areal extent of burned areas are also shown.
+<center><img src="pics/step2.png" width="600"><br>Figure 3. Create Builder Input.</center>
 
-<center><img src="pics/slide4.png" width="600"><br>Figure 1. Shiny-based disturbance explorer app.</center>
+### Run Builder
 
-### Download data
+The "Step 3 - Run Builder" tab consists to run Builder and from which the KBAs will be generated. 
 
-Finally, you can click on "Download data" in the left sidebar to save the footprint and intactness layers to a GeoPackage format which can be further viewed and analysed in a GIS e.g., QGIS.
+<center><img src="pics/step3.png" width="600"><br>Figure 4. Run Builder.</center>
 
-<center><img src="pics/slide5.png" width="600"><br>Figure 1. Shiny-based disturbance explorer app.</center>
+### Reduce numbers of KBAs
+
+The "Step 4 - Reduce numbers of KBAs" tab consists to calculate hydrology metrics for each KBA generated by builder and to reduce the number of KBAs using a predetermined grid cell size. KBAs will then be dispalyed on the map. 
+
+<center><img src="pics/step4.png" width="600"><br>Figure 5. KBAs generated by Builder once the number has been reduced using predefined grid cell size.</center>
+
+### Run representation analysis
+
+The "Step 5 - Run representation analysis" tab consists to calculate dissimilarity metrics for each KBA using the criteria that were previously uploaded. Dissimilarity metrics range from 0 (low dissimilarity) to 1 (high dissimilarity). You can then filter KBAs based on a  criteria specific threshold and then map individual KBA with their respective upstream areas. The selection of an individual KBA populates the statistics panel to display results on intactness, upstream area, dendritic connectivity and dissimilarity metrics. 
+
+<center><img src="pics/step5.png" width="600"><br>Figure 6. Run representation analysis.</center>
+
+### Create KBAs network
+
+The "Step 6 - Create KBAs network" tab consists to create KBAs network by setting the number of KBAs per network and confirm if network would be only composed of selected KBAs that reached the criteria threshold previously applied. The dissimilarity metrics then run at the network level. To visualize each network, the user can then apply a threshold on each criterion. The selection of a network populates the statistics panel to display results on intactness, upstream area, dendritic connectivity and dissimilarity metrics.
+
+<center><img src="pics/step6.png" width="600"><br>Figure 7. Create KBAs network.</center>
