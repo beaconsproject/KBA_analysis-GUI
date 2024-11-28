@@ -1097,6 +1097,7 @@ server = function(input, output) {
     }else{
       potential_kbas <- poly_filtered_reactive()
       outName <- paste0("Network_up", as.character(input$slideUP), "_n", input$set_net, "_force", as.character(input$forceKBA))
+      network_dir <- paste0("output/plotnet_up", as.character(input$slideUP), "_n",input$set_net, "_force", as.character(input$forceKBA))
     }
     
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
@@ -1293,7 +1294,7 @@ server = function(input, output) {
     }else{
       network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & !!sym(criteria5name()) <=input$slideNETcrit5 & up_km2 >= input$slideNETUP)
     }
- 
+
     x <- outfreqnet()
     x$Count[x$Variables=="Filtered networks"] <- nrow(network_sf_rep)
     outfreqnet(x) 
@@ -1381,27 +1382,63 @@ server = function(input, output) {
   ####################################################################################################
   observeEvent(input$network, {
     req(input$network)  # Ensure there is a selected KBA
-    if(input$criteria5 == ""){
-      network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
-                            "_led", as.character(input$slideLED),"_lcc" , as.character(input$slideLCC), "_up", as.character(input$slideUP),
-                            "_n",input$set_net, "_force", as.character(input$forceKBA))
+    
+    if(input$forceKBA){
+      if(input$criteria5==""){
+        network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
+                              "_led", as.character(input$slideLED),"_lcc" , as.character(input$slideLCC), "_up", as.character(input$slideUP),
+                              "_n",input$set_net, "_force", as.character(input$forceKBA))
+        
+        # Prepare the table for display
+        x <- tibble(
+          Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
+                        "DCI", "CMI", "GPP", "LED", "LCC"),
+          Values = NA
+        )
+      }else{
+        network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
+                              "_led", as.character(input$slideLED),"_lcc", as.character(input$slideLCC), "_", criteria5name(), as.character(input$slidecrit5), 
+                              "_up", as.character(input$slideUP), "_n",input$set_net, "_force", as.character(input$forceKBA))
+        # Prepare the table for display
+        x <- tibble(
+          Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
+                        "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
+          Values = NA
+        )
+      }
+    }else{
+      network_dir <- paste0("output/plotnet_up", as.character(input$slideUP), "_n",input$set_net, "_force", as.character(input$forceKBA))
       # Prepare the table for display
       x <- tibble(
         Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
                       "DCI", "CMI", "GPP", "LED", "LCC"),
         Values = NA
       )
-    }else{
-      network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
-                              "_led", as.character(input$slideLED),"_lcc", as.character(input$slideLCC), "_", criteria5name(), as.character(input$slidecrit5), 
-                              "_up", as.character(input$slideUP), "_n",input$set_net, "_force", as.character(input$forceKBA))
-      # Prepare the table for display
-      x <- tibble(
-        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
-                      "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
-        Values = NA
-      )
     }
+    
+    
+#    if(input$criteria5 == ""){
+#      network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
+#                            "_led", as.character(input$slideLED),"_lcc" , as.character(input$slideLCC), "_up", as.character(input$slideUP),
+#                            "_n",input$set_net, "_force", as.character(input$forceKBA))
+#      
+#      # Prepare the table for display
+#      x <- tibble(
+#        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
+#                      "DCI", "CMI", "GPP", "LED", "LCC"),
+#        Values = NA
+#      )
+#    }else{
+#      network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
+#                              "_led", as.character(input$slideLED),"_lcc", as.character(input$slideLCC), "_", criteria5name(), as.character(input$slidecrit5), 
+#                              "_up", as.character(input$slideUP), "_n",input$set_net, "_force", as.character(input$forceKBA))
+#      # Prepare the table for display
+#      x <- tibble(
+#        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
+#                      "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
+#        Values = NA
+#      )
+#    }
     
     # Define a route to serve images from the external directory
     shiny::addResourcePath("imageNET", file.path(dirpath(), network_dir))

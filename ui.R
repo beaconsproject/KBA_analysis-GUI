@@ -176,27 +176,27 @@ ui = dashboardPage(skin="black",
                                                  # Dynamically update the content of Guidance based on selected tab
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabUpload'",
-                                                   includeMarkdown("./Rmd/upload_doc.md")
+                                                   includeMarkdown("./Rmd/step1_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabinput'",
-                                                   includeMarkdown("./Rmd/input_doc.md")
+                                                   includeMarkdown("./Rmd/step2_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabBuilder'",
-                                                   includeMarkdown("./Rmd/builder_doc.md")
+                                                   includeMarkdown("./Rmd/step3_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabDCI'",
-                                                   includeMarkdown("./Rmd/representation_doc.md")
+                                                   includeMarkdown("./Rmd/step4_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabKBA'",
-                                                   includeMarkdown("./Rmd/filterKBA_doc.md")
+                                                   includeMarkdown("./Rmd/step5_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabNET'",
-                                                   includeMarkdown("./Rmd/buildNet_doc.md")
+                                                   includeMarkdown("./Rmd/step6_doc.md")
                                                  )
                                         )
                                  ),
