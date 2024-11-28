@@ -891,8 +891,13 @@ server = function(input, output) {
   observeEvent(input$filterRep, {
     req(catchments())
     req(poly_filtered_reactive())
+    #browser()
     poly_sf_filtered <- poly_filtered_reactive()
-    poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 >= input$slideUP)
+    if(input$criteria5 != ""){
+      poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 >= input$slideUP)
+    }else{
+      poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 >= input$slideUP)
+    }
     
     if(nrow(poly_sf_rep)>0){
       showModal(modalDialog(
