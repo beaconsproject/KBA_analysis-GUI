@@ -23,7 +23,7 @@ source("./R/utils_KBA.R")
 source("./R/builder_KBA.R")
 
 bnd <- st_read("./www/Canada_WGS84.shp")
-intact <- st_read("./www/KBAIntactAreas_nad83.shp")
+intact <- st_read("./www/KBAIntactAreasbnd_nad83.shp")
 
 # Helper function to detect available drives (Windows only)
 get_available_drives <- function() {
