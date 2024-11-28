@@ -4,7 +4,7 @@ ui = dashboardPage(skin="black",
                        src = "logoblanc.png",  # Replace with your logo file name
                        height = "50px",   # Adjust the height of the logo
                        style = "margin-right: 10px;"  # Add some spacing around the logo
-                     ),"BEACONs KBA analysis"), titleWidth = 400,
+                     ),"BEACONs KBA Analysis"), titleWidth = 400,
                      tags$li(
                        class = "dropdown",  # Required for dropdown functionality
                        dropdownMenu(
