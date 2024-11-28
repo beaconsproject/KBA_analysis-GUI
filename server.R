@@ -1,4 +1,4 @@
-server = function(input, output) {
+server = function(input, output, session) {
   
   poly_sf_reactive <- reactiveVal()
   poly_filtered_reactive <- reactiveVal()
@@ -26,6 +26,11 @@ server = function(input, output) {
   # Set up directory chooser with expanded access
   shinyDirChoose(input, "directory", roots = roots, session = getDefaultReactiveDomain())
   
+  ################################################################################################
+  # RELOAD
+  observeEvent(input$reload_btn, {
+    session$reload()
+  })
   
   ################################################################################################
   # Set dir

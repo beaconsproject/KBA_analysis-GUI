@@ -5,6 +5,17 @@ ui = dashboardPage(skin="black",
                        height = "50px",   # Adjust the height of the logo
                        style = "margin-right: 10px;"  # Add some spacing around the logo
                      ),"BEACONs KBA Analysis"), titleWidth = 400,
+                     # Add Reload Button Next to Sidebar Toggle
+                     tags$li(
+                       class = "dropdown",
+                       actionButton(
+                         "reload_btn",
+                         label = "Reload",
+                         icon = icon("refresh"),
+                         style = "color: black; background-color: orange; border: none; font-size: 16px;"
+                       ),
+                       style = "position: absolute; left: 50px; top: 10px;"  # Adjust margin for placement next to the toggle
+                     ),
                      tags$li(
                        class = "dropdown",  # Required for dropdown functionality
                        dropdownMenu(
@@ -21,7 +32,8 @@ ui = dashboardPage(skin="black",
                          "About Us", 
                          style = "font-size: 16px; position: relative; top: 15px; right: 10px; white-space: nowrap; color: white;"
                        )
-                     )),
+                     )
+                   ),
                    dashboardSidebar(
                      width = 275,
                      sidebarMenu(id = "tabs",
@@ -138,11 +150,11 @@ ui = dashboardPage(skin="black",
                    ),     
                    dashboardBody(
                      useShinyjs(),
-                     #tags$head(tags$style(".skin-blue .sidebar a { color: #8a8a8a; }")),
                      tags$head(
                        # Link to custom CSS for the orange theme
                        tags$link(rel = "stylesheet", type = "text/css", href = "green-theme.css")
                      ),
+                     
                      tabItems(
                        # Overview tab: three tabPanels
                        tabItem(tabName = "overview",
