@@ -911,14 +911,16 @@ server = function(input, output, session) {
   ####################################################################################################
   observeEvent(input$runRep, {
     req(catchments())
-    req(poly_filtered_reactive())
+    poly_sf_filtered <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reduced")
+    poly_filtered_reactive(poly_sf_filtered)
+    #req(poly_filtered_reactive())
     showModal(modalDialog(
       title = "Processing",
       "Assessing representation. Please wait...",
       footer = NULL
     ))
 
-    poly_sf_filtered <- poly_filtered_reactive()
+    #poly_sf_filtered <- poly_filtered_reactive()
     if(attr(poly_sf_filtered, "sf_column") != "geometry"){
       poly_sf_filtered$geometry <- poly_sf_filtered$geom
     }
@@ -1123,7 +1125,7 @@ server = function(input, output, session) {
   observeEvent(input$filterRep, {
     req(catchments())
     req(poly_filtered_reactive())
-    #browser()
+    browser()
     poly_sf_filtered <- poly_filtered_reactive()
     if(input$criteria5 != ""){
       poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 >= input$slideUP)
