@@ -1,5 +1,7 @@
 server = function(input, output, session) {
   
+  # Reactive values 
+  input_paths <- reactiveVal(data.frame(Layer = character(), Path = character()))
   poly_sf_reactive <- reactiveVal()
   poly_filtered_reactive <- reactiveVal()
   upstream_reactive <- reactiveVal()
@@ -133,6 +135,10 @@ server = function(input, output, session) {
         shp_path <- file.path(dir, paste0(name, ".shp"))
         if (file.exists(shp_path)) {
           return(sf::st_read(shp_path))  # Use sf::st_read() to read the Shapefile
+          new_entry <- tibble(Layer = "catchments", file_path = path)
+          current_paths <- file_paths()
+          updated_paths <- bind_rows(current_paths, new_entry)
+          file_paths(updated_paths)
         } else {
           stop("Shapefile (.shp) is missing.")
         }
@@ -391,7 +397,6 @@ server = function(input, output, session) {
     if (!is.null(input$csv_file)) {
       req(input$csv_file)  # Ensure the CSV file is provided
       # Read the CSV file
-      #browser()
       csv_data <- read.csv(input$csv_file$datapath)
       
       # Check if "LCC" layer exists in the CSV
@@ -1130,7 +1135,6 @@ server = function(input, output, session) {
   observeEvent(input$filterRep, {
     req(catchments())
     req(poly_filtered_reactive())
-    browser()
     poly_sf_filtered <- poly_filtered_reactive()
     if(input$criteria5 != ""){
       poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 >= input$slideUP)
