@@ -54,7 +54,12 @@ server = function(input, output, session) {
     for(d in treedir){
       if(!dir.exists(file.path(dirpath(), d))){
         dir.create(file.path(dirpath(), d))
-        print("Folder created")
+        showModal(modalDialog(
+          title = "Output subdirectories created.",
+          "Please select input parameters by either uploading a csv containing input path or by pointing on the source files.",
+          easyClose = TRUE,
+          footer = modalButton("OK"))
+        )
       }
     }
     
