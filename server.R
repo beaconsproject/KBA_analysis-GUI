@@ -46,7 +46,7 @@ server = function(input, output, session) {
     dirpath()
   })
   
-  observeEvent(input$set_wd>0, {
+  observeEvent(input$set_wd, {
     req(input$set_wd)
     
     dirpath()
@@ -95,123 +95,317 @@ server = function(input, output, session) {
   # Set catchments
   ################################################################################################
   catchments <- reactive({
-    req(input$upload_catch)
-    infile <- input$upload_catch
-    if (length(infile$datapath) > 1) { # Check if multiple files are uploaded
-      dir <- unique(dirname(infile$datapath))  # Get the temp directory
-      outfiles <- file.path(dir, infile$name)  # Create new file path with original names
-      
-      # Strip the base name (without extension) of the first file
-      name <- tools::file_path_sans_ext(infile$name[1])  
-      purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y)) 
-      # Attempt to read the shapefile after renaming
-      shp_path <- file.path(dir, paste0(name, ".shp"))
-      if (file.exists(shp_path)) {
-        i <- sf::st_read(shp_path)  # Use sf::st_read() to read the Shapefile
+    req(!is.null(input$csv_file) || !is.null(input$upload_catch)) 
+    # Handle CSV File
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)
+      # Read the CSV file
+      csv_data <- read.csv(input$csv_file$datapath)
+      # Check if "catchment" layer exists
+      if ("catchments" %in% csv_data$Layer) {
+        path <- csv_data$Path[csv_data$Layer == "catchments"]
+        if (file.exists(path)) {
+          return(st_read(path))
+        } else {
+          stop("The catchment path in the CSV does not exist.")
+        }
       } else {
-        stop("Shapefile (.shp) is missing.")
+        stop("Catchment layer not found in CSV.")
       }
-    } else {
-      stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
     }
-    return(i)
+    # Handle Shapefile Upload
+    if (!is.null(input$upload_catch)) {
+      req(input$upload_catch)
+      infile <- input$upload_catch
+      if (length(infile$datapath) > 1) { # Check if multiple files are uploaded
+        dir <- unique(dirname(infile$datapath))  # Get the temp directory
+        outfiles <- file.path(dir, infile$name)  # Create new file path with original names
+      
+        # Strip the base name (without extension) of the first file
+        name <- tools::file_path_sans_ext(infile$name[1])  
+        purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y)) 
+        # Attempt to read the shapefile after renaming
+        shp_path <- file.path(dir, paste0(name, ".shp"))
+        if (file.exists(shp_path)) {
+          return(sf::st_read(shp_path))  # Use sf::st_read() to read the Shapefile
+        } else {
+          stop("Shapefile (.shp) is missing.")
+        }
+      } else {
+        stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
+      }
+    } 
   })
   ################################################################################################
   # Set streams
   ################################################################################################
   streams <- reactive({
-    req(input$upload_stream)
-    infile <- input$upload_stream
-    if (length(infile$datapath) > 1) { # Check if multiple files are uploaded
-      dir <- unique(dirname(infile$datapath))  # Get the temp directory
-      outfiles <- file.path(dir, infile$name)  # Create new file path with original names
-      
-      # Strip the base name (without extension) of the first file
-      name <- tools::file_path_sans_ext(infile$name[1])  
-      purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y)) 
-      # Attempt to read the shapefile after renaming
-      shp_path <- file.path(dir, paste0(name, ".shp"))
-      if (file.exists(shp_path)) {
-        i <- sf::st_read(shp_path)  # Use sf::st_read() to read the Shapefile
+    req(!is.null(input$csv_file) || !is.null(input$upload_stream)) 
+    # Handle CSV File
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)
+      # Read the CSV file
+      csv_data <- read.csv(input$csv_file$datapath)
+      # Check if "catchment" layer exists
+      if ("catchments" %in% csv_data$Layer) {
+        path <- csv_data$Path[csv_data$Layer == "stream"]
+        if (file.exists(path)) {
+          return(st_read(path))
+        } else {
+          stop("The catchment path in the CSV does not exist.")
+        }
       } else {
-        stop("Shapefile (.shp) is missing.")
+        stop("Catchment layer not found in CSV.")
       }
-    } else {
-      stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
     }
-    return(i)
+    # Handle Shapefile Upload
+    if (!is.null(input$upload_stream)) {
+      req(input$upload_stream)
+      infile <- input$upload_stream
+      if (length(infile$datapath) > 1) { # Check if multiple files are uploaded
+        dir <- unique(dirname(infile$datapath))  # Get the temp directory
+        outfiles <- file.path(dir, infile$name)  # Create new file path with original names
+        
+        # Strip the base name (without extension) of the first file
+        name <- tools::file_path_sans_ext(infile$name[1])  
+        purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y)) 
+        # Attempt to read the shapefile after renaming
+        shp_path <- file.path(dir, paste0(name, ".shp"))
+        if (file.exists(shp_path)) {
+          return(sf::st_read(shp_path))  # Use sf::st_read() to read the Shapefile
+        } else {
+          stop("Shapefile (.shp) is missing.")
+        }
+      } else {
+        stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
+      }
+    } 
   })
+  
   ################################################################################################
   # Set Planning region
   ################################################################################################
   planreg <- reactive({
-    req(input$upload_planreg)
-    infile <- input$upload_planreg
-    if (length(infile$datapath) > 1) { # Check if multiple files are uploaded
-      dir <- unique(dirname(infile$datapath))  # Get the temp directory
-      outfiles <- file.path(dir, infile$name)  # Create new file path with original names
-      
-      # Strip the base name (without extension) of the first file
-      name <- tools::file_path_sans_ext(infile$name[1])  
-      purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y)) 
-      # Attempt to read the shapefile after renaming
-      shp_path <- file.path(dir, paste0(name, ".shp"))
-      if (file.exists(shp_path)) {
-        i <- sf::st_read(shp_path)  # Use sf::st_read() to read the Shapefile
+    req(!is.null(input$csv_file) || !is.null(input$upload_planreg)) 
+    # Handle CSV File
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)
+      # Read the CSV file
+      csv_data <- read.csv(input$csv_file$datapath)
+      # Check if "catchment" layer exists
+      if ("catchments" %in% csv_data$Layer) {
+        path <- csv_data$Path[csv_data$Layer == "planning region"]
+        if (file.exists(path)) {
+          return(st_read(path))
+        } else {
+          stop("The catchment path in the CSV does not exist.")
+        }
       } else {
-        stop("Shapefile (.shp) is missing.")
+        stop("Catchment layer not found in CSV.")
       }
-    } else {
-      stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
     }
-    return(i)
+    # Handle Shapefile Upload
+    if (!is.null(input$upload_planreg)) {
+      req(input$upload_planreg)
+      infile <- input$upload_planreg
+      if (length(infile$datapath) > 1) { # Check if multiple files are uploaded
+        dir <- unique(dirname(infile$datapath))  # Get the temp directory
+        outfiles <- file.path(dir, infile$name)  # Create new file path with original names
+        
+        # Strip the base name (without extension) of the first file
+        name <- tools::file_path_sans_ext(infile$name[1])  
+        purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y)) 
+        # Attempt to read the shapefile after renaming
+        shp_path <- file.path(dir, paste0(name, ".shp"))
+        if (file.exists(shp_path)) {
+          return(sf::st_read(shp_path))  # Use sf::st_read() to read the Shapefile
+        } else {
+          stop("Shapefile (.shp) is missing.")
+        }
+      } else {
+        stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
+      }
+    } 
   })
+  
   ################################################################################################
   # Set LCC
   ################################################################################################  
-  lcc <- reactive({
-    req(input$upload_lcc)  # Ensure the file is uploaded
+#  lcc <- reactive({
+#    req(input$upload_lcc)  # Ensure the file is uploaded
 
-    # Get the file path from the file input
-    lcc_path <- input$upload_lcc$datapath
-    lcc_tiff <- raster(lcc_path)
-    return(lcc_tiff)
+#    # Get the file path from the file input
+#    lcc_path <- input$upload_lcc$datapath
+#    lcc_tiff <- raster(lcc_path)
+#    return(lcc_tiff)
+#  })
+  lcc <- reactive({
+    # Check if lcc file is uploaded first
+    if (!is.null(input$upload_lcc)) {
+      req(input$upload_lcc)  # Ensure the file is uploaded
+      # Get the file path from the file input
+      lcc_path <- input$upload_lcc$datapath
+      lcc_tiff <- raster(lcc_path)  # Load raster from the uploaded file
+      return(lcc_tiff)
+    }
+    
+    # If file not uploaded, check for CSV and parse the path for "LCC"
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)  # Ensure the CSV file is provided
+      # Read the CSV file
+      csv_data <- read.csv(input$csv_file$datapath)
+      
+      # Check if "LCC" layer exists in the CSV
+      if ("LCC" %in% csv_data$Layer) {
+        lcc_path <- csv_data$Path[csv_data$Layer == "LCC"]
+        if (file.exists(lcc_path)) {
+          lcc_tiff <- raster(lcc_path)  # Load raster from the path in CSV
+          return(lcc_tiff)
+        } else {
+          stop("The LCC path in the CSV does not exist.")
+        }
+      } else {
+        stop("LCC layer not found in CSV.")
+      }
+    }
+    
+    # Return NULL if neither file is provided
+    return(NULL)
   })
+  
   ################################################################################################
   # Set LED
   ################################################################################################
-  led <- reactive({
-    req(input$upload_led)  # Ensure the file is uploaded
+#  led <- reactive({
+#    req(input$upload_led)  # Ensure the file is uploaded
     
     # Get the file path from the file input
-    led_path <- input$upload_led$datapath
-    led_tiff <- raster(led_path)
-    return(led_tiff)
-  }) 
+#    led_path <- input$upload_led$datapath
+#    led_tiff <- raster(led_path)
+#    return(led_tiff)
+#  }) 
+  led <- reactive({
+    # Check if lcc file is uploaded first
+    if (!is.null(input$upload_led)) {
+      req(input$upload_led)  # Ensure the file is uploaded
+      # Get the file path from the file input
+      path <- input$upload_led$datapath
+      tiff <- raster(path)  # Load raster from the uploaded file
+      return(tiff)
+    }
+    
+    # If file not uploaded, check for CSV and parse the path for "LCC"
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)  # Ensure the CSV file is provided
+      # Read the CSV file
+      csv_data <- read.csv(input$csv_file$datapath)
+      
+      # Check if "LCC" layer exists in the CSV
+      if ("LCC" %in% csv_data$Layer) {
+        path <- csv_data$Path[csv_data$Layer == "LED"]
+        if (file.exists(path)) {
+          tiff <- raster(path)  # Load raster from the path in CSV
+          return(tiff)
+        } else {
+          stop("The LCC path in the CSV does not exist.")
+        }
+      } else {
+        stop("LCC layer not found in CSV.")
+      }
+    }
+    
+    # Return NULL if neither file is provided
+    return(NULL)
+  })
   ################################################################################################
   # Set GPP
   ################################################################################################
-  gpp <- reactive({
-    req(input$upload_gpp)  # Ensure the file is uploaded
+#  gpp <- reactive({
+#    req(input$upload_gpp)  # Ensure the file is uploaded
     
     # Get the file path from the file input
-    gpp_path <- input$upload_gpp$datapath
-    gpp_tiff <- raster(gpp_path)
-    return(gpp_tiff)
+#    gpp_path <- input$upload_gpp$datapath
+#    gpp_tiff <- raster(gpp_path)
+#    return(gpp_tiff)
+#  })
+  gpp <- reactive({
+    # Check if lcc file is uploaded first
+    if (!is.null(input$upload_gpp)) {
+      req(input$upload_gpp)  # Ensure the file is uploaded
+      # Get the file path from the file input
+      path <- input$upload_gpp$datapath
+      tiff <- raster(path)  # Load raster from the uploaded file
+      return(tiff)
+    }
+    
+    # If file not uploaded, check for CSV and parse the path for "LCC"
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)  # Ensure the CSV file is provided
+      # Read the CSV file
+      csv_data <- read.csv(input$csv_file$datapath)
+      
+      # Check if "LCC" layer exists in the CSV
+      if ("LCC" %in% csv_data$Layer) {
+        path <- csv_data$Path[csv_data$Layer == "GPP"]
+        if (file.exists(path)) {
+          tiff <- raster(path)  # Load raster from the path in CSV
+          return(tiff)
+        } else {
+          stop("The LCC path in the CSV does not exist.")
+        }
+      } else {
+        stop("LCC layer not found in CSV.")
+      }
+    }
+    
+    # Return NULL if neither file is provided
+    return(NULL)
   })
-
   ################################################################################################
   # Set CMI
   ################################################################################################
-  cmi <- reactive({
-    req(input$upload_cmi)  # Ensure the file is uploaded
+#  cmi <- reactive({
+#    req(input$upload_cmi)  # Ensure the file is uploaded
     
-    # Get the file path from the file input
-    cmi_path <- input$upload_cmi$datapath
-    cmi_tiff <- raster(cmi_path)
-    return(cmi_tiff)
+#    # Get the file path from the file input
+#    cmi_path <- input$upload_cmi$datapath
+#    cmi_tiff <- raster(cmi_path)
+#    return(cmi_tiff)
+#  })
+  cmi <- reactive({
+    # Check if lcc file is uploaded first
+    if (!is.null(input$upload_cmi)) {
+      req(input$upload_cmi)  # Ensure the file is uploaded
+      # Get the file path from the file input
+      path <- input$upload_cmi$datapath
+      tiff <- raster(path)  # Load raster from the uploaded file
+      return(tiff)
+    }
+    
+    # If file not uploaded, check for CSV and parse the path for "LCC"
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)  # Ensure the CSV file is provided
+      # Read the CSV file
+      #browser()
+      csv_data <- read.csv(input$csv_file$datapath)
+      
+      # Check if "LCC" layer exists in the CSV
+      if ("LCC" %in% csv_data$Layer) {
+        path <- csv_data$Path[csv_data$Layer == "CMI"]
+        if (file.exists(path)) {
+          tiff <- raster(path)  # Load raster from the path in CSV
+          return(tiff)
+        } else {
+          stop("The LCC path in the CSV does not exist.")
+        }
+      } else {
+        stop("LCC layer not found in CSV.")
+      }
+    }
+    
+    # Return NULL if neither file is provided
+    return(NULL)
   })
-  
   ################################################################################################
   # Set criteria5
   ################################################################################################
@@ -284,7 +478,7 @@ server = function(input, output, session) {
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c(""))
   
-    if(!is.null(input$upload_catch)){
+    if(!is.null(input$csv_file) || !is.null(input$upload_catch)){
       req(catchments())
 
       # show pop-up ...
@@ -312,33 +506,57 @@ server = function(input, output, session) {
       # Close the modal once processing is done
       removeModal()
     }
+    if(!is.null(input$csv_file) || !is.null(input$upload_planreg)){
+      req(planreg())
+      
+      showModal(modalDialog(
+        title = "Uploading study region extent. Please wait...",
+        easyClose = TRUE,
+        footer = NULL
+      ))
+      
+      planreg_4326 <- st_transform(planreg(), 4326)
+      map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
+      
+      map <- map %>%
+        fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
+        addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer2")) %>%
+        addLayersControl(position = "topright",
+                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
+                         overlayGroups = c("Catchments extent", "Planning region", "Intact areas"),
+                         options = layersControlOptions(collapsed = FALSE))  %>%
+        hideGroup(c(""))
+      
+      # Close the modal once processing is done
+      removeModal()
+    }
     map
   })
   
-  # Observe planning region uploads
-  observeEvent(input$upload_planreg, {
-    req(catchments()) # You can adjust this condition if it's not dependent on catchments
+#  # Observe planning region uploads
+#  observeEvent(input$upload_planreg, {
+#    req(catchments()) # You can adjust this condition if it's not dependent on catchments
     
-    showModal(modalDialog(
-      title = "Uploading study region extent. Please wait...",
-      easyClose = TRUE,
-      footer = NULL
-    ))
+#    showModal(modalDialog(
+#      title = "Uploading study region extent. Please wait...",
+#      easyClose = TRUE,
+#      footer = NULL
+#    ))
     
-    planreg_4326 <- st_transform(planreg(), 4326)
-    map_bounds1 <- planreg_4326 %>% st_bbox() %>% as.character()
+#    planreg_4326 <- st_transform(planreg(), 4326)
+#    map_bounds1 <- planreg_4326 %>% st_bbox() %>% as.character()
     
-    leafletProxy("map") %>%
-      fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
-      addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer2")) %>%
-      addLayersControl(position = "topright",
-                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Intact areas"),
-                       options = layersControlOptions(collapsed = FALSE)) %>%
-      hideGroup(c(""))
+#    leafletProxy("map") %>%
+#      fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
+#      addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer2")) %>%
+#      addLayersControl(position = "topright",
+#                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
+#                       overlayGroups = c("Catchments extent", "Planning region", "Intact areas"),
+#                       options = layersControlOptions(collapsed = FALSE)) %>%
+#      hideGroup(c(""))
     
-    removeModal()
-  })
+#    removeModal()
+#  })
   ####################################################################################################
   ####################################################################################################
   # Analysis
@@ -355,6 +573,23 @@ server = function(input, output, session) {
       easyClose = TRUE,
       footer = NULL)
     )
+    
+    #Clear previous map
+    leafletProxy("map") %>%
+      clearGroup('Potential KBAs') %>%
+      clearGroup('Upstream') %>%
+      clearGroup(reactive_labelKBA()) %>%
+      clearGroup(reactive_labelNET()) %>%
+      clearGroup("CMI") %>%
+      clearGroup("LED") %>%
+      clearGroup("GPP") %>%
+      clearGroup("LCC") %>%
+      clearGroup(criteria5name()) %>%
+      addLayersControl(position = "topright",
+                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
+                       overlayGroups = c("Catchments extent", "Planning region", "Intact areas"),
+                       options = layersControlOptions(collapsed = FALSE))
+    
     out_dir <- dirpath()
     # Generate neighbours table for catchments - Builder_input file for Builder. Skip this step is nghbrs.csv already exists.
     if (!file.exists(file.path(out_dir, "Builder_input/nghbrs.csv"))) {
@@ -502,7 +737,7 @@ server = function(input, output, session) {
   observeEvent(input$calc_dci, {
     req(input$set_grid)
     req(!is.null(poly_sf_reactive()))
-    
+
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     layer_to_check <- "KBAs_dci"
@@ -623,7 +858,6 @@ server = function(input, output, session) {
       req(!is.null(upstream_reactive()))
       # REDUCE NUMBER OF CONSERVATION AREAS
       # Select the top conservation area from each group based on smallest upstream area, largest DCI, and largest upstream intactness
-      #st_write(poly_sf,file.path(wd,'output','benchmark_attributes.shp')) #specify output folder and shapefile name
       poly_sf <- poly_sf_reactive()
       
       poly_sf_filtered <- poly_sf %>%
@@ -683,7 +917,7 @@ server = function(input, output, session) {
       "Assessing representation. Please wait...",
       footer = NULL
     ))
-    
+
     poly_sf_filtered <- poly_filtered_reactive()
     if(attr(poly_sf_filtered, "sf_column") != "geometry"){
       poly_sf_filtered$geometry <- poly_sf_filtered$geom
@@ -691,7 +925,6 @@ server = function(input, output, session) {
     
     # CMI
     if (!file.exists(file.path(dirpath(), "output/kba_cmi.tif"))) {
-      if(!is.null(input$upload_cmi)){
         cmi_crop <- crop(cmi(), planreg())
         kba_cmi <- mask(cmi_crop, planreg())
         
@@ -700,7 +933,6 @@ server = function(input, output, session) {
         writeRaster(kba_cmi, file.path(dirpath(), "output/kba_cmi.tif"), format = "GTiff")
         cmi_4326 <- kba_cmi %>% aggregate(fact = 2) %>% projectRaster(crs = "EPSG:4326")
         writeRaster(cmi_4326, file.path(dirpath(), "output/kba_cmi_4326.tif"), format = "GTiff")
-      } 
     }else{
        kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
        cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
@@ -714,7 +946,6 @@ server = function(input, output, session) {
     
     # LED
     if (!file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
-      if(!is.null(input$upload_led)){
         led_crop <- crop(led(), planreg())
         kba_led <- mask(led_crop, planreg())
         
@@ -723,7 +954,6 @@ server = function(input, output, session) {
         writeRaster(kba_led, file.path(dirpath(), "output/kba_led.tif"), format = "GTiff")
         led_4326 <- kba_led %>% aggregate( fact = 4) %>% projectRaster(crs = "EPSG:4326")
         writeRaster(led_4326, file.path(dirpath(), "output/kba_led_4326.tif"), format = "GTiff")
-      }
     } else{
       kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
       led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
@@ -737,7 +967,6 @@ server = function(input, output, session) {
     
     # GPP
     if (!file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
-      if(!is.null(input$upload_gpp)){
         gpp_crop <- crop(gpp(), planreg())
         kba_gpp <- mask(gpp_crop, planreg())
         
@@ -746,7 +975,6 @@ server = function(input, output, session) {
         writeRaster(kba_gpp, file.path(dirpath(), "output/kba_gpp.tif"), format = "GTiff")
         gpp_4326 <- kba_gpp %>% aggregate( fact = 4) %>% projectRaster(crs = "EPSG:4326")
         writeRaster(gpp_4326, file.path(dirpath(), "output/kba_gpp_4326.tif"), format = "GTiff")
-      }
     } else{
       kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
       gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
@@ -759,7 +987,6 @@ server = function(input, output, session) {
     
     # LCC
     if (!file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
-      if(!is.null(input$upload_lcc)){
         lcc_crop <- crop(lcc(), planreg())
         kba_lcc <- mask(lcc_crop, planreg())
         kba_lcc[kba_lcc > 19] <- NA # all land cover classes > 19 are NA 
@@ -774,8 +1001,6 @@ server = function(input, output, session) {
         writeRaster(kba_lcc, file.path(dirpath(), "output/kba_lcc.tif"), format = "GTiff")
         lcc_4326 <- terra::aggregate(rast(kba_lcc), fact = 40, fun = modal) %>% project("EPSG:4326")
         writeRaster(lcc_4326, file.path(dirpath(), "output/kba_lcc_4326.tif"), filetype = "GTiff")
-        
-      }
     }else{
       kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
       lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
@@ -845,6 +1070,8 @@ server = function(input, output, session) {
     }
     
     poly_sf_filtered_4326 <- poly_sf_filtered %>% st_transform(4326)
+    unique_kbas <- unique(poly_sf_filtered$network)
+    updateSelectInput(getDefaultReactiveDomain(), "KBA", choices = unique_kbas)
     pop = ~paste("KBA:", network)
     
     leafletProxy("map") %>%

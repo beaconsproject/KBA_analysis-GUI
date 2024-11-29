@@ -56,7 +56,11 @@ ui = dashboardPage(skin="black",
                        actionButton("set_wd", "Confirm", icon = icon(name = "check", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
                        tags$br(),
                        HTML("<h4>&nbsp; &nbsp; Upload spatial dataset</h4>"),
-                       div(style = "margin-top: 0px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
+                       # File input to upload CSV
+                       fileInput("csv_file", "Choose CSV containing files path", accept = ".csv"),
+                       div(style = "margin: 15px; margin-top: -20px; font-size:13px;font-weight: bold", "  --  Or  --"),
+                       div(style = "margin: 15px; font-size:13px;font-weight: bold", "Upload layers"),
+                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_stream", label = "Streams dataset", multiple = TRUE)),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_planreg", label = "Planning region", multiple = TRUE)),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_lcc", label = "LCC", multiple = FALSE)),
@@ -69,7 +73,8 @@ ui = dashboardPage(skin="black",
                        tags$script(HTML("$(document).on('shiny:inputinitialized', function(event) {
                              if (event.name === 'criteria5') {$('#criteria5').attr('maxlength', 10);}
                              });
-                       "))
+                       ")),
+                       actionButton("save_path", "Save path into csv", icon = icon(name = "check", lib = "font-awesome"), class = "btn-warning", style="width:200px")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  
