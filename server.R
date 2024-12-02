@@ -62,6 +62,13 @@ server = function(input, output, session) {
           easyClose = TRUE,
           footer = modalButton("OK"))
         )
+      }else{
+        showModal(modalDialog(
+          title = "Output directory selected",
+          "Please select input parameters by either uploading a csv containing input path or by pointing on the source files.",
+          easyClose = TRUE,
+          footer = modalButton("OK"))
+        )
       }
     }
     
@@ -242,14 +249,6 @@ server = function(input, output, session) {
   ################################################################################################
   # Set LCC
   ################################################################################################  
-#  lcc <- reactive({
-#    req(input$upload_lcc)  # Ensure the file is uploaded
-
-#    # Get the file path from the file input
-#    lcc_path <- input$upload_lcc$datapath
-#    lcc_tiff <- raster(lcc_path)
-#    return(lcc_tiff)
-#  })
   lcc <- reactive({
     # Check if lcc file is uploaded first
     if (!is.null(input$upload_lcc)) {
@@ -287,14 +286,6 @@ server = function(input, output, session) {
   ################################################################################################
   # Set LED
   ################################################################################################
-#  led <- reactive({
-#    req(input$upload_led)  # Ensure the file is uploaded
-    
-    # Get the file path from the file input
-#    led_path <- input$upload_led$datapath
-#    led_tiff <- raster(led_path)
-#    return(led_tiff)
-#  }) 
   led <- reactive({
     # Check if lcc file is uploaded first
     if (!is.null(input$upload_led)) {
@@ -331,14 +322,6 @@ server = function(input, output, session) {
   ################################################################################################
   # Set GPP
   ################################################################################################
-#  gpp <- reactive({
-#    req(input$upload_gpp)  # Ensure the file is uploaded
-    
-    # Get the file path from the file input
-#    gpp_path <- input$upload_gpp$datapath
-#    gpp_tiff <- raster(gpp_path)
-#    return(gpp_tiff)
-#  })
   gpp <- reactive({
     # Check if lcc file is uploaded first
     if (!is.null(input$upload_gpp)) {
@@ -375,14 +358,6 @@ server = function(input, output, session) {
   ################################################################################################
   # Set CMI
   ################################################################################################
-#  cmi <- reactive({
-#    req(input$upload_cmi)  # Ensure the file is uploaded
-    
-#    # Get the file path from the file input
-#    cmi_path <- input$upload_cmi$datapath
-#    cmi_tiff <- raster(cmi_path)
-#    return(cmi_tiff)
-#  })
   cmi <- reactive({
     # Check if lcc file is uploaded first
     if (!is.null(input$upload_cmi)) {
@@ -445,7 +420,6 @@ server = function(input, output, session) {
     return(intact_4326)
   })
 ################################################################################################
-
 # Observe when the dataset is loaded and update the selectInput choices
   observe({
     req(catchments())  # Ensure the catchments data is available
@@ -455,9 +429,9 @@ server = function(input, output, session) {
     
     # Update the choices of the selectInput elements with column names
     updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = colnames, selected = "ecoMDAzone")
-    updateSelectInput(session = getDefaultReactiveDomain(), "intactColname", choices = colnames, selected = "IntactPB")
+    updateSelectInput(session = getDefaultReactiveDomain(), "intactColname", choices = colnames, selected = "intactKBA")
     updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="Area_land")
-    updateSelectInput(session = getDefaultReactiveDomain(), "intactseedColname", choices = colnames, selected="kba_m2")
+    updateSelectInput(session = getDefaultReactiveDomain(), "intactseedColname", choices = colnames, selected="intactKBA")
     
   })
   
@@ -602,13 +576,20 @@ server = function(input, output, session) {
     
     out_dir <- dirpath()
     # Generate neighbours table for catchments - Builder_input file for Builder. Skip this step is nghbrs.csv already exists.
-    if (!file.exists(file.path(out_dir, "Builder_input/nghbrs.csv"))) {
-      nghbrs <- neighbours(catchments())
+    if (!is.null(input$upload_nghbr)) {
+      nghbrs_path <- input$upload_nghbr$datapath
+      nghbrs <- read.csv(nghbrs_path)
       nghbrs_reactive(nghbrs)
       write.csv(nghbrs, file=file.path(out_dir,"Builder_input/nghbrs.csv"), row.names=FALSE) # Convert neighbours table to csv file.
     }else{
-      nghbrs <- read.csv(file.path(out_dir,'Builder_input','nghbrs.csv'))
-      nghbrs_reactive(nghbrs)
+      if (!file.exists(file.path(out_dir, "Builder_input/nghbrs.csv"))) {
+        nghbrs <- neighbours(catchments())
+        nghbrs_reactive(nghbrs)
+        write.csv(nghbrs, file=file.path(out_dir,"Builder_input/nghbrs.csv"), row.names=FALSE) # Convert neighbours table to csv file.
+      }else{
+        nghbrs <- read.csv(file.path(out_dir,'Builder_input','nghbrs.csv'))
+        nghbrs_reactive(nghbrs)
+      }
     }
     # Create seed list - input file for Builder that identifies where construction of conservation area is to start
     # intact ranges from 0 to 1 and is the minimum required proporational intactness required for a catchment to be a seed (0.8 = 80%)
