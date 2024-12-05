@@ -128,6 +128,8 @@ ui = dashboardPage(skin="black",
                      conditionalPanel(
                        condition="input.tabs=='tabKBA'",
                        fileInput(inputId = "upload_refarea", label = "Upload reference areas shapefile", multiple = TRUE),
+                       div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
+                                                                   selected = NULL)),
                        actionButton("runRep", "Run representation analysis", icon = icon(name = "image", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                        div("Filter KBAs based on criteria dissimilarity metrics (DMS)", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
                        div("DMs range from 0 (low dissimilarity) to 1 (high dissimilarity)", style = "font-size: 12px; margin-top : 20px; margin-left : 20px; "),
