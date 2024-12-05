@@ -106,10 +106,13 @@ ui = dashboardPage(skin="black",
                        ),
                      conditionalPanel(
                        condition="input.tabs=='tabDCI'",
-                       actionButton(inputId = "calc_dci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("1. Calculate hydrology metrics")), class = "btn-warning", style="width:250px"),
+                       div(style = "margin: 14px; font-size:15px; font-weight: bold", "1. Hydrology Metrics "),
+                       div(style = "margin: 13px; font-size:13px; font-weight: bold", "Calculate DCI and add upstream attributes to KBAs"), 
+                       actionButton(inputId = "calc_dci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px"),
                        tags$br(),
-                       textInput("set_grid", "2. Set grid cell size", value = 10000),
-                       actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("3. Reduce number of KBAs")), class = "btn-warning", style="width:250px")
+                       div(style = "margin: 14px; font-size:15px; font-weight: bold", "2. Reduce number of KBAs "),
+                       div(style = "margin-top: -20px;",textInput("set_grid", label = div(style = "font-size:13px;margin: 0px;", "Specify grid cell size"), value = 10000)),
+                       actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabKBA'",
