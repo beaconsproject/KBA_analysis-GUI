@@ -57,7 +57,7 @@ ui = dashboardPage(skin="black",
                        tags$br(),
                        HTML("<h4>&nbsp; &nbsp; Upload spatial dataset</h4>"),
                        # File input to upload CSV
-                       fileInput("csv_file", "Choose CSV containing files path", accept = ".csv"),
+                       fileInput("csv_file", "Use csv with file pathways", accept = ".csv"),
                        div(style = "margin: 15px; margin-top: -20px; font-size:13px;font-weight: bold", "  --  Or  --"),
                        div(style = "margin: 15px; font-size:13px;font-weight: bold", "Upload layers"),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
@@ -68,13 +68,12 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_gpp", label = "GPP", multiple = FALSE)),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_custom", label = "Custom criteria", multiple = FALSE)),
-                       div(style = "margin-top: -20px;", textInput("criteria5", label = div(style = "font-size:13px;", "Set custom criteria accronym"), value = "")),
+                       #div(style = "margin-top: -20px;", textInput("criteria5", label = div(style = "font-size:13px;", "Set custom criteria accronym"), value = "")),
                        # Add JavaScript to limit the input length to 10 characters (change as needed)
                        tags$script(HTML("$(document).on('shiny:inputinitialized', function(event) {
                              if (event.name === 'criteria5') {$('#criteria5').attr('maxlength', 10);}
                              });
-                       ")),
-                       actionButton("save_path", "Save path into csv", icon = icon(name = "check", lib = "font-awesome"), class = "btn-warning", style="width:200px")
+                       "))
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  

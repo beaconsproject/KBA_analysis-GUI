@@ -287,7 +287,7 @@ server = function(input, output, session) {
   # Set LED
   ################################################################################################
   led <- reactive({
-    # Check if lcc file is uploaded first
+    # Check if led file is uploaded first
     if (!is.null(input$upload_led)) {
       req(input$upload_led)  # Ensure the file is uploaded
       # Get the file path from the file input
@@ -296,23 +296,23 @@ server = function(input, output, session) {
       return(tiff)
     }
     
-    # If file not uploaded, check for CSV and parse the path for "LCC"
+    # If file not uploaded, check for CSV and parse the path for "LED"
     if (!is.null(input$csv_file)) {
       req(input$csv_file)  # Ensure the CSV file is provided
       # Read the CSV file
       csv_data <- read.csv(input$csv_file$datapath)
       
-      # Check if "LCC" layer exists in the CSV
-      if ("LCC" %in% csv_data$Layer) {
+      # Check if "LED" layer exists in the CSV
+      if ("LED" %in% csv_data$Layer) {
         path <- csv_data$Path[csv_data$Layer == "LED"]
         if (file.exists(path)) {
           tiff <- raster(path)  # Load raster from the path in CSV
           return(tiff)
         } else {
-          stop("The LCC path in the CSV does not exist.")
+          stop("The LED path in the CSV does not exist.")
         }
       } else {
-        stop("LCC layer not found in CSV.")
+        stop("LED layer not found in CSV.")
       }
     }
     
@@ -323,7 +323,7 @@ server = function(input, output, session) {
   # Set GPP
   ################################################################################################
   gpp <- reactive({
-    # Check if lcc file is uploaded first
+    # Check if gpp file is uploaded first
     if (!is.null(input$upload_gpp)) {
       req(input$upload_gpp)  # Ensure the file is uploaded
       # Get the file path from the file input
@@ -332,23 +332,23 @@ server = function(input, output, session) {
       return(tiff)
     }
     
-    # If file not uploaded, check for CSV and parse the path for "LCC"
+    # If file not uploaded, check for CSV and parse the path for "GPP"
     if (!is.null(input$csv_file)) {
       req(input$csv_file)  # Ensure the CSV file is provided
       # Read the CSV file
       csv_data <- read.csv(input$csv_file$datapath)
       
-      # Check if "LCC" layer exists in the CSV
-      if ("LCC" %in% csv_data$Layer) {
+      # Check if "GPP" layer exists in the CSV
+      if ("GPP" %in% csv_data$Layer) {
         path <- csv_data$Path[csv_data$Layer == "GPP"]
         if (file.exists(path)) {
           tiff <- raster(path)  # Load raster from the path in CSV
           return(tiff)
         } else {
-          stop("The LCC path in the CSV does not exist.")
+          stop("The GPP path in the CSV does not exist.")
         }
       } else {
-        stop("LCC layer not found in CSV.")
+        stop("GPP layer not found in CSV.")
       }
     }
     
@@ -359,7 +359,7 @@ server = function(input, output, session) {
   # Set CMI
   ################################################################################################
   cmi <- reactive({
-    # Check if lcc file is uploaded first
+    # Check if cmi file is uploaded first
     if (!is.null(input$upload_cmi)) {
       req(input$upload_cmi)  # Ensure the file is uploaded
       # Get the file path from the file input
@@ -368,48 +368,89 @@ server = function(input, output, session) {
       return(tiff)
     }
     
-    # If file not uploaded, check for CSV and parse the path for "LCC"
+    # If file not uploaded, check for CSV and parse the path for "CMI"
     if (!is.null(input$csv_file)) {
       req(input$csv_file)  # Ensure the CSV file is provided
       # Read the CSV file
       csv_data <- read.csv(input$csv_file$datapath)
       
-      # Check if "LCC" layer exists in the CSV
-      if ("LCC" %in% csv_data$Layer) {
+      # Check if "CMI" layer exists in the CSV
+      if ("CMI" %in% csv_data$Layer) {
         path <- csv_data$Path[csv_data$Layer == "CMI"]
         if (file.exists(path)) {
           tiff <- raster(path)  # Load raster from the path in CSV
           return(tiff)
         } else {
-          stop("The LCC path in the CSV does not exist.")
+          stop("The CMI path in the CSV does not exist.")
         }
       } else {
-        stop("LCC layer not found in CSV.")
+        stop("CMI layer not found in CSV.")
       }
     }
     
     # Return NULL if neither file is provided
     return(NULL)
   })
+  
   ################################################################################################
   # Set criteria5
   ################################################################################################
   criteria5 <- reactive({
-    req(input$upload_custom)  # Ensure the file is uploaded
+    # Check if custom file is uploaded first
+    if (!is.null(input$upload_custom)) {
+      req(input$upload_custom)  # Ensure the file is uploaded
+      # Get the file path from the file input
+      crit5_path <- input$upload_custom$datapath
+      crit5_tiff <- raster(crit5_path)
+      rastName <- sub("\\..*$", "", input$upload_custom$name)
+      criteria5name(rastName)
+      updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = rastName)
+      updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = rastName)
+      grp <- c("CMI", "GPP", "LED", "LCC", criteria5name())
+      legendcrit(grp)
+      return(crit5_tiff)
+    }
     
-    # Get the file path from the file input
-    crit5_path <- input$upload_custom$datapath
-    crit5_tiff <- raster(crit5_path)
-    return(crit5_tiff)
-  })
+    # If file not uploaded, check for CSV and parse the path for "CMI"
+    if (!is.null(input$csv_file)) {
+      req(input$csv_file)  
+      # Ensure the CSV file is provided
+      # Read the CSV file
+      csv_data <- read.csv(input$csv_file$datapath)
+      
+      # Extract custom name
+      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region")
+      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
+      
+      # Display result
+      if (!is.null(unexpected_layers)) {
+        if(length(unexpected_layers)==1){
+          print(paste("Unexpected layers found:", paste(unexpected_layers, collapse = ", ")))
+          path <- csv_data$Path[csv_data$Layer == unexpected_layers]
+          if (file.exists(path)) {
+            crit5_tiff <- raster(path)  # Load raster from the path in CSV
+            criteria5name(unexpected_layers)
+            updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = unexpected_layers)
+            updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = unexpected_layers)
+            grp <- c("CMI", "GPP", "LED", "LCC", criteria5name())
+            legendcrit(grp)
+            return(crit5_tiff)
+          } else {
+            stop("The custom vatiable path in the CSV does not exist.")
+          }
+        }else{
+          # show pop-up ...
+          showModal(modalDialog(
+            title = "Provided layer csv pathways include more than one custom layer.", "The app allow only the addtion of one custom layer at the moment. Please fix the csv.",
+            easyClose = TRUE,
+            footer = NULL)
+          )
+        }
+      }
+    }
+    
+    #req(input$upload_custom)  # Ensure the file is uploaded
   
-  observeEvent(input$criteria5, {
-    req(input$criteria5)
-    criteria5name(input$criteria5)
-    updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = input$criteria5)
-    updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = input$criteria5)
-    grp <- c("CMI", "GPP", "LED", "LCC", criteria5name())
-    legendcrit(grp)
   })
   
   ################################################################################################
@@ -419,8 +460,8 @@ server = function(input, output, session) {
     intact_4326 <- intact %>% st_transform(4326)
     return(intact_4326)
   })
-################################################################################################
-# Observe when the dataset is loaded and update the selectInput choices
+  ################################################################################################
+  # Observe when the dataset is loaded and update the selectInput choices
   observe({
     req(catchments())  # Ensure the catchments data is available
     catchment_data <- catchments()
@@ -517,30 +558,6 @@ server = function(input, output, session) {
     map
   })
   
-#  # Observe planning region uploads
-#  observeEvent(input$upload_planreg, {
-#    req(catchments()) # You can adjust this condition if it's not dependent on catchments
-    
-#    showModal(modalDialog(
-#      title = "Uploading study region extent. Please wait...",
-#      easyClose = TRUE,
-#      footer = NULL
-#    ))
-    
-#    planreg_4326 <- st_transform(planreg(), 4326)
-#    map_bounds1 <- planreg_4326 %>% st_bbox() %>% as.character()
-    
-#    leafletProxy("map") %>%
-#      fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
-#      addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer2")) %>%
-#      addLayersControl(position = "topright",
-#                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-#                       overlayGroups = c("Catchments extent", "Planning region", "Intact areas"),
-#                       options = layersControlOptions(collapsed = FALSE)) %>%
-#      hideGroup(c(""))
-    
-#    removeModal()
-#  })
   ####################################################################################################
   ####################################################################################################
   # Analysis
@@ -728,7 +745,7 @@ server = function(input, output, session) {
   observeEvent(input$calc_dci, {
     req(input$set_grid)
     req(!is.null(poly_sf_reactive()))
-
+    browser()
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     layer_to_check <- "KBAs_dci"
@@ -1020,7 +1037,7 @@ server = function(input, output, session) {
     selected_cols <- lcc_cols
     
     # criteria5
-    if(input$criteria5 != ""){
+    if(!is.null(criteria5())){
       if (!file.exists(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))) {
         criteria5_crop <- crop(criteria5(), planreg())
         kba_criteria5 <- mask(criteria5_crop, planreg())
@@ -1087,7 +1104,8 @@ server = function(input, output, session) {
                        overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Intact areas", "Streams", legendcrit()),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams"))
-    if(input$criteria5 != ""){
+
+    if(!is.null(criteria5)){
       leafletProxy("map") %>%
         addRasterImage(crit5_4326, colors=val.color, opacity = 1, group=criteria5name()) %>%
         addLegend(pal = crit_xpal, values = values(crit5_4326), opacity = 1, title = criteria5name(),
@@ -1117,8 +1135,9 @@ server = function(input, output, session) {
     req(catchments())
     req(poly_filtered_reactive())
     poly_sf_filtered <- poly_filtered_reactive()
-    if(input$criteria5 != ""){
-      poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 >= input$slideUP)
+    #if(input$criteria5 != ""){
+    if(!is.null(criteria5())){
+      poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
     }else{
       poly_sf_rep <- filter(poly_sf_filtered, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 >= input$slideUP)
     }
@@ -1217,7 +1236,6 @@ server = function(input, output, session) {
   ####################################################################################################
   observeEvent(input$KBA, {
     req(input$KBA)  # Ensure there is a selected KBA
-    
     # Define a route to serve images from the external directory
     shiny::addResourcePath("image", file.path(dirpath(), "output/plot"))
     
@@ -1226,7 +1244,7 @@ server = function(input, output, session) {
     selected_polygon <- potential_kbas[potential_kbas$network == input$KBA, ]
     
     # Prepare the table for display
-    if(input$criteria5 != ""){
+    if(is.null(criteria5())){
       x <- tibble(
         Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
                     "DCI", "CMI", "GPP", "LED", "LCC"),
@@ -1248,7 +1266,8 @@ server = function(input, output, session) {
     x$Values[x$Variables == "GPP"] <- round(selected_polygon$gpp, 2)
     x$Values[x$Variables == "LED"] <- round(selected_polygon$led, 2)
     x$Values[x$Variables == "LCC"] <- round(selected_polygon$lcc, 1)
-    if(input$criteria5 != ""){
+
+    if(!is.null(criteria5())){
       x$Values[x$Variables == criteria5name()] <- round(selected_polygon[[criteria5name()]], 1)
     }
     output$outkba <- renderTable({
@@ -1277,10 +1296,12 @@ server = function(input, output, session) {
                             tags$h3("LCC"),  # Title 
                             tags$img(src = paste0("image/lcc/", input$KBA, ".png"), height = "400px", width = "300px")
                    ),
-                   tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                            tags$h3(input$criteria5),  # Title 
-                            tags$img(src = paste0("image/", input$criteria5, "/", input$KBA, ".png"), height = "400px", width = "300px")
-                   )
+                   if(!is.null(criteria5())){
+                     tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
+                              tags$h3(criteria5name()),  # Title 
+                              tags$img(src = paste0("image/", criteria5name(), "/", input$KBA, ".png"), height = "400px", width = "300px")
+                     )
+                   }
           )
         )
       })
@@ -1301,8 +1322,8 @@ server = function(input, output, session) {
     ))
     
     if(input$forceKBA){
-      if(input$criteria5==""){
-        potential_kbas <- filter(poly_filtered_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 >= input$slideUP)
+      if(!is.null(criteria5())){
+        potential_kbas <- filter(poly_filtered_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
         outName <- paste0("Network_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
                           "_lcc", as.character(input$slideLCC), "_up", as.character(input$slideUP), "_n", input$set_net, "_force", as.character(input$forceKBA))
         network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
@@ -1414,8 +1435,9 @@ server = function(input, output, session) {
         kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
         kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
         kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
-        if(!input$criteria5==""){
-          kba_crit5 <- raster(file.path(dirpath(), "output",paste0(input$criteria5,".tif")))
+
+        if(!is.null(criteria5())){
+          kba_crit5 <- raster(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
         } 
         #Prep criteria legend LCC
         unique_sorted_values <- sort(na.omit(unique(values(kba_lcc))))
@@ -1432,7 +1454,7 @@ server = function(input, output, session) {
       
         networks_sf$gpp <- calc_dissimilarity(networks_sf, planreg(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"gpp")) 
         
-        if(!input$criteria5==""){
+        if(!is.null(criteria5())){
           networks_sf[[criteria5name()]] <- calc_dissimilarity(networks_sf, planreg(), kba_crit5, 'continuous', plot_out_dir=file.path(dirpath(), network_dir, criteria5name())) 
         }
       
@@ -1488,18 +1510,6 @@ server = function(input, output, session) {
         )
     
     )
-   # outfreqnet(
-   #   outfreqnet() %>% 
-   #     mutate(
-   #       Count = if_else(Variables == "Networks", nrow(networks_sf), Count)
-   #     )
-   # )
-   # outfreqnet(
-   #   outfreqnet() %>% 
-   #     mutate(
-   #       Count = if_else(Variables == "Filtered networks", NA, Count)
-   #     )
-   # )
   })
   
   output$outnetfreq <- renderTable({
@@ -1513,7 +1523,7 @@ server = function(input, output, session) {
     
     network_sf <- network_reactive()
     # criteria5
-    if(input$criteria5 == ""){
+    if(!is.null(criteria5())){
       network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 >= input$slideNETUP)
     }else{
       network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & !!sym(criteria5name()) <=input$slideNETcrit5 & up_km2 >= input$slideNETUP)
@@ -1608,7 +1618,7 @@ server = function(input, output, session) {
     req(input$network)  # Ensure there is a selected KBA
     
     if(input$forceKBA){
-      if(input$criteria5==""){
+      if(!is.null(criteria5())){
         network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
                               "_led", as.character(input$slideLED),"_lcc" , as.character(input$slideLCC), "_up", as.character(input$slideUP),
                               "_n",input$set_net, "_force", as.character(input$forceKBA))
@@ -1639,31 +1649,7 @@ server = function(input, output, session) {
         Values = NA
       )
     }
-    
-    
-#    if(input$criteria5 == ""){
-#      network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
-#                            "_led", as.character(input$slideLED),"_lcc" , as.character(input$slideLCC), "_up", as.character(input$slideUP),
-#                            "_n",input$set_net, "_force", as.character(input$forceKBA))
-#      
-#      # Prepare the table for display
-#      x <- tibble(
-#        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
-#                      "DCI", "CMI", "GPP", "LED", "LCC"),
-#        Values = NA
-#      )
-#    }else{
-#      network_dir <- paste0("output/plotnet_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),
-#                              "_led", as.character(input$slideLED),"_lcc", as.character(input$slideLCC), "_", criteria5name(), as.character(input$slidecrit5), 
-#                              "_up", as.character(input$slideUP), "_n",input$set_net, "_force", as.character(input$forceKBA))
-#      # Prepare the table for display
-#      x <- tibble(
-#        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
-#                      "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
-#        Values = NA
-#      )
-#    }
-    
+
     # Define a route to serve images from the external directory
     shiny::addResourcePath("imageNET", file.path(dirpath(), network_dir))
     
@@ -1680,7 +1666,8 @@ server = function(input, output, session) {
     x$Values[x$Variables == "GPP"] <- round(selected_network$gpp, 2)
     x$Values[x$Variables == "LED"] <- round(selected_network$led, 2)
     x$Values[x$Variables == "LCC"] <- round(selected_network$lcc, 1)
-    if(input$criteria5 != ""){
+
+    if(!is.null(criteria5())){
       x$Values[x$Variables == criteria5name()] <- round(selected_network[[criteria5name()]], 1)
     }
     
@@ -1709,10 +1696,10 @@ server = function(input, output, session) {
                           tags$h3("LCC"),  # Title 
                           tags$img(src = paste0("imageNET/lcc/", input$network, ".png"), height = "400px", width = "300px")
                  ),
-                 if(input$criteria5 != ""){
+                 if(!is.null(criteria5())){
                    tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                          tags$h3(input$criteria5),  # Title 
-                          tags$img(src = paste0("imageNET/", input$criteria5, "/", input$network, ".png"), height = "400px", width = "300px")
+                          tags$h3(criteria5name()),  # Title 
+                          tags$img(src = paste0("imageNET/", criteria5name(), "/", input$network, ".png"), height = "400px", width = "300px")
                    )
                  }
         )
