@@ -42,17 +42,17 @@ ui = dashboardPage(skin="black",
                                  menuItem("Build KBAs (optional)", tabName = "build_kbas", icon = icon(name = "fas fa-tools", lib = "font-awesome"), startExpanded = FALSE,
                                           #menuSubItem("Step 1: Set input parameters", tabName = "tabUpload", icon = icon("th")),
                                           menuSubItem("Create Builder input", tabName = "tabinput", icon = icon("th")),                
-                                          menuSubItem("Run Builder", tabName = "tabBuilder", icon = icon("th")),                
-                                          menuSubItem("Calculate hydrology metrics on KBAs", tabName = "tabDCI", icon = icon("th"))
+                                          menuSubItem("Run Builder", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
+                                          menuSubItem("Calculate hydrology metrics on KBAs", tabName = "tabDCI", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
                                           ),
-                                 menuItem("Evaluate PAs (optional)", tabName = "load_pas", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"), startExpanded = FALSE,
-                                          menuSubItem("Calculate hydrology metrics on PAs", tabName = "tabPAs", icon = icon("th"))
+                                 menuItem("Evaluate PAs (optional)", tabName = "load_pas", icon = icon(name = "fas fa-search", lib = "font-awesome"), startExpanded = FALSE,
+                                          menuSubItem("Calculate hydrology metrics on PAs", tabName = "tabPAs", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
                                           ),
                                  menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
-                                          menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Upload reference area<br>and assess representation</span>'), tabName = "tabKBA", icon = icon("th")),
-                                          menuSubItem("Create KBAs network", tabName = "tabNET", icon = icon("th"))
+                                          menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Upload reference area<br>and assess representation</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
+                                          menuSubItem("Create KBAs network", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))
                                           ),
-                                 menuItem("Download results", tabName = "download", icon = icon("th")),
+                                 menuItem("Download results", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome")),
                                  hr()
                      ),
                      conditionalPanel(
@@ -121,10 +121,10 @@ ui = dashboardPage(skin="black",
                      conditionalPanel(
                        condition="input.tabs=='tabPAs'",
                        fileInput(inputId = "upload_pas", label = "Upload protected areas shapefile", multiple = TRUE),
+                       div(style = "margin-top: -20px;",selectInput("intactColpas", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = "intactKBA")),
                        div(style = "margin: 14px; font-size:15px; font-weight: bold", "1. Hydrology Metrics "),
                        div(style = "margin: 13px; font-size:13px; font-weight: bold", "Calculate DCI and add upstream attributes to KBAs"), 
-                       actionButton(inputId = "calc_pasdci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px")
-                     ),
+                       actionButton(inputId = "calc_pasdci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px")                     ),
                      conditionalPanel(
                        condition="input.tabs=='tabKBA'",
                        fileInput(inputId = "upload_refarea", label = "Upload reference areas shapefile", multiple = TRUE),
@@ -208,6 +208,10 @@ ui = dashboardPage(skin="black",
                                   tabBox(id = "mapBox", width = 10,
                                           tabPanel(HTML("<b>Mapview</b>"),
                                                    leafletOutput("map", height = 750) %>% withSpinner(),
+                                                   conditionalPanel(
+                                                     condition = "input.tabs == 'tabPAs'",
+                                                     dataTableOutput("pastbl")  # Use tableOutput for basic table
+                                                   ),
                                                    fluidRow(uiOutput("images"))  # Placeholder for images below the map
                                           ),
                                           tabPanel("Guidance",
