@@ -17,6 +17,7 @@ library(beaconstools)
 library(terra)
 library(stringr)
 library(shinyFiles)
+library(DT)
 #source("./R/beaconshydro.R")
 #source("./R/utils.R")
 source("./R/utils_KBA.R")
@@ -33,6 +34,25 @@ get_available_drives <- function() {
   available_drives
 }
 
+# crop and mask criteria layer
+process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4, crs = "EPSG:4326", aggregation_fun = NULL) {
+  output_path <- file.path(dir_path, "output", file_name)
+  projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
+  
+  cropped <- crop(input_raster, ref_area)
+  masked <- mask(cropped, ref_area)
+  raster::writeRaster(masked, output_path, format = "GTiff")
+  if (!is.null(aggregation_fun)) {
+    aggregated <- terra::aggregate(rast(masked), fact = fact, fun = aggregation_fun)
+    projected <- project(aggregated, crs)
+    terra::writeRaster(projected, projected_path, filetype = "GTiff")
+  } else {
+    aggregated <- aggregate(masked, fact = fact)
+    projected <- projectRaster(aggregated, crs = crs)
+    raster::writeRaster(projected, projected_path, format = "GTiff")
+  }
+  list(original = masked, projected = projected)
+}
 
 MB <- 1024^2
 

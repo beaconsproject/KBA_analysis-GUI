@@ -57,7 +57,7 @@ ui = dashboardPage(skin="black",
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabUpload'",
-                       shinyDirButton("directory", "Select output Directory", "Please select a folder", icon = icon(name = "fa-solid fa-folder", lib = "font-awesome")),
+                       shinyDirButton("directory", "Select output Directory", "Please select a folder", icon = icon(name = "fas fa-folder", lib = "font-awesome")),
                        div(style = "width: 250px;margin-left: 20px;", verbatimTextOutput("dirpath")), 
                        actionButton("set_wd", "Confirm", icon = icon(name = "check", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
                        tags$br(),
@@ -128,7 +128,9 @@ ui = dashboardPage(skin="black",
                      conditionalPanel(
                        condition="input.tabs=='tabKBA'",
                        fileInput(inputId = "upload_refarea", label = "Upload reference areas shapefile", multiple = TRUE),
-                       div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
+                       #div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
+                       #                                            selected = NULL)),
+                       div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs"),
                                                                    selected = NULL)),
                        actionButton("runRep", "Run representation analysis", icon = icon(name = "image", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                        div("Filter KBAs based on criteria dissimilarity metrics (DMS)", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
@@ -143,7 +145,7 @@ ui = dashboardPage(skin="black",
                          condition = "input.criteria5 != ''",
                          div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = "Criteria", min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE))
                        ),
-                       div(style = "margin-top: -30px;",sliderInput("slideUP", label="Upstream area (sq.km):", min=0, max=25000, value = 0, step=500, ticks=FALSE)),
+                       div(style = "margin-top: -30px;",sliderInput("slideUP", label="Upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterRep", "Apply dissimilarity metrics filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                      ),
                      conditionalPanel(
@@ -246,9 +248,9 @@ ui = dashboardPage(skin="black",
                                    condition = "input.tabs == 'tabKBA'",
                                    tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabset1",
-                                                      tabPanel(HTML("<h4>Potential KBA metrics</h4>"), 
+                                                      tabPanel(HTML("<h4>Number of potential KBAs and protected areas</h4>"), 
                                                                tableOutput("outkbafreq"),
-                                                               selectInput("KBA", label = "Select KBAs:", choices = NULL),  # Initially empty, updated dynamically
+                                                               selectInput("KBA", label = "Select KBAs/PAs:", choices = NULL),  # Initially empty, updated dynamically
                                                                tableOutput("outkba")
                                                       )
                                           )
