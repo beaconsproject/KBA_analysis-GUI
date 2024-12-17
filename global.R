@@ -1,27 +1,22 @@
-library(leaflet)
-library(shiny)
-library(purrr)
-library(markdown)
-library(shinydashboard)
-library(shinyjs)
-library(shinycssloaders)
-library(devtools)
-library(beaconsbuilder) # code needs to be repaired.
-library(dplyr)
-library(tidyr)
-library(sf)
-library(zip)
-library(raster)
-library(readr)
-library(beaconstools)
-library(terra)
-library(stringr)
-library(shinyFiles)
-library(DT)
-#source("./R/beaconshydro.R")
-#source("./R/utils.R")
+# Check and install packages if missing
+required_packages <- c(
+  "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", 
+  "shinycssloaders", "devtools", "beaconsbuilder", "dplyr", "tidyr", "sf", 
+  "zip", "raster", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT"
+)
+
+# Install any missing packages
+missing_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+
+# Load the packages
+invisible(lapply(required_packages, library, character.only = TRUE))
+
 source("./R/utils_KBA.R")
 source("./R/builder_KBA.R")
+
 
 bnd <- st_read("./www/Canada_WGS84.shp")
 intact <- st_read("./www/KBAIntactAreasbnd_nad83.shp")
@@ -35,12 +30,15 @@ get_available_drives <- function() {
 }
 
 # crop and mask criteria layer
-process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4, crs = "EPSG:4326", aggregation_fun = NULL) {
+process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4, crs = "EPSG:4326", aggregation_fun = NULL, ignored = NULL) {
   output_path <- file.path(dir_path, "output", file_name)
   projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
   
   cropped <- crop(input_raster, ref_area)
   masked <- mask(cropped, ref_area)
+  if (!is.null(ignored)) {
+    masked[masked %in% ignored] <- NA # cropland = 15, urban = 17 are NA 
+  }
   raster::writeRaster(masked, output_path, format = "GTiff")
   if (!is.null(aggregation_fun)) {
     aggregated <- terra::aggregate(rast(masked), fact = fact, fun = aggregation_fun)
@@ -54,6 +52,70 @@ process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4
   list(original = masked, projected = projected)
 }
 
+
+read_shp_from_csv <- function(csv_file, layer_name) {
+  req(csv_file)
+  csv_data <- read.csv(csv_file$datapath)
+  if (layer_name %in% csv_data$Layer) {
+    path <- csv_data$Path[csv_data$Layer == layer_name]
+    if (file.exists(path)) {
+      return(sf::st_read(path))
+    } else {
+      stop(paste("The path for", layer_name, "in the CSV does not exist."))
+    }
+  } else {
+    stop(paste(layer_name, "layer not found in CSV."))
+  }
+}
+
+# Utility function to read a shapefile from uploaded files
+read_shp_from_upload <- function(upload_input) {
+  req(upload_input)
+  infile <- upload_input
+  if (length(infile$datapath) > 1) {
+    dir <- unique(dirname(infile$datapath))
+    outfiles <- file.path(dir, infile$name)
+    name <- tools::file_path_sans_ext(infile$name[1])
+    purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y))
+    shp_path <- file.path(dir, paste0(name, ".shp"))
+    if (file.exists(shp_path)) {
+      return(sf::st_read(shp_path))
+    } else {
+      stop("Shapefile (.shp) is missing.")
+    }
+  } else {
+    stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
+  }
+}
+
+# Function to read raster file from CSV
+read_tif_from_csv <- function(csv_file, layer_name) {
+  req(csv_file)  # Ensure the CSV file is provided
+  csv_data <- read.csv(csv_file$datapath)
+  
+  # Check if the specified layer exists in the CSV
+  if (layer_name %in% csv_data$Layer) {
+    path <- csv_data$Path[csv_data$Layer == layer_name]
+    if (file.exists(path)) {
+      return(raster::raster(path))  # Load raster using the raster package
+    } else {
+      stop(paste("The path for", layer_name, "in the CSV does not exist."))
+    }
+  } else {
+    stop(paste(layer_name, "layer not found in CSV."))
+  }
+}
+
+#Function to read raster file from fileInput
+read_tif_from_upload <- function(upload_input) {
+  req(upload_input)  # Ensure the file is uploaded
+  path <- upload_input$datapath
+  if (file.exists(path)) {
+    return(raster::raster(path))  # Load raster using the raster package
+  } else {
+    stop("The uploaded raster file does not exist.")
+  }
+}
 MB <- 1024^2
 
 UPLOAD_SIZE_MB <- 5000
