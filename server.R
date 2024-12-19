@@ -12,7 +12,7 @@ server = function(input, output, session) {
   nghbrs_reactive <- reactiveVal()
   seed_reactive <- reactiveVal()
   reactive_labelKBA <- reactiveVal(NULL)
-  reactive_labelNET <- reactiveVal()
+  reactive_labelNET <- reactiveVal(NULL)
   network_reactive <- reactiveVal()
   dir_exists <- reactiveVal(FALSE)
   builder_exists <- reactiveVal(FALSE)
@@ -225,7 +225,6 @@ server = function(input, output, session) {
       updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = rastName)
       return(read_tif_from_upload(input$upload_custom))
     } else if (!is.null(input$csv_file)) {
-      browser()
       csv_data <- read.csv(input$csv_file$datapath)
       req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
       unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
@@ -333,6 +332,7 @@ server = function(input, output, session) {
     updateSelectInput(session = getDefaultReactiveDomain(), "intactColpas", choices = colnames, selected="intactKBA")
   })
   
+
   ####################################################################################################
   ####################################################################################################
   # Map viewer
@@ -812,7 +812,7 @@ server = function(input, output, session) {
     }
     req(pas_sf_reactive())
     req(catchments())
-    #browser()
+    
     catchments <- catchments()
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
@@ -1006,6 +1006,15 @@ server = function(input, output, session) {
       output$outkbafreq <- renderTable({
         outfreqkba()
       })
+      
+      output$slidercrit5 <- renderUI({
+        # Check if criteria5() is NULL
+        if (!is.null(criteria5())) {
+          # If criteria5 is NULL, render the sliderInput with disabled = TRUE
+          div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = criteria5name(), min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE))
+        }
+      })
+    
     }
     if (input$tabs == "tabNET") {
       # build outfreqnet
@@ -1017,6 +1026,13 @@ server = function(input, output, session) {
       outfreqnet(x)
       output$outnetfreq <- renderTable({
         outfreqnet()
+      })
+      output$slideNETcrit5 <- renderUI({
+        # Check if criteria5() is NULL
+        if (!is.null(criteria5())) {
+          # If criteria5 is NULL, render the sliderInput with disabled = TRUE
+          div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = criteria5name(), min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE))
+        }
       })
     }
   })
@@ -1034,7 +1050,6 @@ server = function(input, output, session) {
       return()
     }
     req(refarea_reactive())
-    #req(pas_sf_reactive())
     req(catchments())
     req(input$assessKBAs)
     
@@ -1188,11 +1203,6 @@ server = function(input, output, session) {
         kba_sf_reactive(kba_sf)
         kba_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream")
         kba_upstream_reactive(kba_up)
-        #if ("PAs_att" %in% layers) {
-        #  pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_att")
-        #}else{
-        #  pas_sf <- NULL
-        #} 
       } 
     } 
     
@@ -1224,11 +1234,6 @@ server = function(input, output, session) {
         pas_sf_reactive(pas_sf)
         pas_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_upstream")
         pas_upstream_reactive(pas_up)
-        #if ("KBAs_att" %in% layers) {
-        #  kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_att")
-        #}else{
-        #  kba_sf <- NULL
-        #} 
       }
     }
 
@@ -1326,10 +1331,13 @@ server = function(input, output, session) {
     
     #Delete previous dynamic label
     labelKBA <- reactive_labelKBA()
-    
+    labelNET <- reactive_labelNET
     # Highlight the selected KBA on the map
     leafletProxy("map") %>%
+      clearGroup("Potential KBAs") %>%
+      clearGroup("Protected areas") %>%
       clearGroup(labelKBA) %>%
+      learGroup(labelNET) %>%
       clearGroup("Upstream") %>%  # Clear previous highlight
       addPolygons(data = selected_polygon, color = "black",  fillColor = "grey", fillOpacity = 0.8, weight = 3, group = input$KBA) %>%
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
@@ -1342,7 +1350,6 @@ server = function(input, output, session) {
     if(input$assessKBAs == "Only KBAs"){
       kba_sf_4326 <- kba_sf_reactive() %>% st_transform(4326)
       leafletProxy("map") %>%
-        clearGroup("Potential KBAs") %>%
         addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 0, weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
               baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
@@ -1353,7 +1360,6 @@ server = function(input, output, session) {
     if(input$assessKBAs == "Only PAs"){
       pas_sf_4326 <- pas_sf_reactive() %>% st_transform(4326)
       leafletProxy("map") %>%
-        clearGroup("Protected areas") %>%
         addPolygons(data=pas_sf_4326, color='#6b4b38', fillOpacity = 0.4, weight=2, layerId = pas_sf_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
@@ -1365,8 +1371,6 @@ server = function(input, output, session) {
       kba_sf_4326 <- kba_sf_reactive() %>% st_transform(4326)
       pas_sf_4326 <- pas_sf_reactive() %>% st_transform(4326)
       leafletProxy("map") %>%
-        clearGroup("Protected areas") %>%
-        clearGroup("Potential KBAs") %>%
         addPolygons(data=pas_sf_4326, color='#6b4b38', fillOpacity = 0.4, weight=2, layerId = pas_sf_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
         addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 0, weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
@@ -1452,9 +1456,8 @@ server = function(input, output, session) {
   observeEvent(input$filterRep, {
     req(catchments())
     req(poly_reactive())
-    #browser()
+    
     filetred_sf <- poly_reactive()
-    #if(input$criteria5 != ""){
     if(!is.null(criteria5())){
       filtered_sf_rep <- filter(filetred_sf, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
     }else{
@@ -1474,12 +1477,10 @@ server = function(input, output, session) {
       updateSelectInput(getDefaultReactiveDomain(), "KBA", choices = unique_kbas)
       
       if(input$assessKBAs == "Only KBAs"){
-        #kba <- kba_sf_reactive()[kba_sf_reactive()$network %in% filtered_sf_rep$network,]
-        #kba_4326 <- kba %>% st_transform(4326)
-        #pas<- NULL
         filtered_sf_4326 <- filtered_sf_rep %>% st_transform(4326)
         leafletProxy("map") %>%
           clearGroup('Potential KBAs') %>% 
+          clearGroup('Protected areas') %>% 
           addPolygons(data = filtered_sf_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 3,
                       layerId = filtered_sf_4326$network, popup = ~network, group = "Potential KBAs", 
                       options = leafletOptions(pane = "layer2")) %>%
@@ -1497,11 +1498,9 @@ server = function(input, output, session) {
       }
       if(input$assessKBAs == "Only PAs"){
         filtered_sf_4326 <- filtered_sf_rep %>% st_transform(4326)
-        #pas <- pas_sf_reactive()[pas_sf_reactive()$network %in% filtered_sf_rep$network,]
-        #pas_4326 <- pas %>% st_transform(4326)
-       # kba <- NULL
         leafletProxy("map") %>%
           clearGroup('Protected areas') %>% 
+          clearGroup('Potential KBAs') %>% 
           addPolygons(data = filtered_sf_4326, color='#6b4b38', fillOpacity = 0.4, weight=2, layerId = filtered_sf_4326$network, popup = ~network, group = "Protected areas", 
                       options = leafletOptions(pane = "layer2")) %>%
           addLayersControl(position = "topright",
@@ -1555,6 +1554,7 @@ server = function(input, output, session) {
     }else{
       leafletProxy("map") %>%
         clearGroup('Potential KBAs') %>%
+        clearGroup('Protected areas') %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                          overlayGroups = c("Catchments extent", "Planning region", "Intact areas", legendcrit()),
@@ -1576,7 +1576,7 @@ server = function(input, output, session) {
   observeEvent(input$buildNet, {
     req(catchments())
     #Validate Force PAs
-    browser()
+    
     if(input$forcePAs){
       if ((is.null(pas_sf_reactive()))){
         showModal(modalDialog(
@@ -1659,22 +1659,9 @@ server = function(input, output, session) {
           poly_reactive(potential_kbas)
         }
       }else{
-      #  if(input$set_net ==0){
-      #    potential_kbas <- pas_sf
-      #    upstream_reactive(pas_up)
-      #  }else{
-      #    pas_sf <- pas_sf %>%
-      #      dplyr::select(-NAME, -intact_km2)
-      #    potential_kbas <- rbind(kba_sf_reactive(), pas_sf)
-      #    pas_up <- pas_up %>%
-       #     dplyr::select(network)
-      #    kbapas_up <- rbind(kba_up, pas_up)
-       #   upstream_reactive(kbapas_up)
-       # }
         outName <- paste0("net_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
         network_dir <- paste0("output/plot", outName)
       }
-     # poly_reactive(potential_kbas)
     } else {
       if(input$forceKBA){
         filtering <- paste0("_up", as.character(input$slideUP), "_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
@@ -1692,7 +1679,6 @@ server = function(input, output, session) {
           poly_reactive(potential_kbas)
         }
       }else{
-        #potential_kbas <- poly_reactive()
         outName <- paste0("net", "_kba", input$set_net, "_force", as.character(input$forceKBA))
         network_dir <- paste0("output/plot", outName)
       }
@@ -1704,22 +1690,6 @@ server = function(input, output, session) {
     layer_to_check <- outName
     
     if (!layer_to_check %in% layers) {
-      #if(input$set_net==0){
-      #  if(input$forcePAs){
-      #    showModal(modalDialog(
-      #      title = "No KBA will be added. The representation analysis will run using only the protected areas",
-      #      easyClose = TRUE,
-      #      footer = modalButton("OK"))
-      #    )
-      #  }else{
-      #      showModal(modalDialog(
-      #        title = "You need at least 2 KBAs to build a network.",
-      #        easyClose = TRUE,
-      #        footer = modalButton("OK"))
-      #      )
-      #  }
-      #}
-    
       potential_kbas <- poly_reactive()
       if(attr(potential_kbas, "sf_column") != "geometry"){
         potential_kbas$geometry <- potential_kbas$geom

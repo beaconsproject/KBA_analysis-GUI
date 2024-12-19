@@ -74,17 +74,9 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_gpp", label = "GPP", multiple = FALSE)),
                        div(style = "margin-top: -30px;",fileInput(inputId = "upload_custom", label = "Custom criteria", multiple = FALSE)),
-                       #div(style = "margin-top: -20px;", textInput("criteria5", label = div(style = "font-size:13px;", "Set custom criteria accronym"), value = "")),
-                       # Add JavaScript to limit the input length to 10 characters (change as needed)
-                       tags$script(HTML("$(document).on('shiny:inputinitialized', function(event) {
-                             if (event.name === 'criteria5') {$('#criteria5').attr('maxlength', 10);}
-                             });
-                       "))
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  
-                       #textInput("set_wd", "Specify output directory", value = "C:/temp/KBA"),
-                       #tags$br(),
                        div(style = "margin: 15px; font-size:15px; font-weight: bold", "Use existing files"),
                        div(style = "margin-top: -10px;",fileInput(inputId = "upload_seed", label = NULL, placeholder  = "Upload seedlist .csv", multiple = FALSE)),
                        div(style = "margin-top: -10px;",fileInput(inputId = "upload_nghbr", label = NULL,  placeholder = "Upload neighbours .csv", multiple = FALSE)),
@@ -129,21 +121,15 @@ ui = dashboardPage(skin="black",
                        fileInput(inputId = "upload_refarea", label = "Upload reference areas shapefile", multiple = TRUE),
                        div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
                                                                    selected = NULL)),
-                       #div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs"),
-                        #                                           selected = NULL)),
                        actionButton("runRep", "Run representation analysis", icon = icon(name = "image", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                        div("Filter KBAs based on criteria dissimilarity metrics (DMS)", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
                        div("DMs range from 0 (low dissimilarity) to 1 (high dissimilarity)", style = "font-size: 12px; margin-top : 20px; margin-left : 20px; "),
-                       #HTML("<h4>&nbsp; &nbsp; Filter criteria based on dissimilarity metrics</h4>"),
                        div(style = "margin-top: 0px;",sliderInput("slideCMI", label="CMI:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideLED", label="LED:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideGPP", label="GPP:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
-                       # Nested condition for slidecrit5, only shows if both conditions are met
-                       conditionalPanel(
-                         condition = "input.criteria5 != ''",
-                         div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = "Criteria", min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE))
-                       ),
+                       #div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = "Criteria", min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE)),
+                       uiOutput("slidercrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterRep", "Apply dissimilarity metrics filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                      ),
@@ -158,11 +144,8 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideNETLED", label="LED:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideNETGPP", label="GPP:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideNETLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
-                       # Nested condition for slidecrit5, only shows if both conditions are met
-                       conditionalPanel(
-                         condition = "input.criteria5 != ''",
-                         div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = "Criteria", min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE))
-                       ),
+                       #div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = "Criteria", min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE)),
+                       uiOutput("slideNETcrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideNETUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterNet", "Apply dissimilarity metrics filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                        
