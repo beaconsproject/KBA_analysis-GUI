@@ -535,7 +535,8 @@ server = function(input, output, session) {
       seed <- seed_reactive()
       nghbrs <- nghbrs_reactive()
 
-      builder_tab <- builder(catchments_sf = catchments(),
+      tryCatch({
+        builder_tab <- builder(catchments_sf = catchments(),
                              seeds = seed, 
                              neighbours = nghbrs,
                              out_dir = file.path(out_dir, "Builder_output"),
@@ -567,17 +568,17 @@ server = function(input, output, session) {
                              summary_intactness_props = "\"\"",
                              summary_area_target_props = "\"\"")
         
-      # Fix PB to KBA
-      builder_tab <- builder_tab %>%
-        rename_with(~ str_replace(.x, "PB", "KBA"))
+        # Fix PB to KBA
+        builder_tab <- builder_tab %>%
+          rename_with(~ str_replace(.x, "PB", "KBA"))
       
-      # Convert conservation areas created by builder to polygons.(NOTE: poly_sf is the R object with conservation areas.)
+        # Convert conservation areas created by builder to polygons.(NOTE: poly_sf is the R object with conservation areas.)
         poly_sf <- dissolve_catchments_from_table(catchments_sf = catchments(), 
                                                   input_table = builder_tab, 
                                                   out_feature_id = "network")
         poly_sf <- poly_sf %>%
-          st_buffer(dist = 20) %>% 
-          st_buffer(dist = -20)
+            st_buffer(dist = 20) %>% 
+            st_buffer(dist = -20)
         
         kba_sf_reactive(poly_sf)  # Store the poly_sf in reactiveVal
 
@@ -594,6 +595,18 @@ server = function(input, output, session) {
           easyClose = TRUE,
           footer = modalButton("OK"))
         )
+      }, error = function(err) {
+        # Close the "Please wait" modal if it is open
+        removeModal()
+        
+        # Show an error modal with the error message
+        showModal(modalDialog(
+          title = "Error Running BUILDER",
+          paste("Please check Builder software is found in your beaconsbuilder library and that you have .NET framework 3.5 installed:", conditionMessage(err)),
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      })
       } else {
         kba_sf <- st_read(dsn = file.path(out_dir, "output/KBA_analysis.gpkg"), layer = "KBAs_builder")
         kba_sf_reactive(kba_sf)
