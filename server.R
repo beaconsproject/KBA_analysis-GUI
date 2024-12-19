@@ -225,11 +225,12 @@ server = function(input, output, session) {
       updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = rastName)
       return(read_tif_from_upload(input$upload_custom))
     } else if (!is.null(input$csv_file)) {
+      browser()
       csv_data <- read.csv(input$csv_file$datapath)
       req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
       unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
       # Read raster from CSV
-      if (!is.null(unexpected_layers)) {
+      if (length(unexpected_layers)>0) {
         if(length(unexpected_layers)==1){
           #print(paste("Unexpected layers found:", paste(unexpected_layers, collapse = ", ")))
           path <- csv_data$Path[csv_data$Layer == unexpected_layers]
@@ -249,6 +250,8 @@ server = function(input, output, session) {
             footer = NULL)
           )
         }
+      }else{
+        return(NULL) 
       }
     }
     # Return NULL if neither source is available
@@ -284,22 +287,6 @@ server = function(input, output, session) {
   ################################################################################################
   # Set reference area
   ################################################################################################
-  refarea2 <- reactive({
-    #req(!is.null(input$csv_file) || !is.null(input$upload_refarea))
-    if (!is.null(input$csv_file)) {
-      refarea <- read_shp_from_csv(input$csv_file, "reference area")
-      st_write(refarea, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
-               layer = "reference area", driver = "GPKG", append = FALSE)
-      return(refarea)
-    } else if (!is.null(input$upload_refarea)) {
-      refarea <- read_shp_from_upload(input$upload_refarea)
-      st_write(refarea, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
-               layer = "reference area", driver = "GPKG", append = FALSE)
-      return(refarea)
-    }else{
-      return(NULL)
-    }
-  })
   # PAs upload shapefile
   observeEvent(input$upload_refarea, {
     req(input$upload_refarea)
@@ -1588,10 +1575,8 @@ server = function(input, output, session) {
   ################################################################################################
   observeEvent(input$buildNet, {
     req(catchments())
-    pas_sf <- pas_sf_reactive() %>% dplyr::select(-NAME, -intact_km2)
-    kba_sf <- kba_sf_reactive()
-
     #Validate Force PAs
+    browser()
     if(input$forcePAs){
       if ((is.null(pas_sf_reactive()))){
         showModal(modalDialog(
@@ -1601,6 +1586,7 @@ server = function(input, output, session) {
         )
         return()
       }else{
+        pas_sf <- pas_sf_reactive() %>% dplyr::select(-NAME, -intact_km2)
         agg_pa_name <- pas_sf %>%
           dplyr::pull(network) %>%     # Extract the `network` column
           unique() %>%                 # Get unique values
@@ -1629,6 +1615,7 @@ server = function(input, output, session) {
             dplyr::select(network)
           kbapas_up <- rbind(kba_up, pas_up)
           upstream_reactive(kbapas_up)
+          kba_sf <- kba_sf_reactive()
           kbapas_sf <- rbind(kba_sf, pas_sf)
           poly_reactive(kbapas_sf)
         }
@@ -1645,7 +1632,7 @@ server = function(input, output, session) {
         ))
         return() 
       }else{
-        poly_reactive(kbas)
+        poly_reactive(kba_sf_reactive())
       }
     }
     
