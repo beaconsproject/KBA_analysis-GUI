@@ -21,6 +21,16 @@ source("./R/builder_KBA.R")
 bnd <- st_read("./www/Canada_WGS84.shp")
 intact <- st_read("./www/KBAIntactAreasbnd_nad83.shp")
 
+
+######
+# Fix sep_network_names
+sep_network_names <- function (network_names){
+    out_val <- lapply(network_names, function(x) {
+      strsplit(x, "__")[[1]]
+    })
+    names(out_val) <- network_names
+  return(out_val)
+}
 # Helper function to detect available drives (Windows only)
 get_available_drives <- function() {
   drives <- c(paste0(LETTERS, ":/")) # Generate list of potential drives
