@@ -20,6 +20,7 @@ server = function(input, output, session) {
   netDir <- reactiveVal()
   legendcrit <-  reactiveVal(c("CMI", "LED", "GPP", "LCC"))
   selected_polygon <- reactiveVal(NULL)  # Track the selected polygon on map
+  refarea_reactive <- reactiveVal(NULL)
   
   outfreqkba <- reactiveVal(
     #tibble(Variables = c("KBAs", "PAs", "Filtered KBAs","Filtered PAs"), Count = NA)
@@ -283,7 +284,7 @@ server = function(input, output, session) {
   ################################################################################################
   # Set reference area
   ################################################################################################
-  refarea <- reactive({
+  refarea2 <- reactive({
     #req(!is.null(input$csv_file) || !is.null(input$upload_refarea))
     if (!is.null(input$csv_file)) {
       refarea <- read_shp_from_csv(input$csv_file, "reference area")
@@ -299,7 +300,29 @@ server = function(input, output, session) {
       return(NULL)
     }
   })
+  # PAs upload shapefile
+  observeEvent(input$upload_refarea, {
+    req(input$upload_refarea)
+    refarea_sf <- read_shp_from_upload(input$upload_refarea)
+    st_write(refarea_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"),
+             layer = "reference area", driver = "GPKG", append = FALSE)
+    refarea_reactive(refarea_sf)
+  })
   
+  # PAs upload using csv
+  observeEvent(input$csv_file, {
+    req(input$csv_file)
+    csv_data <- read.csv(input$csv_file$datapath)
+    layers_to_check <- "reference area"
+    
+    # Check if the required layer exists in the CSV
+    if (layers_to_check %in% csv_data$Layer) {
+      refarea_sf <- read_shp_from_csv(input$csv_file, "reference area")
+      st_write(refarea_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"),
+               layer = "reference area", driver = "GPKG", append = FALSE)
+      refarea_reactive(refarea_sf)
+    } 
+  })
   ################################################################################################
   # Set intact areas
   ################################################################################################
@@ -742,8 +765,8 @@ server = function(input, output, session) {
     }
     
     showModal(modalDialog(
-      title = paste0("KBAs number reduced to ", as.character(nrow(kba_sf)),
-      "Display KBAs. Please wait..."),
+      title = paste0("KBAs number reduced to ", as.character(nrow(kba_sf)), "."),
+      "  Display KBAs. Please wait...",
       footer = NULL
     ))
     
@@ -791,10 +814,9 @@ server = function(input, output, session) {
   # -Calculate hydro metrics
   ####################################################################################################
   observeEvent(input$calc_pasdci, {
-    #browser()
     if(is.null(pas_sf_reactive())){
       showModal(modalDialog(
-        title = "No protected areas layer have been uploaded",  
+        title = "No protected areas layer has been uploaded",  
         "Please upload a shapefile" ,
         easyClose = TRUE,
         footer = modalButton("OK"))
@@ -1015,11 +1037,22 @@ server = function(input, output, session) {
   #-RUN REPRESENTATION
   #########################################################
   observeEvent(input$runRep, {
+    if(is.null(refarea_reactive())){
+      showModal(modalDialog(
+        title = "No reference area has been uploaded",  
+        "Please upload a shapefile" ,
+        easyClose = TRUE,
+        footer = modalButton("OK"))
+      )
+      return()
+    }
+    req(refarea_reactive())
+    #req(pas_sf_reactive())
     req(catchments())
     req(input$assessKBAs)
     
     # Check if reference area is available
-    if (is.null(refarea())) {
+    if (is.null(refarea_reactive())) {
       showModal(modalDialog(
         title = "Reference area missing",
         "Please upload the reference area before running the analysis.",
@@ -1027,7 +1060,7 @@ server = function(input, output, session) {
       ))
       return()  # Stop further execution if refarea is missing
     }
-    req(refarea())
+    req(refarea_reactive())
     showModal(modalDialog(
       title = "Processing representation analysis",
       "Please wait...",
@@ -1051,7 +1084,7 @@ server = function(input, output, session) {
     }
     #Prep criteria
     if (!file.exists(file.path(dirpath(), "output/kba_cmi.tif"))) {
-      cmi <- process_raster(cmi(), refarea(), dirpath(), "kba_cmi", fact = 2)
+      cmi <- process_raster(cmi(), refarea_reactive(), dirpath(), "kba_cmi", fact = 2)
       kba_cmi <- cmi$original
       cmi_4326 <- cmi$projected
     }else{
@@ -1059,7 +1092,7 @@ server = function(input, output, session) {
       cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
-      led <- process_raster(led(), refarea(), dirpath(), "kba_led", fact = 4)
+      led <- process_raster(led(), refarea_reactive(), dirpath(), "kba_led", fact = 4)
       kba_led <- led$original
       led_4326 <- led$projected
     } else{
@@ -1067,7 +1100,7 @@ server = function(input, output, session) {
       led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
-      gpp <- process_raster(gpp(), refarea(), dirpath(), "kba_gpp", fact = 4)
+      gpp <- process_raster(gpp(), refarea_reactive(), dirpath(), "kba_gpp", fact = 4)
       kba_gpp <- gpp$original
       gpp_4326 <- gpp$projected
     } else{
@@ -1075,7 +1108,7 @@ server = function(input, output, session) {
       gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
-      lcc <- process_raster(lcc(), refarea(), dirpath(), "kba_lcc", fact = 40, aggregation_fun = modal, ignored = c(15, 17))
+      lcc <- process_raster(lcc(), refarea_reactive(), dirpath(), "kba_lcc", fact = 40, aggregation_fun = modal, ignored = c(15, 17))
       kba_lcc <- lcc$original
       lcc_4326 <- lcc$projected
     }else{
@@ -1084,7 +1117,7 @@ server = function(input, output, session) {
     }
     if(!is.null(criteria5())){
       if (!file.exists(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))) {
-        crit5 <- process_raster(criteria5(), refarea(), dirpath(), criteria5name(), fact = 4)
+        crit5 <- process_raster(criteria5(), refarea_reactive(), dirpath(), criteria5name(), fact = 4)
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
@@ -1145,14 +1178,14 @@ server = function(input, output, session) {
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
-        kba_sf$cmi <- calc_dissimilarity(kba_sf, refarea(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
-        kba_sf$led <- calc_dissimilarity(kba_sf, refarea(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
-        kba_sf$gpp <- calc_dissimilarity(kba_sf, refarea(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
+        kba_sf$cmi <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
+        kba_sf$led <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
+        kba_sf$gpp <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
         kba_lcc[kba_lcc %in% c(15, 17)] <- NA # cropland = 15, urban = 17 are NA 
-        kba_sf$lcc <- calc_dissimilarity(kba_sf, refarea(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
+        kba_sf$lcc <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
         # criteria5
         if(!is.null(criteria5())){
-          kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+          kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
         }
         kba_sf <- kba_sf %>%
           dplyr::select(-Area_PB, - group_id)
@@ -1184,13 +1217,13 @@ server = function(input, output, session) {
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
-        pas_sf$cmi <- calc_dissimilarity(pas_sf, refarea(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
-        pas_sf$led <- calc_dissimilarity(pas_sf, refarea(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
-        pas_sf$gpp <- calc_dissimilarity(pas_sf, refarea(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
-        pas_sf$lcc <- calc_dissimilarity(pas_sf, refarea(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
+        pas_sf$cmi <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
+        pas_sf$led <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
+        pas_sf$gpp <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
+        pas_sf$lcc <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
         # criteria5
         if(!is.null(criteria5())){
-          pas_sf[[criteria5name()]] <- calc_dissimilarity(pas_sf, refarea(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+          pas_sf[[criteria5name()]] <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
         }
         st_write(pas_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_att", driver = "GPKG", append = FALSE)
         pas_sf_reactive(pas_sf)
