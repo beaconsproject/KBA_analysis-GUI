@@ -21,9 +21,16 @@ source("./R/builder_KBA.R")
 bnd <- st_read("./www/Canada_WGS84.shp")
 intact <- st_read("./www/KBAIntactAreasbnd_nad83.shp")
 
+MB <- 1024^2
 
-######
-# Fix sep_network_names
+UPLOAD_SIZE_MB <- 5000
+options(shiny.maxRequestSize = UPLOAD_SIZE_MB*MB)
+#########################################################
+#########################################################
+#         ADDON FUNCTIONS
+#########################################################
+#########################################################
+# sep_network_names :Fix sep_network_names
 sep_network_names <- function (network_names){
     out_val <- lapply(network_names, function(x) {
       strsplit(x, "__")[[1]]
@@ -31,7 +38,8 @@ sep_network_names <- function (network_names){
     names(out_val) <- network_names
   return(out_val)
 }
-# Helper function to detect available drives (Windows only)
+
+# get_available_drives: Helper function to detect available drives (Windows only)
 get_available_drives <- function() {
   drives <- c(paste0(LETTERS, ":/")) # Generate list of potential drives
   available_drives <- drives[file.exists(drives)] # Keep only existing drives
@@ -39,7 +47,7 @@ get_available_drives <- function() {
   available_drives
 }
 
-# crop and mask criteria layer
+# process_raster: crop and mask criteria layer
 process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4, crs = "EPSG:4326", aggregation_fun = NULL, ignored = NULL) {
   output_path <- file.path(dir_path, "output", file_name)
   projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
@@ -62,7 +70,7 @@ process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4
   list(original = masked, projected = projected)
 }
 
-
+# read_shp_from_csv: read layer from path found in csv uploaded with fileInput
 read_shp_from_csv <- function(csv_file, layer_name) {
   req(csv_file)
   csv_data <- read.csv(csv_file$datapath)
@@ -78,7 +86,7 @@ read_shp_from_csv <- function(csv_file, layer_name) {
   }
 }
 
-# Utility function to read a shapefile from uploaded files
+# read_shp_from_upload: read a shapefile from fileInput
 read_shp_from_upload <- function(upload_input) {
   req(upload_input)
   infile <- upload_input
@@ -98,7 +106,7 @@ read_shp_from_upload <- function(upload_input) {
   }
 }
 
-# Function to read raster file from CSV
+# read_tif_from_csv: Read raster file from CSV
 read_tif_from_csv <- function(csv_file, layer_name) {
   req(csv_file)  # Ensure the CSV file is provided
   csv_data <- read.csv(csv_file$datapath)
@@ -116,7 +124,7 @@ read_tif_from_csv <- function(csv_file, layer_name) {
   }
 }
 
-#Function to read raster file from fileInput
+# read_tif_from_upload: Read raster file from fileInput
 read_tif_from_upload <- function(upload_input) {
   req(upload_input)  # Ensure the file is uploaded
   path <- upload_input$datapath
@@ -127,8 +135,8 @@ read_tif_from_upload <- function(upload_input) {
   }
 }
 
-
-get_stat_on_net <- function(net_sf, catchments, intact_col) {
+# get_stat_on_net: compute stats on NET
+get_stat_on_net <- function(net_sf, catchments, intact_col, upstream) {
   # Union NET and intersect  with catchments
   net_diss <- st_union(net_sf) 
   area_km2 <- net_diss %>% st_area(.)/1000000
@@ -141,34 +149,28 @@ get_stat_on_net <- function(net_sf, catchments, intact_col) {
     summarize(AWI = sum(catch_awi, na.rm = TRUE) / 1000000)
 
   #Calculate area and intactness for upstream NET
-  up_list <- get_upstream_catchments(net_sf, "network", catchments)
-  if(nrow(up_list)>0){
-    catch_up <- catchments[catchments$CATCHNUM %in% up_list[[1]], ]
-    up_km2 <- catch_up %>% 
-      mutate(catch_km2 = as.numeric(st_area(.)))%>%
+  p_name <- sep_network_names(net_sf$network)
+  up_net <- upstream[upstream$network %in% p_name[[1]],]
+  
+  if(nrow(up_net)>0){
+    up_bind <- st_union(up_net)
+    up_km2 <- up_bind %>% st_area(.)/1000000
+    up_catch <- st_intersection(catchments, up_bind)
+  
+    up_intactkm <- up_catch %>%
+      mutate(catch_awi = as.numeric(st_area(.)) * .[[intact_col]]) %>%
       st_drop_geometry() %>%
-      summarize(up_km2 = sum(catch_km2, na.rm = TRUE) / 1000000)
-    up_AWI <- catch_up %>% 
-      mutate(intact = as.numeric(st_area(.))* .[[intact_col]]) %>%
-      st_drop_geometry() %>%
-      summarize(up_AWI = sum(intact, na.rm = TRUE) / 1000000)
-    up_net <- catch_up %>% 
-      st_union() %>%
-      st_as_sf() %>% 
-      mutate(network = net_sf$network, 
-             area_km2 = as.numeric(area_km2),
-             AWI = as.numeric(AWI)/as.numeric(area_km2),
-             up_km2 = as.numeric(up_km2),
-             up_AWI = as.numeric(up_AWI)/as.numeric(up_km2))
-    return(up_net)
+      summarize(up_AWI = sum(catch_awi, na.rm = TRUE) / 1000000)
+  
+    up_bind <- up_bind %>% 
+      st_as_sf() %>%
+        mutate(network = net_sf$network, 
+               area_km2 = as.numeric(area_km2),
+               AWI = as.numeric(AWI)/as.numeric(area_km2),
+               up_km2 = as.numeric(up_km2),
+               up_AWI = as.numeric(up_intactkm)/as.numeric(up_km2))
+    return(up_bind)
   }else{
     return(NULL)
   } 
-  
 }
-
-
-MB <- 1024^2
-
-UPLOAD_SIZE_MB <- 5000
-options(shiny.maxRequestSize = UPLOAD_SIZE_MB*MB)
