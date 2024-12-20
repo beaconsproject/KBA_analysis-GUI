@@ -109,11 +109,54 @@ server = function(input, output, session) {
       )
     }
   })
+  
+  ################################################################################################
+  # Validate csv
+  ################################################################################################
+  # Required layers
+  required_layers <- c("catchments", "stream", "planning region", "CMI", "GPP", "LCC", "LED")
+ 
+  # Reactive function to validate the input file
+  validate_csv <- reactive({
+    req(input$csv_file)  # Ensure the file input is not NULL
+    #browser()
+    # Read the uploaded CSV file
+    csv_data <- read.csv(input$csv_file$datapath)
+    
+    # Find missing layers
+    missing_layers <- setdiff(required_layers, csv_data$Layer)
+    if (length(missing_layers) > 0) {
+      showModal(modalDialog(
+        title = "Missing Layers",
+        paste("The uploaded CSV is missing the following layers:",
+              paste(missing_layers, collapse = ", "),
+              ". Please fix and re-upload."),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+        return(FALSE)  # Stop further execution
+    }
+    
+    # Return validated data if all checks pass
+    return(TRUE)
+  })
+  
+  observeEvent(input$csv_file, {
+    req(validate_csv()) # Validate the uploaded file
+    # If valid, proceed with your logic
+    showModal(modalDialog(
+      title = "Success",
+      "The uploaded CSV file is valid.",
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+  })
   ################################################################################################
   # Set catchments
   ################################################################################################
   catchments <- reactive({
     if (!is.null(input$csv_file)) {
+      req(validate_csv())
       return(read_shp_from_csv(input$csv_file, "catchments"))
     } else if (!is.null(input$upload_catch)) {
       return(read_shp_from_upload(input$upload_catch))
@@ -127,6 +170,7 @@ server = function(input, output, session) {
   streams <- reactive({
     req(!is.null(input$csv_file) || !is.null(input$upload_stream))
     if (!is.null(input$csv_file)) {
+      req(validate_csv())
       return(read_shp_from_csv(input$csv_file, "stream"))
     } else if (!is.null(input$upload_stream)) {
       return(read_shp_from_upload(input$upload_stream))
@@ -137,6 +181,7 @@ server = function(input, output, session) {
   ################################################################################################
   planreg <- reactive({
     if (!is.null(input$csv_file)) {
+      req(validate_csv())
       planreg <- read_shp_from_csv(input$csv_file, "planning region")
       st_write(planreg, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
                layer = "planning region", driver = "GPKG", append = FALSE)
@@ -159,6 +204,7 @@ server = function(input, output, session) {
       # Read raster from file upload
       return(read_tif_from_upload(input$upload_lcc))
     } else if (!is.null(input$csv_file)) {
+      req(validate_csv())
       # Read raster from CSV
       return(read_tif_from_csv(input$csv_file, "LCC"))
     }
@@ -176,6 +222,7 @@ server = function(input, output, session) {
       # Read raster from file upload
       return(read_tif_from_upload(input$upload_led))
     } else if (!is.null(input$csv_file)) {
+      req(validate_csv())
       # Read raster from CSV
       return(read_tif_from_csv(input$csv_file, "LED"))
     }
@@ -191,6 +238,7 @@ server = function(input, output, session) {
       # Read raster from file upload
       return(read_tif_from_upload(input$upload_gpp))
     } else if (!is.null(input$csv_file)) {
+      req(validate_csv())
       # Read raster from CSV
       return(read_tif_from_csv(input$csv_file, "GPP"))
     }
@@ -206,6 +254,7 @@ server = function(input, output, session) {
       # Read raster from file upload
       return(read_tif_from_upload(input$upload_cmi))
     } else if (!is.null(input$csv_file)) {
+      req(validate_csv())
       # Read raster from CSV
       return(read_tif_from_csv(input$csv_file, "CMI"))
     }
