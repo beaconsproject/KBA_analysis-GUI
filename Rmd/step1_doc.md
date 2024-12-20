@@ -54,6 +54,10 @@ The spatial datasets can be uploaded using a csv file created in a text editor (
  LED,C:/data/led.tif  
  GPP,C:/data/gpp.tif
 
+If you upload a csv but one of the above element is missing, the app won't be able to generate the  the map. 
+
+'reference area', "protected areas," and an optional fifth criterion representing a continuous variable stored as a TIFF file can also be included in the CSV.
+
 **OPTION 2: Upload each spatial dataset individually.**
 
 Datasets are uploaded by navigating to the shapefile or tif, select the dataset, and click open. For shapefiles, select all files associated with the shapefile before clicking open.
