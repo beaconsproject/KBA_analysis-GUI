@@ -1,11 +1,11 @@
-Layer,Path,Requirement
-catchments,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Required
-stream,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Required
-planning region,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Required
-protected areas,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Optional
-reference area,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Optional
-CMI,C:/path/to/continuous tif (.tif),Required
-LCC,C:/path/to/categorical tif (.tif),Required
-LED,C:/path/to/continuous tif (.tif),Required
-GPP,C:/path/to/continuous tif (.tif),Required
-PROJCMI,C:/path/to/continuous tif (.tif),Optional
+Layer,Path,Requirement_(delete this column)
+catchments,C:/path/to/name_of_catchments_shapefile.shp,Required
+stream,C:/path/to/name_of_stream_shapefile.shp,Required
+planning region,C:/path/to/name_of_planningregionshapefile.shp,Required
+protected areas,C:/path/to/name_of_protected_areas_shapefile.shp,Optional_delete_line
+reference area,C:/path/to/name_of_reference_area_shapefile.shp,Optional_delete_line
+CMI,C:/path/to/name_of_cmi_continuous_variable.tif,Required
+LCC,C:/path/to/name_of_lcc_categorical_variable.tif,Required
+LED,C:/path/to/name_of_led_continuous_variable.tif,Required
+GPP,C:/path/to/name_of_gpp_continuous_varible.tif,Required
+ChangetoNameofCustomCriteriaFile,C:/path/to/name_of_custom_criteria_continuous_variable.tif,Optional_delete_line
