@@ -1,4 +1,4 @@
-# KBA_analysis-GUI
+# BEACONs KBA Explorer
 Using beaconstools to design KBAs
 
 **How to Install the GUI**
