@@ -153,11 +153,15 @@ ui = dashboardPage(skin="black",
                      ),
                      conditionalPanel(
                        condition="input.tabs=='download'",
-                       div("Download resulting KBAs", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
-                       checkboxInput("filteredKBAs", label = "Download filtered KBAs", value = T),
-                       checkboxInput("networkKBAs", label = "Download KBAs networks", value = T),
-                       tags$style(type="text/css", "#downloadData {background-color:gey;color: black}"),
-                       div(style="position:relative; left:calc(10%);", downloadButton("downloadData", "Download results"))
+                       actionButton("downloadData", "Download filtered KBAs network", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
+                       div(
+                         textOutput("outPath"),
+                         style = "font-size: 14px; margin-top: 20px; margin-left: 20px;"
+                       )
+                       # Dynamic UI for slidecrit5
+                       #div("Download filtered KBAs network", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
+                       #tags$style(type="text/css", "#downloadData {background-color:gey;color: black}"),
+                       #div(style="position:relative; left:calc(10%);", downloadButton("downloadData", "Download results"))
                      )
                    ),     
                    dashboardBody(
