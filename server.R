@@ -158,13 +158,13 @@ server = function(input, output, session) {
   
   observeEvent(input$csv_file, {
     req(validate_csv()) # Validate the uploaded file
-    # If valid, proceed with your logic
-    showModal(modalDialog(
-      title = "Success",
-      "The uploaded CSV file is valid.",
-      easyClose = TRUE,
-      footer = modalButton("OK")
-    ))
+    ## If valid, proceed with your logic
+   # showModal(modalDialog(
+    #  title = "Success",
+   #   "The uploaded CSV file is valid.",
+   #   easyClose = TRUE,
+    #  footer = modalButton("OK")
+   # ))
   })
   ################################################################################################
   # Set catchments
@@ -1646,8 +1646,8 @@ server = function(input, output, session) {
   ################################################################################################
   observeEvent(input$buildNet, {
     req(catchments())
-    #Validate Force PAs
     
+    #Validate Force PAs
     if(input$forcePAs){
       if ((is.null(pas_sf_reactive()))){
         showModal(modalDialog(
@@ -1793,7 +1793,8 @@ server = function(input, output, session) {
           get_stat_on_net(
             net_sf = network_group,
             catchments = catchments(),
-            intact_col = input$intactColpas
+            intact_col = input$intactColpas,
+            upstream = upstream_reactive()
           )
         })
         
@@ -1802,11 +1803,11 @@ server = function(input, output, session) {
         
         upstream_attributes <- upstream_network_sf %>%
           st_drop_geometry() %>%
-          select(network, area_km2, AWI, up_km2, up_AWI)
+          dplyr::select(network, area_km2, AWI, up_km2, up_AWI)
         
         networks_sf <- networks_sf %>%
           left_join(upstream_attributes, by = "network")
-        
+        #browser()
         upstream_network_sf <-upstream_network_sf %>%
           dplyr::select(network) %>%
           mutate(network = if_else(str_detect(network, "__PA"), "PAs", network))
@@ -1954,6 +1955,7 @@ server = function(input, output, session) {
   observeEvent(input$network, {
     req(input$network)
     req(network_reactive())
+    
     # Filter the `sf` object to get the selected KBA based on the input value
     selected_net <- network_reactive() %>%
       filter(network == input$network) %>%
