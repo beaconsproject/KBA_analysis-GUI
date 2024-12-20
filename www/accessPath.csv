@@ -1,0 +1,11 @@
+Layer,Path,Requirement
+catchments,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Required
+stream,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Required
+planning region,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Required
+protected areas,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Optional
+reference area,C:/path/to/shapefile (.shp; .shx; .dbf; .prj),Optional
+CMI,C:/path/to/continuous tif (.tif),Required
+LCC,C:/path/to/categorical tif (.tif),Required
+LED,C:/path/to/continuous tif (.tif),Required
+GPP,C:/path/to/continuous tif (.tif),Required
+PROJCMI,C:/path/to/continuous tif (.tif),Optional

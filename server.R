@@ -2076,6 +2076,15 @@ server = function(input, output, session) {
 
   ################################################################################################
   # Save features to a geopackage
+  output$downloadSample <- downloadHandler(
+    filename = function() { "accessPath.csv" },
+    content = function(file) {
+      # Copy the file from the www folder to the temporary file
+      file.copy("www/accessPath.csv", file)
+    }
+  )
+  
+  # Save features to a geopackage
   output$downloadData <- downloadHandler(
     filename = function() { paste("KBA_network:cmi", as.character(input$slideCMI),
                                   "gpp", as.character(input$slideGPP),
