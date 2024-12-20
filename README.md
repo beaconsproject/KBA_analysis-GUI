@@ -7,4 +7,4 @@ Using beaconstools to design KBAs
 3. For Builder to work, computer must have Microsoft .NET Framework installed.
 
 **Sample csv file for uploading spatial data**  
-A sample csv file for uploading spatial data to the App (accessPath.csv)) can be found in the folder called "www".
+A sample csv file for uploading spatial data into the App (accessPath.csv) can be found in the folder called "www".
