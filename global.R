@@ -126,6 +126,48 @@ read_tif_from_upload <- function(upload_input) {
     stop("The uploaded raster file does not exist.")
   }
 }
+
+
+get_stat_on_net <- function(net_sf, catchments, intact_col) {
+  # Union NET and intersect  with catchments
+  net_diss <- st_union(net_sf) 
+  area_km2 <- net_diss %>% st_area(.)/1000000
+  net_catch <- st_intersection(catchments, net_diss)
+  
+  #Calculate total area and intactness for NET
+  AWI <- net_catch %>%
+    mutate(catch_awi = as.numeric(st_area(.)) * .[[intact_col]]) %>%
+    st_drop_geometry() %>%
+    summarize(AWI = sum(catch_awi, na.rm = TRUE) / 1000000)
+
+  #Calculate area and intactness for upstream NET
+  up_list <- get_upstream_catchments(net_sf, "network", catchments)
+  if(nrow(up_list)>0){
+    catch_up <- catchments[catchments$CATCHNUM %in% up_list[[1]], ]
+    up_km2 <- catch_up %>% 
+      mutate(catch_km2 = as.numeric(st_area(.)))%>%
+      st_drop_geometry() %>%
+      summarize(up_km2 = sum(catch_km2, na.rm = TRUE) / 1000000)
+    up_AWI <- catch_up %>% 
+      mutate(intact = as.numeric(st_area(.))* .[[intact_col]]) %>%
+      st_drop_geometry() %>%
+      summarize(up_AWI = sum(intact, na.rm = TRUE) / 1000000)
+    up_net <- catch_up %>% 
+      st_union() %>%
+      st_as_sf() %>% 
+      mutate(network = net_sf$network, 
+             area_km2 = as.numeric(area_km2),
+             AWI = as.numeric(AWI)/as.numeric(area_km2),
+             up_km2 = as.numeric(up_km2),
+             up_AWI = as.numeric(up_AWI)/as.numeric(up_km2))
+    return(up_net)
+  }else{
+    return(NULL)
+  } 
+  
+}
+
+
 MB <- 1024^2
 
 UPLOAD_SIZE_MB <- 5000
