@@ -161,14 +161,31 @@ get_stat_on_net <- function(net_sf, catchments, intact_col, upstream) {
       mutate(catch_awi = as.numeric(st_area(.)) * .[[intact_col]]) %>%
       st_drop_geometry() %>%
       summarize(up_AWI = sum(catch_awi, na.rm = TRUE) / 1000000)
-  
-    up_bind <- up_bind %>% 
-      st_as_sf() %>%
-        mutate(network = net_sf$network, 
-               area_km2 = as.numeric(area_km2),
-               AWI = as.numeric(AWI)/as.numeric(area_km2),
-               up_km2 = as.numeric(up_km2),
-               up_AWI = as.numeric(up_intactkm)/as.numeric(up_km2))
+    
+    up_km2 <- as.numeric(up_km2)
+    up_AWI <- as.numeric(up_intactkm)/as.numeric(up_km2)
+  }else{
+    up_km2 <- 0
+    up_AWI <- 0
+  } 
+  net_sf <- net_sf %>% 
+    st_as_sf() %>%
+    mutate(area_km2 = as.numeric(area_km2),
+           AWI = as.numeric(AWI)/as.numeric(area_km2),
+           up_km2 = up_km2,
+           up_AWI = up_AWI)
+  return(net_sf)
+}
+
+# get_stat_on_net: compute stats on NET
+get_upstream <- function(net_sf, upstream) {
+  # Extract upstream 
+  p_name <- sep_network_names(net_sf$network)
+  up_net <- upstream[upstream$network %in% p_name[[1]],]
+  if(nrow(up_net)>0){
+    up_bind <- st_union(up_net) %>% 
+      st_as_sf()%>% 
+      mutate(network = net_sf$network)
     return(up_bind)
   }else{
     return(NULL)
