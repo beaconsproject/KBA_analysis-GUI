@@ -113,6 +113,10 @@ server = function(input, output, session) {
       st_write(planreg(), dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
                layer = "planning region", driver = "GPKG", append = FALSE)
     }
+    
+    output$outPath <- renderText({
+      paste0("Data will be downloaded in the KBA_Analysis.gpkg found in ", as.character(dirpath(),"/output"))
+    })
   })
   
   observeEvent(planreg(),{
@@ -1527,12 +1531,12 @@ server = function(input, output, session) {
   observeEvent(input$filterRep, {
     req(catchments())
     req(poly_reactive())
-    browser()
+    
     filetred_sf <- poly_reactive()
     if(!is.null(criteria5())){
       filtered_sf_rep <- filter(filetred_sf, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
     }else{
-      filtered_sf_rep <- filter(filetred_sf, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 >= input$slideUP)
+      filtered_sf_rep <- filter(filetred_sf, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
     }
     
     if(nrow(filtered_sf_rep)>0){
@@ -1720,7 +1724,7 @@ server = function(input, output, session) {
                           "_lcc", as.character(input$slideLCC))
         if(!is.null(criteria5())){
           potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & 
-                                   !!sym(criteria5name()) <= input$slidecrit5 & up_km2 >= input$slideUP)
+                                   !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
           outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
           network_dir <- paste0("output/plot", outName)
           poly_reactive(potential_kbas)
@@ -1740,7 +1744,7 @@ server = function(input, output, session) {
                             "_lcc", as.character(input$slideLCC))
         if(!is.null(criteria5())){
           potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & 
-                                     !!sym(criteria5name()) <= input$slidecrit5 & up_km2 >= input$slideUP)
+                                     !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
           outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA))
           network_dir <- paste0("output/plot", outName)
           poly_reactive(potential_kbas)
@@ -1922,7 +1926,7 @@ server = function(input, output, session) {
   observeEvent(input$filterNet, {
     req(catchments())
     req(network_reactive())
-    browser()
+    
     network_sf <- network_reactive()
     # criteria5
     if(!is.null(criteria5())){
@@ -2082,20 +2086,46 @@ server = function(input, output, session) {
   )
   
   # Save features to a geopackage
-  output$downloadData <- downloadHandler(
-    filename = function() { paste("KBA_network:cmi", as.character(input$slideCMI),
-                                  "gpp", as.character(input$slideGPP),
-                                  "led", as.character(input$slideLED),
-                                  "lcc", as.character(input$slideLCC),
-                                  "_", as.character(input$slideUP),
-                                  "_", input$set_net, ".gpkg", sep="") },
-    content = function(file) {
-      poly_sf <- poly_filtered_reactive()
-      KBA_network <-network_reactive()
-      poly_sf_rep <- filter(poly_sf, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
-      st_write(KBA_network, dsn=file, layer='KBA_networks_representative', append=FALSE)
-      st_write(poly_sf_rep, dsn=file, layer='KBAs_filtered', append=TRUE)
+  observeEvent(input$downloadData, {
+    if(input$forcePAs){
+      if(input$filterNet>0){
+        filtering <- paste0("_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
+                            "_lcc", as.character(input$slideNETLCC))
+        if(!is.null(criteria5())){
+          potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
+                                     !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+        }else{
+          potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
+          outName <- paste0("filterednet", filtering, "_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+        }
+      }else{
+        potential_net <- network_reactive()
+        outName <- paste0("filterednet_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+      }
+    } else {
+      if(input$filterNet>0){
+        filtering <- paste0("_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
+                            "_lcc", as.character(input$slideNETLCC))
+        if(!is.null(criteria5())){
+          potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
+                                     !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA))
+        }else{
+          potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
+          outName <- paste0("filterednet",  filtering, "_kba", input$set_net, "_force", as.character(input$forceKBA))
+        }
+      }else{
+        potential_net <- network_reactive()
+        outName <- paste0("filterednet", "_kba", input$set_net, "_force", as.character(input$forceKBA))
+      }
     }
-  )
+    st_write(potential_net, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
+    showModal(modalDialog(
+      title = "Filtered networks downloaded",
+      easyClose = TRUE,
+      footer = modalButton("OK"))
+    )
+  })
   
 }
