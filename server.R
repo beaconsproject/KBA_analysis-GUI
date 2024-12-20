@@ -1390,7 +1390,7 @@ server = function(input, output, session) {
   observeEvent(input$KBA, {
     req(input$KBA)
     req(poly_reactive())
-
+    
     poly_sf_4326 <- poly_reactive() %>% st_transform(4326)
     # Filter the `sf` object to get the selected KBA based on the input value
     selected_polygon <- poly_sf_4326 %>%
@@ -1527,7 +1527,7 @@ server = function(input, output, session) {
   observeEvent(input$filterRep, {
     req(catchments())
     req(poly_reactive())
-    
+    browser()
     filetred_sf <- poly_reactive()
     if(!is.null(criteria5())){
       filtered_sf_rep <- filter(filetred_sf, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
@@ -1693,6 +1693,7 @@ server = function(input, output, session) {
    
       }
     } else {
+      agg_pa_name <- NULL
       # Wait for user to set `input$set_net` to at least 2
       if (is.null(input$set_net) || input$set_net < 2) {
         showModal(modalDialog(
@@ -1811,8 +1812,10 @@ server = function(input, output, session) {
         # Combine the results into a single data frame
         upstream_network_sf <- do.call(rbind, up_list)
         
-        upstream_network_sf <-upstream_network_sf %>% 
-          mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
+        if(!is.null(agg_pa_name)){
+          upstream_network_sf <-upstream_network_sf %>% 
+            mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
+        }
         
         upstream_network_reactive(upstream_network_sf)
         if(!is.null(upstream_network_sf)){
@@ -1826,9 +1829,11 @@ server = function(input, output, session) {
         }
         
         #Fix network name
-        networks_sf <-networks_sf %>% 
-          mutate(network = str_replace_all(network, agg_pa_name, "PAs"))               
-                 
+        if(!is.null(agg_pa_name)){
+          networks_sf <-networks_sf %>% 
+            mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
+        }
+                       
         # DCI
         networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
         #Criteria
@@ -1917,13 +1922,13 @@ server = function(input, output, session) {
   observeEvent(input$filterNet, {
     req(catchments())
     req(network_reactive())
-    
+    browser()
     network_sf <- network_reactive()
     # criteria5
     if(!is.null(criteria5())){
-      network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 >= input$slideNETUP)
+      network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
     }else{
-      network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & !!sym(criteria5name()) <=input$slideNETcrit5 & up_km2 >= input$slideNETUP)
+      network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & !!sym(criteria5name()) <=input$slideNETcrit5 & up_km2 <= input$slideNETUP)
     }
 
     x <- outfreqnet()
@@ -1992,30 +1997,22 @@ server = function(input, output, session) {
   observeEvent(input$network, {
     req(input$network)  # Ensure there is a selected KBA
     
-    if(input$forceKBA){
-      if(!is.null(criteria5())){
-        # Prepare the table for display
-        x <- tibble(
+   if(is.null(criteria5())){
+      # Prepare the table for display
+      x <- tibble(
           Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
                         "DCI", "CMI", "GPP", "LED", "LCC"),
           Values = NA
-        )
-      }else{
-        # Prepare the table for display
-        x <- tibble(
-          Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
-                        "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
-          Values = NA
-        )
-      }
+      )
     }else{
       # Prepare the table for display
       x <- tibble(
-        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
-                      "DCI", "CMI", "GPP", "LED", "LCC"),
-        Values = NA
+          Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
+                        "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
+          Values = NA
       )
     }
+    
 
     # Get the filtered polygons and select the one matching the KBA choice
     potential_net <- network_reactive()
