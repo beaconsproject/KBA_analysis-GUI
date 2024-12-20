@@ -58,7 +58,7 @@ server = function(input, output, session) {
   observeEvent(input$set_wd, {
     req(input$set_wd)
     
-    dirpath()
+    #dirpath()
     treedir <- c("output","Builder_input","Builder_output")
     for(d in treedir){
       if(!dir.exists(file.path(dirpath(), d))){
@@ -108,8 +108,24 @@ server = function(input, output, session) {
         footer = modalButton("OK"))
       )
     }
+    if(!is.null(planreg())){
+      req(planreg())
+      st_write(planreg(), dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
+               layer = "planning region", driver = "GPKG", append = FALSE)
+    }
   })
   
+  observeEvent(planreg(),{
+    if(input$set_wd==0){
+      showModal(modalDialog(
+        title = "Output directory is missing",
+        "Please provide an output directory prior to upload the input files",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return(FALSE)  # Stop further execution
+    }
+  })
   ################################################################################################
   # Validate csv
   ################################################################################################
@@ -119,7 +135,6 @@ server = function(input, output, session) {
   # Reactive function to validate the input file
   validate_csv <- reactive({
     req(input$csv_file)  # Ensure the file input is not NULL
-    #browser()
     # Read the uploaded CSV file
     csv_data <- read.csv(input$csv_file$datapath)
     
@@ -134,11 +149,11 @@ server = function(input, output, session) {
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
-        return(FALSE)  # Stop further execution
+      return(FALSE)  # Stop further execution
+    } else {
+      # Return validated data if all checks pass
+      return(TRUE)
     }
-    
-    # Return validated data if all checks pass
-    return(TRUE)
   })
   
   observeEvent(input$csv_file, {
@@ -183,13 +198,13 @@ server = function(input, output, session) {
     if (!is.null(input$csv_file)) {
       req(validate_csv())
       planreg <- read_shp_from_csv(input$csv_file, "planning region")
-      st_write(planreg, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
-               layer = "planning region", driver = "GPKG", append = FALSE)
+      #st_write(planreg, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
+      #         layer = "planning region", driver = "GPKG", append = FALSE)
       return(planreg)
     } else if (!is.null(input$upload_planreg)) {
       planreg <- read_shp_from_upload(input$upload_planreg)
-      st_write(planreg, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
-               layer = "planning region", driver = "GPKG", append = FALSE)
+      #st_write(planreg, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
+      #         layer = "planning region", driver = "GPKG", append = FALSE)
       return(planreg)
     }else{
       return(NULL)
@@ -389,9 +404,6 @@ server = function(input, output, session) {
   ####################################################################################################
   # Render the initial map
   output$map <- renderLeaflet({
-    # Re-project
-    bnd <- bnd
-    map_bounds <- bnd %>% st_bbox() %>% as.character()
     # Render initial map
     map <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
       fitBounds(lng1 = -121, lat1 = 44, lng2 = -65, lat2 = 78)%>%
@@ -400,18 +412,16 @@ server = function(input, output, session) {
       addProviderTiles("Esri.WorldTopoMap", group="Esri.WorldTopoMap") %>% 
       addProviderTiles("Esri.WorldImagery", group="Esri.WorldImagery") %>%
       addPolygons(data=intact_4326(), fill=T, stroke=F, fillColor='#99CC99', fillOpacity=0.5, group="Intact areas", options = leafletOptions(pane = "layer1")) %>%
-      addPolygons(data=bnd, color='grey', fill=F, weight=1, group="region", options = leafletOptions(pane = "layer1")) %>%
-      #fitBounds(map_bounds[1], map_bounds[2], map_bounds[3], map_bounds[4]) %>% # set view to the selected FDA
+      addPolygons(data=bnd, color='grey', fill=F, weight=1, group="Canada extent", options = leafletOptions(pane = "layer1")) %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                        overlayGroups = c("Intact areas"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c(""))
   
-    #if(!is.null(input$csv_file) || !is.null(input$upload_catch)){
     if(!is.null(catchments())){
       req(catchments())
-
+  
       # show pop-up ...
       showModal(modalDialog(
        title = "Uploading layers. Please wait...",
@@ -440,7 +450,6 @@ server = function(input, output, session) {
     #if(!is.null(input$csv_file) || !is.null(input$upload_planreg)){
     if(!is.null(planreg())){
       req(planreg())
-      
       planreg_4326 <- st_transform(planreg(), 4326)
       map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
       
