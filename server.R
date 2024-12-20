@@ -1799,18 +1799,20 @@ server = function(input, output, session) {
         })
         
         # Combine the results into a single data frame
-        upstream_network_sf <- do.call(rbind, results_list)
+        networks_sf <- do.call(rbind, results_list)
         
-        upstream_attributes <- upstream_network_sf %>%
-          st_drop_geometry() %>%
-          dplyr::select(network, area_km2, AWI, up_km2, up_AWI)
+        #upstream_network_sf <- get_upstream(networks_sf, upstream_reactive())
+        up_list <- lapply(network_list, function(network_group) {
+          get_upstream(
+            net_sf = network_group,
+            upstream = upstream_reactive()
+          )
+        })
+        # Combine the results into a single data frame
+        upstream_network_sf <- do.call(rbind, up_list)
         
-        networks_sf <- networks_sf %>%
-          left_join(upstream_attributes, by = "network")
-        #browser()
-        upstream_network_sf <-upstream_network_sf %>%
-          dplyr::select(network) %>%
-          mutate(network = if_else(str_detect(network, "__PA"), "PAs", network))
+        upstream_network_sf <-upstream_network_sf %>% 
+          mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
         
         upstream_network_reactive(upstream_network_sf)
         if(!is.null(upstream_network_sf)){
@@ -1824,10 +1826,9 @@ server = function(input, output, session) {
         }
         
         #Fix network name
-        networks_sf <-networks_sf %>%
-          #mutate(network = str_replace(network, "(.*?)(__PA.*)", "\\1__PAs"))
-          mutate(network = if_else(str_detect(network, "__PA"), "PAs", network))
-        
+        networks_sf <-networks_sf %>% 
+          mutate(network = str_replace_all(network, agg_pa_name, "PAs"))               
+                 
         # DCI
         networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
         #Criteria
