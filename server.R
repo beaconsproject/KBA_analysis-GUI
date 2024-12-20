@@ -350,7 +350,7 @@ server = function(input, output, session) {
       addMapPane(name = "layer2", zIndex=420) %>%
       addProviderTiles("Esri.WorldTopoMap", group="Esri.WorldTopoMap") %>% 
       addProviderTiles("Esri.WorldImagery", group="Esri.WorldImagery") %>%
-      addPolygons(data=intact_4326(), fill=T, stroke=F, fillColor='#99CC99', fillOpacity=0.5, group="Intact areas", options = leafletOptions(pane = "layer2")) %>%
+      addPolygons(data=intact_4326(), fill=T, stroke=F, fillColor='#99CC99', fillOpacity=0.5, group="Intact areas", options = leafletOptions(pane = "layer1")) %>%
       addPolygons(data=bnd, color='grey', fill=F, weight=1, group="region", options = leafletOptions(pane = "layer1")) %>%
       #fitBounds(map_bounds[1], map_bounds[2], map_bounds[3], map_bounds[4]) %>% # set view to the selected FDA
       addLayersControl(position = "topright",
@@ -397,7 +397,7 @@ server = function(input, output, session) {
       
       map <- map %>%
         fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
-        addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer2")) %>%
+        addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer1")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                          overlayGroups = c("Catchments extent", "Planning region", "Intact areas"),
@@ -410,7 +410,7 @@ server = function(input, output, session) {
       pas_4326 <- st_transform(pas_sf_reactive(), 4326)
       map <- map %>%
         fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
-        addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
+        addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, group="Protected areas", options = leafletOptions(pane = "layer1")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                          overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Protected areas"),
@@ -1350,9 +1350,9 @@ server = function(input, output, session) {
       clearGroup("Potential KBAs") %>%
       clearGroup("Protected areas") %>%
       clearGroup(labelKBA) %>%
-      learGroup(labelNET) %>%
+      clearGroup(labelNET) %>%
       clearGroup("Upstream") %>%  # Clear previous highlight
-      addPolygons(data = selected_polygon, color = "black",  fillColor = "grey", fillOpacity = 0.8, weight = 3, group = input$KBA) %>%
+      addPolygons(data = selected_polygon, color = "black",  fillColor = "#989898", fillOpacity = 0.8, weight = 2, group = input$KBA) %>%
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
@@ -1363,7 +1363,7 @@ server = function(input, output, session) {
     if(input$assessKBAs == "Only KBAs"){
       kba_sf_4326 <- kba_sf_reactive() %>% st_transform(4326)
       leafletProxy("map") %>%
-        addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 0, weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
+        addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 1 , weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
               baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
               overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
@@ -1717,60 +1717,41 @@ server = function(input, output, session) {
           network_names <- gen_network_names(in_names = potential_kbas$network, k = k)
         }
         
-    
         #Check and remove overlapping KBAs. 
         overlaps <- list_overlapping_polygons(conservation_areas_sf = potential_kbas)
         network_names <- network_names[!network_names %in% overlaps]
     
         # Build the list of networks using the conservation area polygons. Each network will become a single feature in the polygon object.
         networks_sf <- build_network_polygons(conservation_areas_sf = potential_kbas, network_list = network_names)
-#------------    
-        #Recover area
-        kba_in_net <- sep_network_names(networks_sf$network)
-        kba_areas <- setNames(potential_kbas$area_km2 , potential_kbas$network)
-        network_areas <- sapply(kba_in_net, function(kba_names) {
-          sum(kba_areas[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
+
+        # Split networks_sf into individual polygons by "network"
+        network_list <- split(networks_sf, networks_sf$network)
+        
+        #Upstream
+        results_list <- list()
+        
+        # Use lapply to process each polygon
+        results_list <- lapply(network_list, function(network_group) {
+          get_stat_on_net(
+            net_sf = network_group,
+            catchments = catchments(),
+            intact_col = input$intactColpas
+          )
         })
-        networks_sf$area_km2 <- network_areas[networks_sf$network]
-      
-        #Recover intactness
-        kba_intactarea <- setNames(potential_kbas$area_km2*potential_kbas$up_AWI , potential_kbas$network)
-        network_intact <- sapply(kba_in_net, function(kba_names) {
-          sum(kba_intactarea[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
-        })
-        networks_sf$intact_km2 <- network_intact[networks_sf$network]
-        networks_sf$AWI <- round(networks_sf$intact_km2/networks_sf$area_km2,2)
-      
-        #recover upstream area
-        kba_uparea <- setNames(potential_kbas$up_km2  , potential_kbas$network)
-        network_up <- sapply(kba_in_net, function(kba_names) {
-          sum(kba_uparea[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
-        })
-        networks_sf$up_km2 <- network_up[networks_sf$network]
-      
-        #Recover upstream AWI
-        kba_upAWI <- setNames(potential_kbas$up_km2*potential_kbas$up_AWI , potential_kbas$network)
-        network_areaintact <- sapply(kba_in_net, function(kba_names) {
-          sum(kba_upAWI[kba_names], na.rm = TRUE)  # Sum areas for KBAs in each network
-        })
-        networks_sf$upintact_km2 <- network_areaintact[networks_sf$network]
-        networks_sf$up_AWI <- round(networks_sf$upintact_km2/networks_sf$up_km2,2)
-        # Upstream
-        upstream_sf <- upstream_reactive()
-        upstream_network_list <- lapply(names(kba_in_net), function(network_name) {
-          # Extract the list of KBAs for this network
-          kba_names <- kba_in_net[[network_name]]
-          # Filter upstream_kba_sf to find units matching KBAs in this network
-          upstream_units <- upstream_sf[upstream_sf$network %in% kba_names, ]
-          # Add a network column 
-          upstream_units$network <- network_name
-          return(upstream_units)
-        })
-        upstream_network_sf <- do.call(rbind, upstream_network_list)
+        
+        # Combine the results into a single data frame
+        upstream_network_sf <- do.call(rbind, results_list)
+        
+        upstream_attributes <- upstream_network_sf %>%
+          st_drop_geometry() %>%
+          select(network, area_km2, AWI, up_km2, up_AWI)
+        
+        networks_sf <- networks_sf %>%
+          left_join(upstream_attributes, by = "network")
+        
         upstream_network_sf <-upstream_network_sf %>%
-          #mutate(network = str_replace(network, "(.*?)(__PA.*)", "\\1__PAs"))
+          dplyr::select(network) %>%
           mutate(network = if_else(str_detect(network, "__PA"), "PAs", network))
-          
         
         upstream_network_reactive(upstream_network_sf)
         if(!is.null(upstream_network_sf)){
@@ -1782,7 +1763,7 @@ server = function(input, output, session) {
             footer = modalButton("OK"))
           )
         }
-#----------      
+        
         #Fix network name
         networks_sf <-networks_sf %>%
           #mutate(network = str_replace(network, "(.*?)(__PA.*)", "\\1__PAs"))
@@ -1934,7 +1915,7 @@ server = function(input, output, session) {
       clearGroup('Potential KBAs') %>%
       clearGroup(labelNET) %>%
       clearGroup("Upstream") %>%  # Clear previous highlight
-      addPolygons(data = selected_net, color = "black",  fillColor = "grey", fillOpacity = 0.8, weight = 3, layerId = ~network,  # Ensure each polygon has a unique ID
+      addPolygons(data = selected_net, color = "black",  fillColor = "#989898", fillOpacity = 0.9, weight = 3, layerId = ~network,  # Ensure each polygon has a unique ID
                    group = input$network) %>%
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(
