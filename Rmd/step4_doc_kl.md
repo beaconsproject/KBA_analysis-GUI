@@ -20,7 +20,7 @@ First, **Upload protected areas shapefile" by navigating to the file using the B
 
 Next, specify the intactness attribute in the catchment shapefile that will be used to calculate the intactness of PAs and the area upstream of each PA.
 
-Finally, click on the orange "Run" button to launch the calculation of PA area and intactness, as well as PA hydrology metrics. Spatial layers called "PAs" and "PA_upstream" will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below.
+Finally, click on the orange "Run" button to launch the calculation of PA area and intactness, as well as PA hydrology metrics. Spatial layers called "PAs" and "PAs_upstream" will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below.
 
 Note: The upstream area identified for each PA should be reviewed carefully. The current code can produce errors in some cases. A more sophisticated version of the code will eventually be added. 
 
@@ -39,7 +39,7 @@ Two spatial layers are added to the "KBA_analysis" geopackage (KBA_analysis.gpkg
 - **up_AWI** is calculated the App using the same method as Builderr. It is the mean area-weighted catchment intactness of the area upstream of the PA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
 - **dci** is calculated by the App. See description above for the Dendritic Connectivity Index (DCI).   
   
-2. **PA_upstream** - polygons of the upstream area for each PA. 
+2. **PAs_upstream** - polygons of the upstream area for each PA. 
 
 - **Network** is the unique identifier for the PA and is created by the App.
 - **up_intactkm2** is the amount of intact area in the area upstream of the PA based on the KBA intact areas.
