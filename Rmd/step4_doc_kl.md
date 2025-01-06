@@ -12,7 +12,7 @@ DCI (Dendritic Connectivity Index) quantifies the “longitudinal connectivity o
 
 *Cote, D., Kehler, D.G., Bourne, C. et al. A new measure of longitudinal connectivity for stream networks. Landscape Ecol 24, 101–113 (2009). https://doi.org/10.1007/s10980-008-9283-y*
 
-To run calculate these attributes, the PA boundary is modified to follow catchment boundaries. Catchments are assigned to each PA using an intersect. 
+To run calculate these attributes, catchments are assigned to each PA using an intersect. 
 
 ### Using the app
 
