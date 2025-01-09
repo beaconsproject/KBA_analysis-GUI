@@ -39,3 +39,6 @@ Second, specify if KBAs and/or PAs are to be assessed. For PAs to be included, t
 Click on the orange **Run representation analysis** button to launch the representation analysis. Depending on the number of KBAs/PAs and the resolution of the indicators, this step can take a while to finish. Once completed, a spatial layer called " " will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below.
 
 **Filter KBAs and/or PAs based on dissimilarity metrics (DMs)**
+
+
+## Output
