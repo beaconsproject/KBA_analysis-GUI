@@ -186,7 +186,6 @@ ui = dashboardPage(skin="black",
                        tabItem(tabName = "tabUpload",
                                fluidRow(
                                  # Mapview for multiple tabs
-                                  #condition = "input.tabs == 'tabUpload' || input.tabs == 'tabinput' || input.tabs == 'tabBuilder' || input.tabs == 'tabDCI'",
                                   tabBox(id = "mapBox", width = 10,
                                           tabPanel(HTML("<b>Mapview</b>"),
                                                    leafletOutput("map", height = 750) %>% withSpinner(),
@@ -233,7 +232,8 @@ ui = dashboardPage(skin="black",
                                         )
                                  ),
                                  conditionalPanel(
-                                   condition = "input.tabs == 'tabKBA'",
+                                   #condition = "input.tabs == 'tabKBA'",
+                                   condition = "input.mapBox == 'Mapview' && input.sidebarItemExpanded == 'tabKBA'",  # Updated condition
                                    tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabset1",
                                                       tabPanel(HTML("<h4>Number of potential KBAs and protected areas</h4>"), 
@@ -245,7 +245,8 @@ ui = dashboardPage(skin="black",
                                    )
                                  ),
                                 conditionalPanel(
-                                  condition = "input.tabs == 'tabNET'",
+                                  #condition = "input.tabs == 'tabNET'",
+                                  condition = "input.mapBox == 'Mapview' && input.sidebarItemExpanded == 'tabNET'",  # Updated condition
                                   tabBox(id = "metricsNET", width = 2,
                                          tabsetPanel(id = "tabsetNET",
                                                      tabPanel(HTML("<h4>Number of potential KBA network</h4>"), 
