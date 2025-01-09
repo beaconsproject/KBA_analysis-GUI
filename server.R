@@ -1086,7 +1086,7 @@ server = function(input, output, session) {
         # Check if criteria5() is NULL
         if (!is.null(criteria5())) {
           # If criteria5 is NULL, render the sliderInput with disabled = TRUE
-          div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = criteria5name(), min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE))
+          div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = criteria5name(), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
         }
       })
     
@@ -1106,7 +1106,7 @@ server = function(input, output, session) {
         # Check if criteria5() is NULL
         if (!is.null(criteria5())) {
           # If criteria5 is NULL, render the sliderInput with disabled = TRUE
-          div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = criteria5name(), min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE))
+          div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = criteria5name(), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
         }
       })
     }
