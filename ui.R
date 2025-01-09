@@ -185,9 +185,9 @@ ui = dashboardPage(skin="black",
                        # Explorer tab: two tabBoxes
                        tabItem(tabName = "tabUpload",
                                fluidRow(
-                                 # Mapview for multiple tabs
+                                  # Mapview for multiple tabs
                                   tabBox(id = "mapBox", width = 10,
-                                          tabPanel(HTML("<b>Mapview</b>"),
+                                          tabPanel("Mapview",
                                                    leafletOutput("map", height = 750) %>% withSpinner(),
                                                    conditionalPanel(
                                                      condition = "input.tabs == 'tabPAs'",
@@ -232,7 +232,8 @@ ui = dashboardPage(skin="black",
                                         )
                                  ),
                                  conditionalPanel(
-                                   condition = "input.mapBox == 'Mapview' && input.sidebarItemExpanded == 'tabKBA'",  # Updated condition
+                                   #condition = "input.tabs == 'tabKBA'",  # Updated condition
+                                   condition = "input.tabs == 'tabKBA' && input.mapBox === 'Mapview'", 
                                    tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabset1",
                                                       tabPanel(HTML("<h4>Number of potential KBAs and protected areas</h4>"), 
@@ -244,7 +245,7 @@ ui = dashboardPage(skin="black",
                                    )
                                  ),
                                 conditionalPanel(
-                                  condition = "input.mapBox == 'Mapview' && input.sidebarItemExpanded == 'tabNET'",  # Updated condition
+                                  condition = "input.tabs == 'tabNET' && input.mapBox === 'Mapview'",  # Updated condition
                                   tabBox(id = "metricsNET", width = 2,
                                          tabsetPanel(id = "tabsetNET",
                                                      tabPanel(HTML("<h4>Number of potential KBA network</h4>"), 
