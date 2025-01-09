@@ -1472,22 +1472,32 @@ server = function(input, output, session) {
         Values = NA)
     }
     
-    x$Values[x$Variables == "Area km2"] <- round(selected_polygon$area_km2, 2)
-    x$Values[x$Variables == "AWI"] <- round(as.numeric(selected_polygon$AWI) * 100, 2)
-    x$Values[x$Variables == "Upstream area km2"] <- round(selected_polygon$up_km2, 2)
+    x$Values[x$Variables == "Area km2"] <- as.integer(selected_polygon$area_km2)
+    x$Values[x$Variables == "AWI"] <- round(as.numeric(selected_polygon$AWI) * 100, 3)
+    x$Values[x$Variables == "Upstream area km2"] <- as.integer(selected_polygon$up_km2)
     x$Values[x$Variables == "Upstream AWI"] <- round(as.numeric(selected_polygon$up_AWI) * 100, 2)
-    x$Values[x$Variables == "DCI"] <- round(selected_polygon$dci, 2)
-    x$Values[x$Variables == "CMI"] <- round(selected_polygon$cmi, 2)
-    x$Values[x$Variables == "GPP"] <- round(selected_polygon$gpp, 2)
-    x$Values[x$Variables == "LED"] <- round(selected_polygon$led, 2)
-    x$Values[x$Variables == "LCC"] <- round(selected_polygon$lcc, 1)
+    x$Values[x$Variables == "DCI"] <- round(selected_polygon$dci, 3)
+    x$Values[x$Variables == "CMI"] <- round(selected_polygon$cmi, 3)
+    x$Values[x$Variables == "GPP"] <- round(selected_polygon$gpp, 3)
+    x$Values[x$Variables == "LED"] <- round(selected_polygon$led, 3)
+    x$Values[x$Variables == "LCC"] <- round(selected_polygon$lcc, 3)
 
     if(!is.null(criteria5())){
-      x$Values[x$Variables == criteria5name()] <- round(selected_polygon[[criteria5name()]], 1)
+      x$Values[x$Variables == criteria5name()] <- round(selected_polygon[[criteria5name()]], 3)
     }
+    
+    formatted_x <- x %>%
+      mutate(
+        Values = case_when(
+          Variables %in% c("Area km2", "Upstream area km2") ~ as.character(as.integer(Values)),  # No decimals
+          Variables %in% c("AWI", "Upstream AWI") ~ formatC(as.numeric(Values), format = "f", digits = 2),  # 2 decimals
+          TRUE ~ formatC(as.numeric(Values), format = "f", digits = 3)  # 3 decimals for others
+        )
+      )
+    
     output$outkba <- renderTable({
-      x
-    }, digits = 1)
+      formatted_x
+    }, digits = 0)  # digits is ignored since we manually formatted the values
     
     ####################################################################################################
     # Render Rep Analysis PLOT per KBA
@@ -1650,7 +1660,6 @@ server = function(input, output, session) {
   ################################################################################################
   observeEvent(input$buildNet, {
     req(catchments())
-    
     #Validate Force PAs
     if(input$forcePAs){
       if ((is.null(pas_sf_reactive()))){
@@ -1684,7 +1693,15 @@ server = function(input, output, session) {
             footer = modalButton("OK")
           ))
           return() 
-        }else {
+        }else if(input$set_net > nrow(kba_sf_reactive())){
+          showModal(modalDialog(
+            title = "The number of KBAs set per network is above the number of KBAs available.",
+            "Please revise the number of KBA per network.",
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+          return()
+        } else {
           kba_up <- kba_upstream_reactive()
           pas_up <- pas_upstream_reactive() %>%
             dplyr::select(network)
@@ -1707,6 +1724,14 @@ server = function(input, output, session) {
           footer = modalButton("OK")
         ))
         return() 
+      }else if(input$set_net > nrow(kba_sf_reactive())){
+        showModal(modalDialog(
+          title = "The number of KBAs set per network is above the number of KBAs available.",
+          "Please revise the number of KBA per network.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
       }else{
         poly_reactive(kba_sf_reactive())
       }
@@ -2026,19 +2051,29 @@ server = function(input, output, session) {
     x$Values[x$Variables == "AWI"] <- round(as.numeric(selected_network$AWI) * 100, 2)
     x$Values[x$Variables == "Upstream area km2"] <- round(selected_network$up_km2, 2)
     x$Values[x$Variables == "Upstream AWI"] <- round(as.numeric(selected_network$up_AWI) * 100, 2)
-    x$Values[x$Variables == "DCI"] <- round(selected_network$dci, 2)
-    x$Values[x$Variables == "CMI"] <- round(selected_network$cmi, 2)
-    x$Values[x$Variables == "GPP"] <- round(selected_network$gpp, 2)
-    x$Values[x$Variables == "LED"] <- round(selected_network$led, 2)
-    x$Values[x$Variables == "LCC"] <- round(selected_network$lcc, 1)
+    x$Values[x$Variables == "DCI"] <- round(selected_network$dci, 3)
+    x$Values[x$Variables == "CMI"] <- round(selected_network$cmi, 3)
+    x$Values[x$Variables == "GPP"] <- round(selected_network$gpp, 3)
+    x$Values[x$Variables == "LED"] <- round(selected_network$led, 3)
+    x$Values[x$Variables == "LCC"] <- round(selected_network$lcc, 3)
 
     if(!is.null(criteria5())){
-      x$Values[x$Variables == criteria5name()] <- round(selected_network[[criteria5name()]], 1)
+      x$Values[x$Variables == criteria5name()] <- round(selected_network[[criteria5name()]], 3)
     }
     
+    formatted_x <- x %>%
+      mutate(
+        Values = case_when(
+          Variables %in% c("Area km2", "Upstream area km2") ~ as.character(as.integer(Values)),  # No decimals
+          Variables %in% c("AWI", "Upstream AWI") ~ formatC(as.numeric(Values), format = "f", digits = 2),  # 2 decimals
+          TRUE ~ formatC(as.numeric(Values), format = "f", digits = 3)  # 3 decimals for others
+        )
+      )
+    
     output$outnet <- renderTable({
-      x
-    }, digits = 1)
+      formatted_x
+    }, digits = 0)  # digits is ignored since we manually formatted the values
+    
     ####################################################################################################
     # Render Rep Analysis PLOT per KBA
     ####################################################################################################
