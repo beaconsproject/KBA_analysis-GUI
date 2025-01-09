@@ -43,10 +43,10 @@ ui = dashboardPage(skin="black",
                                           #menuSubItem("Step 1: Set input parameters", tabName = "tabUpload", icon = icon("th")),
                                           menuSubItem("Create Builder input", tabName = "tabinput", icon = icon("th")),                
                                           menuSubItem("Run Builder", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
-                                          menuSubItem("Calculate hydrology metrics on KBAs", tabName = "tabDCI", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
+                                          menuSubItem("Calculate hydrology metrics (KBAs)", tabName = "tabDCI", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
                                           ),
                                  menuItem("Evaluate PAs (optional)", tabName = "load_pas", icon = icon(name = "fas fa-search", lib = "font-awesome"), startExpanded = FALSE,
-                                          menuSubItem("Calculate hydrology metrics on PAs", tabName = "tabPAs", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
+                                          menuSubItem("Calculate hydrology metrics (PAs)", tabName = "tabPAs", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
                                           ),
                                  menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
                                           menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Upload reference area<br>and assess representation</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
@@ -119,12 +119,12 @@ ui = dashboardPage(skin="black",
                        actionButton(inputId = "calc_pasdci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px")                     ),
                      conditionalPanel(
                        condition="input.tabs=='tabKBA'",
-                       fileInput(inputId = "upload_refarea", label = "Upload reference areas shapefile", multiple = TRUE),
+                       fileInput(inputId = "upload_refarea", label = "Upload reference area shapefile", multiple = TRUE),
                        div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
                                                                    selected = NULL)),
                        actionButton("runRep", "Run representation analysis", icon = icon(name = "image", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
-                       div("Filter KBAs based on criteria dissimilarity metrics (DMS)", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
-                       div("DMs range from 0 (low dissimilarity) to 1 (high dissimilarity)", style = "font-size: 12px; margin-top : 20px; margin-left : 20px; "),
+                       div("Filter KBAs and/or PAs based on dissimilarity metrics (DMs)", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
+                       div("DMs range from 0 to 1. 0 = low dissimilarity or high representation, 1 = high dissimilarity or low representation", style = "font-size: 12px; margin-top : 20px; margin-left : 20px; "),
                        div(style = "margin-top: 0px;",sliderInput("slideCMI", label="CMI:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideLED", label="LED:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideGPP", label="GPP:", min=0, max=1, value = 0.2, step=0.1, ticks=FALSE)),
@@ -232,7 +232,6 @@ ui = dashboardPage(skin="black",
                                         )
                                  ),
                                  conditionalPanel(
-                                   #condition = "input.tabs == 'tabKBA'",
                                    condition = "input.mapBox == 'Mapview' && input.sidebarItemExpanded == 'tabKBA'",  # Updated condition
                                    tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabset1",
@@ -245,7 +244,6 @@ ui = dashboardPage(skin="black",
                                    )
                                  ),
                                 conditionalPanel(
-                                  #condition = "input.tabs == 'tabNET'",
                                   condition = "input.mapBox == 'Mapview' && input.sidebarItemExpanded == 'tabNET'",  # Updated condition
                                   tabBox(id = "metricsNET", width = 2,
                                          tabsetPanel(id = "tabsetNET",
