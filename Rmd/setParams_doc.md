@@ -1,6 +1,6 @@
 ## Set input parameters
 
-Here, the user must complete two actions: (1) select an output directory and (2) upload spatial datasets.
+Two actions are completed here: (1) select an output directory and (2) upload spatial datasets.
 
 ### Using the app: Scenario 1 - New Analysis
 
@@ -26,16 +26,16 @@ All spatial datasets must be projected to `NAD 1983 Albers` to match the catchme
 
 There are two options for uploading the spatial datasets: (1) upload csv file with pathways to the datasets and (2) upload each spatial dataset individually. 
 
-For both upload options, the following spatial datasets are required: 
+For both upload options, the following spatial datasets are required:   
 NOTE: See Overview-Dataset tab for dataset details, including required attributes for catchments and streams.
 
 - **Catchments**: A shapefile representing a set of watershed catchments created by BEACONs Project. 
 - **Streams**: A shapefile of linear features representing the stream network. 
 - **Planning region**: A single polygon outlining the boundary of the planning area where KBAs will be generated
+- **LCC**: A TIF representing Land Cover map of Canada 2020 (categorical- 19 classes)  
+- **LED**: A TIF representing Lake-Edge Density (continuous)  
 - **CMI**: A TIF representing Climate Moisture Index (continuous)
 - **GPP**: A TIF representing Gross Primary Productivity (continuous)
-- **LED**: A TIF representing Lake-Edge Density (continuous)
-- **LCC**: A TIF representing Land Cover map of Canada 2020 (categorical- 19 classes)
 
 Optional spatial dataset: 
 
@@ -46,17 +46,18 @@ Optional spatial dataset:
 The spatial datasets can be uploaded using a csv file created in a text editor (e.g., Notepad). The csv file must have the following structure:
 
  Layer,Path  
- catchments,C:/KBA/data/catchments.shp  
+ catchments,C:/data/catchments.shp  
  stream,C:/data/streams.shp  
  planning region,C:/data/planning_region.shp  
+ protected areas,C:/data/protected_areas.shp **This dataset is optional. Delete this line if a protected areas dataset is not included.*  
+ reference area,C:/data/reference_area.shp **This dataset is optional. Delete this line if a reference area dataset is not included.*  
  CMI,C:/data/cmi.tif  
  LCC,C:/data/lcc.tif  
  LED,C:/data/led.tif  
- GPP,C:/data/gpp.tif
+ GPP,C:/data/gpp.tif  
+ PROJCMI,C:/data/projcmi.tif **Adding custom criteria is optional. Delete this line if a custom dataset is not included.* 
 
-If you upload a csv but one of the above element is missing, the app won't be able to generate the  the map. 
-
-'reference area', "protected areas," and an optional fifth criterion representing a continuous variable stored as a TIFF file can also be included in the CSV.
+The column headings (Layer,Path) must not change. Layer names under the "Layer" column (e.g., catchments, streams, planning region, etc.) must not change except for the custom criteria (e.g., PROJCMI). See note above about naming the custom criteria under "Optional spatial dataset".
 
 **OPTION 2: Upload each spatial dataset individually.**
 

@@ -170,7 +170,6 @@ ui = dashboardPage(skin="black",
                        # Link to custom CSS for the orange theme
                        tags$link(rel = "stylesheet", type = "text/css", href = "green-theme.css")
                      ),
-                     
                      tabItems(
                        # Overview tab: three tabPanels
                        tabItem(tabName = "overview",
@@ -184,17 +183,10 @@ ui = dashboardPage(skin="black",
                        ),
                        
                        # Explorer tab: two tabBoxes
-                       tabItem(tabName = "tabdir",
-                               fluidRow(
-                                 condition = "input.tabs == 'tabdir'",
-                                 tabBox(id = "mapDir", width = 10,
-                                        tabPanel("Guidance", includeMarkdown("./Rmd/dir_doc.md")))
-                               )
-                       ),
                        tabItem(tabName = "tabUpload",
                                fluidRow(
                                  # Mapview for multiple tabs
-                                  condition = "input.tabs == 'tabUpload' || input.tabs == 'tabinput' || input.tabs == 'tabBuilder' || input.tabs == 'tabDCI'",
+                                  #condition = "input.tabs == 'tabUpload' || input.tabs == 'tabinput' || input.tabs == 'tabBuilder' || input.tabs == 'tabDCI'",
                                   tabBox(id = "mapBox", width = 10,
                                           tabPanel(HTML("<b>Mapview</b>"),
                                                    leafletOutput("map", height = 750) %>% withSpinner(),
@@ -208,27 +200,35 @@ ui = dashboardPage(skin="black",
                                                  # Dynamically update the content of Guidance based on selected tab
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabUpload'",
-                                                   includeMarkdown("./Rmd/step1_doc.md")
+                                                   includeMarkdown("./Rmd/setParams_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabinput'",
-                                                   includeMarkdown("./Rmd/step2_doc.md")
+                                                   includeMarkdown("./Rmd/builderInput_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabBuilder'",
-                                                   includeMarkdown("./Rmd/step3_doc.md")
+                                                   includeMarkdown("./Rmd/runBuilder_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabDCI'",
-                                                   includeMarkdown("./Rmd/step4_doc.md")
+                                                   includeMarkdown("./Rmd/KBAmetrics_doc.md")
+                                                 ),
+                                                 conditionalPanel(
+                                                   condition = "input.tabs == 'tabPAs'",
+                                                   includeMarkdown("./Rmd/PAmetrics_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabKBA'",
-                                                   includeMarkdown("./Rmd/step5_doc.md")
+                                                   includeMarkdown("./Rmd/assessRep_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabNET'",
-                                                   includeMarkdown("./Rmd/step6_doc.md")
+                                                   includeMarkdown("./Rmd/createNet_doc.md")
+                                                 ),
+                                                 conditionalPanel(
+                                                   condition = "input.tabs == 'download'",
+                                                   includeMarkdown("./Rmd/dwd_doc.md")
                                                  )
                                         )
                                  ),
