@@ -6,7 +6,7 @@ KBAs and PAs representative of the planning region and/or reference area are ide
 
 Representation is assessed using two dissimilarity metrics (DMs): Kolmogorov‐Smirnov (KS) for continuous indicators (CMI, GPP, LED) and Bray‐Curtis (BC) for categorical indicators (landcover or LCC). Dissimilarity metrics compare the distribution of indicators within KBAs and/or PAs against the distribution within a reference area. 
 
-The reference area may or may not be the same as the planning region. For example, the planning region is the extent at which KBAs are identified such as an ecoregion plus intersecting FDAs (i.e., watersheds), while the reference area is restricted to the ecoregion.
+The reference area may or may not be the same as the planning region. For example, the planning region is the extent at which KBAs are identified such as an ecoregion plus intersecting FDAs (i.e., watersheds), while the reference area may be restricted to the ecoregion.
 
 The indicator distributions are based on pixel‐level values. Both dissimilarity metrics, range from 0 to 1, where 0 is most similar and 1 is most dissimilar. The closer the two distributions are to each other, the more representative the candidate network is to its reference area and the lower the value of the dissimilarity metric. 
 
