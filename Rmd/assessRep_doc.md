@@ -13,6 +13,7 @@ The indicator distributions are based on pixel‐level values. Both dissimilarit
 For each KBA / PA, the App produces plots of the distributions used to generate the DM (Figures 1 and 2). 
 
 <insert examples of plots>
+<center><img src="pics/figure1_KSplot.png" width="800"></center>
 
 **Figure 1.** Density plots show the distribution of the indicator within the KBA or PA (red) and within the reference area (blue). The Kolmogorov‐Smirnov (KS) statistic describes the dissimilarity between these distributions, and ranges in value from 0 to 1, where 0 indicates perfect proportional representation within the KBA or PA. Portions of the KBA or PA distribution (red) that fall below the blue represent values for which proportional representation was not achieved.
 
