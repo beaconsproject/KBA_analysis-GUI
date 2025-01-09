@@ -12,14 +12,19 @@ The indicator distributions are based on pixel‐level values. Both dissimilarit
 
 For each KBA / PA, the App produces plots of the distributions used to generate the DM (Figures 1 and 2). 
 
-<insert examples of plots>
-<center><img src="pics/figure1_KSplot.png" width="800"></center>
+<center>
+  <img src="figure1_KSplot.png" width="50%">
+    <br>
+    Figure 1. Density plots show the distribution of the indicator within the KBA or PA (red) and within the reference area (blue). The Kolmogorov‐Smirnov (KS) statistic describes the dissimilarity between these distributions, and ranges in value from 0 to 1, where 0 indicates perfect proportional representation within the KBA or PA. Portions of the KBA or PA distribution (red) that fall below the blue represent values for which proportional representation was not achieved.
+  </center>
+  
 
-**Figure 1.** Density plots show the distribution of the indicator within the KBA or PA (red) and within the reference area (blue). The Kolmogorov‐Smirnov (KS) statistic describes the dissimilarity between these distributions, and ranges in value from 0 to 1, where 0 indicates perfect proportional representation within the KBA or PA. Portions of the KBA or PA distribution (red) that fall below the blue represent values for which proportional representation was not achieved.
+<center>
+  <img src="figure2_BCplot.png" width="50%">
+    <br>
+    Figure 2. Barplots show the proportions of each indicator class (i.e., land cover types) within the KBA or PA (bars) and within the reference area (black dots). The Bray‐Curtis (BC) statistic describes the dissimilarity between the bars and dots, and ranges in value from 0 to 1, where 0 indicates perfect proportional representation within the KBA or PA. Bars that fall below the black dots indicate that proportional representation of that class was not achieved. 
+  </center>
 
-<insert examples of plots>
-
-**Figure 2.** Barplots show the proportions of each indicator class (i.e., land cover types) within the KBA or PA (bars) and within the reference area (black dots). The Bray‐Curtis (BC) statistic describes the dissimilarity between the bars and dots, and ranges in value from 0 to 1, where 0 indicates perfect proportional representation within the KBA or PA. Bars that fall below the black dots indicate that proportional representation of that class was not achieved. 
 
 ### Using the app
 
