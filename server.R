@@ -23,7 +23,6 @@ server = function(input, output, session) {
   refarea_reactive <- reactiveVal(NULL)
   
   outfreqkba <- reactiveVal(
-    #tibble(Variables = c("KBAs", "PAs", "Filtered KBAs","Filtered PAs"), Count = NA)
     tibble(Variables = character(), Count = numeric())
   )
   outfreqnet <- reactiveVal(
@@ -113,10 +112,6 @@ server = function(input, output, session) {
       st_write(planreg(), dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
                layer = "planning region", driver = "GPKG", append = FALSE)
     }
-    
-    output$outPath <- renderText({
-      paste0("Data will be downloaded in the KBA_Analysis.gpkg found in ", as.character(dirpath(),"/output"))
-    })
   })
   
   observeEvent(planreg(),{
@@ -1046,7 +1041,7 @@ server = function(input, output, session) {
   ####################################################################################################
   ####################################################################################################
   #########################################################
-  #-UPDATE FREQUENCY TABLE
+  #-UPDATE FREQUENCY TABLE AND MAX UPSTREAM SLIDER
   #########################################################
   observeEvent(input$tabs, {
     if (input$tabs == "tabKBA") {
@@ -1089,7 +1084,16 @@ server = function(input, output, session) {
           div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = criteria5name(), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
         }
       })
-    
+      
+      # Update max upstream slider
+      combined_sf <- dplyr::bind_rows(kba_sf, pas_sf)
+      max_value <- as.integer(max(combined_sf$up_km2, na.rm = TRUE))
+      # Update the slider input with the max value
+      updateSliderInput(
+        session = getDefaultReactiveDomain(),
+        inputId = "slideUP",
+        max = max_value
+      )
     }
     if (input$tabs == "tabNET") {
       # build outfreqnet
@@ -1111,6 +1115,7 @@ server = function(input, output, session) {
       })
     }
   })
+
   #########################################################
   #-RUN REPRESENTATION
   #########################################################
@@ -1943,6 +1948,14 @@ server = function(input, output, session) {
     output$outkbafreq <- renderTable({
       outfreqkba()
     })
+
+    # Update max upstream slider
+    max_value <- as.integer(max(networks_sf$up_km2, na.rm = TRUE))
+    updateSliderInput(
+      session = getDefaultReactiveDomain(), 
+      inputId = "slideNETUP", 
+      max = max_value
+    )
   })
   
   ################################################################################################
@@ -2158,6 +2171,7 @@ server = function(input, output, session) {
     st_write(potential_net, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
     showModal(modalDialog(
       title = "Filtered networks downloaded",
+      paste0("Filtered networks were downloaded in the KBA_analysis.gpkg  under the name ", outName, " found in ", dirpath(), "/output"),
       easyClose = TRUE,
       footer = modalButton("OK"))
     )
