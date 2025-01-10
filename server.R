@@ -22,6 +22,7 @@ server = function(input, output, session) {
   selected_polygon <- reactiveVal(NULL)  # Track the selected polygon on map
   refarea_reactive <- reactiveVal(NULL)
   
+  
   outfreqkba <- reactiveVal(
     tibble(Variables = character(), Count = numeric())
   )
@@ -155,16 +156,6 @@ server = function(input, output, session) {
     }
   })
   
-  observeEvent(input$csv_file, {
-    req(validate_csv()) # Validate the uploaded file
-    ## If valid, proceed with your logic
-   # showModal(modalDialog(
-    #  title = "Success",
-   #   "The uploaded CSV file is valid.",
-   #   easyClose = TRUE,
-    #  footer = modalButton("OK")
-   # ))
-  })
   ################################################################################################
   # Set catchments
   ################################################################################################
@@ -182,12 +173,14 @@ server = function(input, output, session) {
   # Set streams
   ################################################################################################
   streams <- reactive({
-    req(!is.null(input$csv_file) || !is.null(input$upload_stream))
+    #req(!is.null(input$csv_file) || !is.null(input$upload_stream))
     if (!is.null(input$csv_file)) {
       req(validate_csv())
       return(read_shp_from_csv(input$csv_file, "stream"))
     } else if (!is.null(input$upload_stream)) {
       return(read_shp_from_upload(input$upload_stream))
+    } else{
+      return(NULL)
     }
   })
   ################################################################################################
@@ -212,68 +205,80 @@ server = function(input, output, session) {
   ################################################################################################
   # Set LCC
   ################################################################################################  
-  lcc <- reactive({
-    req(!is.null(input$upload_lcc) || !is.null(input$csv_file))
-    if (!is.null(input$upload_lcc)) {
+  lcc <- reactiveVal(NULL)
+  observe({
+    req(dirpath())
+    if (file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
+      lcc(raster(file.path(dirpath(), "output/kba_lcc.tif")))
+    } else if (!is.null(input$upload_lcc)) {
       # Read raster from file upload
-      return(read_tif_from_upload(input$upload_lcc))
+      lcc(read_tif_from_upload(input$upload_lcc))
     } else if (!is.null(input$csv_file)) {
       req(validate_csv())
       # Read raster from CSV
-      return(read_tif_from_csv(input$csv_file, "LCC"))
+      lcc(read_tif_from_csv(input$csv_file, "LCC"))
+    } else{
+      lcc(NULL)
     }
-    # Return NULL if neither source is available
-    return(NULL)
   })
   
   ################################################################################################
   # Set LED
   ################################################################################################
   # Reactive to handle LED (TIFF files)
-  led <- reactive({
-    req(!is.null(input$upload_led) || !is.null(input$csv_file))
-    if (!is.null(input$upload_led)) {
+  led <- reactiveVal(NULL)
+  observe({
+    req(dirpath())
+    if (file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
+      led(raster(file.path(dirpath(), "output/kba_led.tif")))
+    } else if (!is.null(input$upload_led)) {
       # Read raster from file upload
-      return(read_tif_from_upload(input$upload_led))
+      led(read_tif_from_upload(input$upload_led))
     } else if (!is.null(input$csv_file)) {
       req(validate_csv())
       # Read raster from CSV
-      return(read_tif_from_csv(input$csv_file, "LED"))
+      led(read_tif_from_csv(input$csv_file, "LED"))
+    } else{
+      led(NULL)
     }
-    # Return NULL if neither source is available
-    return(NULL)
   })
   ################################################################################################
   # Set GPP
   ################################################################################################
-  gpp <- reactive({
-    req(!is.null(input$upload_gpp) || !is.null(input$csv_file))
-    if (!is.null(input$upload_gpp)) {
+  gpp <- reactiveVal(NULL)
+  observe({
+    req(dirpath())
+    if (file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
+      gpp(raster(file.path(dirpath(), "output/kba_gpp.tif")))
+    } else if (!is.null(input$upload_gpp)) {
       # Read raster from file upload
-      return(read_tif_from_upload(input$upload_gpp))
+      gpp(read_tif_from_upload(input$upload_gpp))
     } else if (!is.null(input$csv_file)) {
       req(validate_csv())
       # Read raster from CSV
-      return(read_tif_from_csv(input$csv_file, "GPP"))
+      gpp(read_tif_from_csv(input$csv_file, "GPP"))
+    }else{
+      gpp(NULL)
     }
-    # Return NULL if neither source is available
-    return(NULL)
   })
   ################################################################################################
   # Set CMI
   ################################################################################################
-  cmi <- reactive({
-    req(!is.null(input$upload_cmi) || !is.null(input$csv_file))
-    if (!is.null(input$upload_cmi)) {
+  cmi <- reactiveVal(NULL)
+  observe({
+    req(dirpath())
+    if (file.exists(file.path(dirpath(), "output/kba_cmi.tif"))) {
+      cmi(raster(file.path(dirpath(), "output/kba_cmi.tif")))
+    } else if (!is.null(input$upload_cmi)) {
       # Read raster from file upload
-      return(read_tif_from_upload(input$upload_cmi))
+      cmi(read_tif_from_upload(input$upload_cmi))
     } else if (!is.null(input$csv_file)) {
       req(validate_csv())
       # Read raster from CSV
-      return(read_tif_from_csv(input$csv_file, "CMI"))
+      cmi(read_tif_from_csv(input$csv_file, "CMI"))
+    } else{
+      cmi(NULL)
     }
-    # Return NULL if neither source is available
-    return(NULL)
   })
   
   ################################################################################################
@@ -1111,35 +1116,49 @@ server = function(input, output, session) {
   #-RUN REPRESENTATION
   #########################################################
   observeEvent(input$runRep, {
-    if(is.null(refarea_reactive())){
-      showModal(modalDialog(
-        title = "No reference area has been uploaded",  
-        "Please upload a shapefile" ,
-        easyClose = TRUE,
-        footer = modalButton("OK"))
+    #if(is.null(refarea_reactive())){
+    #  showModal(modalDialog(
+    #    title = "No reference area has been uploaded",  
+    #    "Please upload a shapefile" ,
+     #   easyClose = TRUE,
+    #    footer = modalButton("OK"))
+    #  )
+    #  return()
+    #}
+    browser()
+    if (is.null(refarea_reactive()) || is.null(streams()) || is.null(planreg()) || is.null(cmi()) || is.null(gpp()) || is.null(led()) || is.null(lcc())) {
+      # Generate a specific message based on the missing layer(s)
+      missing_layers <- c(
+        if (is.null(refarea_reactive())) "reference area",
+        if (is.null(streams())) "stream",
+        if (is.null(planreg())) "planning region",
+        if (is.null(cmi())) "CMI",
+        if (is.null(gpp())) "GPP",
+        if (is.null(led())) "LED",
+        if (is.null(lcc())) "LCC"
       )
+      
+      # Create the modal dialog
+      showModal(modalDialog(
+        title = "Missing Data",
+        paste("The following layers are missing:", paste(missing_layers, collapse = ", "), " Please upload missing spatial dataset or provide a csv tha contain access path in the Set input parameters step."),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      
       return()
     }
+    
     req(refarea_reactive())
     req(catchments())
     req(input$assessKBAs)
     
-    # Check if reference area is available
-    if (is.null(refarea_reactive())) {
-      showModal(modalDialog(
-        title = "Reference area missing",
-        "Please upload the reference area before running the analysis.",
-        footer = modalButton("OK")
-      ))
-      return()  # Stop further execution if refarea is missing
-    }
-    req(refarea_reactive())
     showModal(modalDialog(
       title = "Processing representation analysis",
       "Please wait...",
       footer = NULL
     ))
-    
+
     # Check if there is a 5 criteria and store the name
     if (!is.null(input$upload_custom)) {
       rastName <- sub("\\..*$", "", input$upload_custom$name)
@@ -1155,13 +1174,14 @@ server = function(input, output, session) {
       updated_grp <- c(legendcrit(), unexpected_layers)
       legendcrit(updated_grp) # Update the reactive value
     }
+    
     #Prep criteria
     if (!file.exists(file.path(dirpath(), "output/kba_cmi.tif"))) {
       cmi <- process_raster(cmi(), refarea_reactive(), dirpath(), "kba_cmi", fact = 2)
       kba_cmi <- cmi$original
       cmi_4326 <- cmi$projected
     }else{
-      kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
+      kba_cmi <- cmi()
       cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
@@ -1169,7 +1189,7 @@ server = function(input, output, session) {
       kba_led <- led$original
       led_4326 <- led$projected
     } else{
-      kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
+      kba_led <- led()
       led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
@@ -1177,7 +1197,7 @@ server = function(input, output, session) {
       kba_gpp <- gpp$original
       gpp_4326 <- gpp$projected
     } else{
-      kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
+      kba_gpp <- gpp()
       gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
@@ -1185,7 +1205,7 @@ server = function(input, output, session) {
       kba_lcc <- lcc$original
       lcc_4326 <- lcc$projected
     }else{
-      kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
+      kba_lcc <- lcc()
       lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
     }
     if(!is.null(criteria5())){
@@ -1328,16 +1348,16 @@ server = function(input, output, session) {
       clearGroup(labelKBA) %>%
       clearGroup("Streams") %>%
       addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
-      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI") %>%
-      addLegend(pal = xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
-                position = "bottomright", group="CMI", labFormat = labeller_function)  %>%
-      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP") %>%
-      addLegend(pal = gppxpal, values = values(gpp_4326), opacity = 1, title = "GPP",
-                position = "bottomright", group="GPP", labFormat = labeller_function)  %>%
+      addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC") %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED") %>%
+      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP") %>%
+      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI") %>%
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
                 position = "bottomright", group="LED", labFormat = labeller_function)  %>%
-      addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC") %>%
+      addLegend(pal = gppxpal, values = values(gpp_4326), opacity = 1, title = "GPP",
+                position = "bottomright", group="GPP", labFormat = labeller_function)  %>%
+      addLegend(pal = xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
+                position = "bottomright", group="CMI", labFormat = labeller_function)  %>%
       addLegend(colors = selected_cols, label = cls,  position=c("bottomleft"), opacity = 1, title = "LCC",
                 group="LCC") %>%
       addLayersControl(position = "topright",
