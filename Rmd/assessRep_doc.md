@@ -37,9 +37,9 @@ To upload the shapefile, Browse to the location of the file and select all files
 Second, specify if KBAs and/or PAs are to be assessed. For PAs to be included, the PAs must first be evaluated under the **Evaluate PAs (optional)** step. 
 
 **Assess representation using:**
-- Only KBAs - select this option if only KBAs are to be assessed.
-- Only PAs - select this option if only PAs are to be assessed. **See note above regarding PAs.**  
-- Both KBAs and PAs - select this option if both KBAs and PAs are to be assessed. **See note above regarding PAs.** 
+- **Only KBAs** - select this option if only KBAs are to be assessed.
+- **Only PAs** - select this option if only PAs are to be assessed. **See note above regarding PAs.**  
+- **Both KBAs and PAs** - select this option if both KBAs and PAs are to be assessed. **See note above regarding PAs.** 
 
 Click on the orange **Run representation analysis** button to launch the representation analysis. Depending on the number of KBAs/PAs and the resolution of the indicators, this step can take a while to finish. Once completed, a spatial layer called " " will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below.
 
