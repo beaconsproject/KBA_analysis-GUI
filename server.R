@@ -1085,15 +1085,6 @@ server = function(input, output, session) {
         }
       })
       
-      # Update max upstream slider
-      combined_sf <- dplyr::bind_rows(kba_sf, pas_sf)
-      max_value <- as.integer(max(combined_sf$up_km2, na.rm = TRUE))
-      # Update the slider input with the max value
-      updateSliderInput(
-        session = getDefaultReactiveDomain(),
-        inputId = "slideUP",
-        max = max_value
-      )
     }
     if (input$tabs == "tabNET") {
       # build outfreqnet
@@ -1370,10 +1361,28 @@ server = function(input, output, session) {
     if(input$assessKBAs == "Only KBAs"){
       upstream_reactive(kba_up)
       poly_reactive(kba_sf)
+      
+      # Update max upstream slider
+      max_value <- as.integer(max(kba_sf$up_km2, na.rm = TRUE))
+      # Update the slider input with the max value
+      updateSliderInput(
+        session = getDefaultReactiveDomain(),
+        inputId = "slideUP",
+        max = max_value
+      )
     }
     if(input$assessKBAs == "Only PAs"){
       upstream_reactive(pas_up)
       poly_reactive(pas_sf)
+      
+      # Update max upstream slider
+      max_value <- as.integer(max(pas_sf$up_km2, na.rm = TRUE))
+      # Update the slider input with the max value
+      updateSliderInput(
+        session = getDefaultReactiveDomain(),
+        inputId = "slideUP",
+        max = max_value
+      )
     }
     if(input$assessKBAs == "Both KBAs and PAs"){
       pas_up <- pas_up %>%
@@ -1384,6 +1393,15 @@ server = function(input, output, session) {
         dplyr::select(-NAME, -intact_km2)
       kbapas_sf <- rbind(kba_sf, pas_sf)
       poly_reactive(kbapas_sf)
+      
+      # Update max upstream slider
+      max_value <- as.integer(max(kbapas_sf$up_km2, na.rm = TRUE))
+      # Update the slider input with the max value
+      updateSliderInput(
+        session = getDefaultReactiveDomain(),
+        inputId = "slideUP",
+        max = max_value
+      )
     }
     
     unique_kbas <- unique(poly_reactive()$network)
@@ -1809,7 +1827,7 @@ server = function(input, output, session) {
           k <- as.numeric(input$set_net)
           network_names <- gen_network_names(in_names = potential_kbas$network, k = k)
         }
-        
+        browser()
         #Check and remove overlapping KBAs. 
         overlaps <- list_overlapping_polygons(conservation_areas_sf = potential_kbas)
         network_names <- network_names[!network_names %in% overlaps]
