@@ -493,7 +493,19 @@ server = function(input, output, session) {
   ####################################################################################################
   # -Create BUILDER input
   ####################################################################################################
-  observeEvent(input$runBuilderInput>0, {
+  observeEvent(input$runBuilderInput, {
+    #Test if catchments are uploaded
+    if (is.null(catchments())) {
+      # Create the modal dialog
+      showModal(modalDialog(
+        title = "Missing Data",
+        "Catchments layers is missing. Please go back to Set input parameters to upload catchments layer.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+    
     req(catchments())
     req(dirpath())
     # show pop-up ...
@@ -1116,18 +1128,8 @@ server = function(input, output, session) {
   #-RUN REPRESENTATION
   #########################################################
   observeEvent(input$runRep, {
-    #if(is.null(refarea_reactive())){
-    #  showModal(modalDialog(
-    #    title = "No reference area has been uploaded",  
-    #    "Please upload a shapefile" ,
-     #   easyClose = TRUE,
-    #    footer = modalButton("OK"))
-    #  )
-    #  return()
-    #}
-    browser()
+    #Test on required objects
     if (is.null(refarea_reactive()) || is.null(streams()) || is.null(planreg()) || is.null(cmi()) || is.null(gpp()) || is.null(led()) || is.null(lcc())) {
-      # Generate a specific message based on the missing layer(s)
       missing_layers <- c(
         if (is.null(refarea_reactive())) "reference area",
         if (is.null(streams())) "stream",
