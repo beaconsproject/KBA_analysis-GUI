@@ -129,14 +129,12 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideLED", label="LED:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideGPP", label="GPP:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
-                       #div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = "Criteria", min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE)),
                        uiOutput("slidercrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterRep", "Apply dissimilarity metrics filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabNET'",
-                       #div("Build network", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 10px; "),
                        textInput("set_net", "Set numbers of KBAs per network", value = 0),
                        div(style = "margin-top: -30px;", checkboxInput("forceKBA", label = "Apply KBA filtering in the network", value = F)),
                        div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Force PAs in the network", value = F)),
@@ -145,7 +143,6 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideNETLED", label="LED:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideNETGPP", label="GPP:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideNETLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
-                       #div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = "Criteria", min = 0, max = 1, value = 0.2, step = 0.1, ticks = FALSE)),
                        uiOutput("slideNETcrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideNETUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterNet", "Apply dissimilarity metrics filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
@@ -153,15 +150,7 @@ ui = dashboardPage(skin="black",
                      ),
                      conditionalPanel(
                        condition="input.tabs=='download'",
-                       actionButton("downloadData", "Download filtered KBAs network", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px")#,
-                       #div(
-                       #  textOutput("outPath"),
-                       #  style = "font-size: 14px; margin-top: 20px; margin-left: 20px;"
-                       #)
-                       # Dynamic UI for slidecrit5
-                       #div("Download filtered KBAs network", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
-                       #tags$style(type="text/css", "#downloadData {background-color:gey;color: black}"),
-                       #div(style="position:relative; left:calc(10%);", downloadButton("downloadData", "Download results"))
+                       actionButton("downloadData", "Download filtered KBAs network", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px")
                      )
                    ),     
                    dashboardBody(
