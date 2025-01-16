@@ -878,12 +878,14 @@ server = function(input, output, session) {
   # REDUCE KBAs
   ####################################################################################################
   observeEvent(input$reduce_KBAs, {
+
     #Test on required layers
-    if (is.null(kba_sf_reactive()) || is.null(upstream_reactive()) || is.null(streams())) {
+    if (is.null(kba_sf_reactive()) || is.null(upstream_reactive()) || is.null(streams()) || is.null(planreg())) {
       # Create the modal dialog
       showModal(modalDialog(
         title = "Missing Data",
-        "One or more required layers are missing. Make sure stream layer is uploaded and Builder output exist.",
+        "One or more required layers are missing. Make sure stream and planning region dataset are uploaded and Builder output  
+         on which hydrology metrics have been calculated exist.",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
@@ -893,6 +895,8 @@ server = function(input, output, session) {
     req(!is.null(kba_sf_reactive()))
     req(!is.null(upstream_reactive()))
     req(input$set_grid)
+    req(streams())
+    req(planreg())
     
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
