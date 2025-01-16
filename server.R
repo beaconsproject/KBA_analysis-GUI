@@ -804,6 +804,18 @@ server = function(input, output, session) {
   # REDUCE KBAs
   ####################################################################################################
   observeEvent(input$reduce_KBAs, {
+    #Test if catchments are uploaded
+    if (is.null(kba_sf_reactive()) || is.null(upstream_reactive()) || is.null(streams())) {
+      # Create the modal dialog
+      showModal(modalDialog(
+        title = "Missing Data",
+        "One or more required layers are missing. Make sure stream layer is uploaded and Builder output exist.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+    
     req(!is.null(kba_sf_reactive()))
     req(!is.null(upstream_reactive()))
     req(input$set_grid)
