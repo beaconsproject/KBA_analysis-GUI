@@ -725,7 +725,37 @@ server = function(input, output, session) {
   # -Calculate hydro metrics on KBAs
   ####################################################################################################
   observeEvent(input$calc_dci, {
+    #Test if streams  and catchments are uploaded
+    if (is.null(streams()) || is.null(catchments())) {
+      if(!is.null(streams())){
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Catchments dataset is missing. Please go back to Set input parameters to upload the catchments dataset",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      } else if(!is.null(catchments())){
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Streams dataset is missing. Please go back to Set input parameters to upload the streams dataset",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      } else{
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Catchments and streams dataset are missing. Please go back to Set input parameters to upload both dataset.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      }
+      return()
+    }
+    
     req(!is.null(kba_sf_reactive()))
+    req(streams())
+    req(catchments())
+    
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     layer_to_check <- "KBAs_dci"
@@ -937,7 +967,7 @@ server = function(input, output, session) {
       )
       return()
     }
-    #Test if catchments are uploaded
+    #Test if streams are uploaded
     if (is.null(streams())) {
       # Create the modal dialog
       showModal(modalDialog(
@@ -1198,7 +1228,7 @@ server = function(input, output, session) {
       # Create the modal dialog
       showModal(modalDialog(
         title = "Missing Data",
-        paste("The following layers are missing:", paste(missing_layers, collapse = ", "), " Please upload missing spatial dataset or provide a csv tha contain access path in the Set input parameters step."),
+        paste("The following layers are missing:", paste(missing_layers, collapse = ", "), ". Please upload missing spatial dataset or provide a csv tha contain access path in the Set input parameters step."),
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
