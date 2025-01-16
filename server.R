@@ -21,7 +21,7 @@ server = function(input, output, session) {
   legendcrit <-  reactiveVal(c("CMI", "LED", "GPP", "LCC"))
   selected_polygon <- reactiveVal(NULL)  # Track the selected polygon on map
   refarea_reactive <- reactiveVal(NULL)
-  
+  tab_upload_visited <- reactiveVal(FALSE)
   
   outfreqkba <- reactiveVal(
     tibble(Variables = character(), Count = numeric())
@@ -354,7 +354,6 @@ server = function(input, output, session) {
   ################################################################################################
   # Set reference area
   ################################################################################################
-  # PAs upload shapefile
   observeEvent(input$upload_refarea, {
     req(input$upload_refarea)
     refarea_sf <- read_shp_from_upload(input$upload_refarea)
@@ -363,7 +362,6 @@ server = function(input, output, session) {
     refarea_reactive(refarea_sf)
   })
   
-  # PAs upload using csv
   observeEvent(input$csv_file, {
     req(input$csv_file)
     csv_data <- read.csv(input$csv_file$datapath)
@@ -406,6 +404,25 @@ server = function(input, output, session) {
   # Map viewer
   ####################################################################################################
   ####################################################################################################
+  # Observe tab changes
+  observeEvent(input$tabs, {
+    if (input$tabs == "tabUpload") {
+      tab_upload_visited(TRUE)  # Mark tabUpload as visited
+    }
+    if (input$tabs != "tabUpload" && !tab_upload_visited() && input$tabs != "overview") {
+      # Show modal message if tabUpload has not been visited
+      showModal(modalDialog(
+        title = "Action Required",
+        "Please visit the 'Set input parameters' tab to initialize the map and upload the required dataset before proceeding to the next steps.",
+        easyClose = TRUE,
+        footer = modalButton("Go to tabUpload")
+      ))
+      
+      # Redirect user back to tabUpload
+      updateTabItems(session = getDefaultReactiveDomain(), "tabs", "tabUpload")
+    }
+  })
+  
   # Render the initial map
   output$map <- renderLeaflet({
     # Render initial map
@@ -511,7 +528,7 @@ server = function(input, output, session) {
     }
     map
   })
-  
+
   ####################################################################################################
   ####################################################################################################
   # BUILD KBAs
