@@ -451,8 +451,21 @@ server = function(input, output, session) {
       # Close the modal once processing is done
       removeModal()
     }
-    #if(!is.null(input$csv_file) || !is.null(input$upload_planreg)){
+
     if(!is.null(planreg())){
+      #Test if catchments are uploaded
+      if (is.null(catchments())) {
+        # Create the modal dialog
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Catchments layers is missing. Please go back to Set input parameters to upload catchments layer.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
+      
+      req(catchments())
       req(planreg())
       planreg_4326 <- st_transform(planreg(), 4326)
       map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
@@ -466,10 +479,24 @@ server = function(input, output, session) {
                          options = layersControlOptions(collapsed = FALSE))  %>%
         hideGroup(c(""))
     }
-    #if(!is.null(input$csv_file) || !is.null(input$upload_pas)){
+
     if(!is.null(pas_sf_reactive())){
+      #Test if catchments are uploaded
+      if (is.null(catchments())) {
+         # Create the modal dialog
+        showModal(modalDialog(
+           title = "Missing Data",
+          "Catchments layers is missing. Please go back to Set input parameters to upload catchments layer.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+          return()
+      }
+        
       req(pas_sf_reactive())
+      req(catchments())
       pas_4326 <- st_transform(pas_sf_reactive(), 4326)
+      map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
       map <- map %>%
         fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
         addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, group="Protected areas", options = leafletOptions(pane = "layer1")) %>%
@@ -499,7 +526,7 @@ server = function(input, output, session) {
       # Create the modal dialog
       showModal(modalDialog(
         title = "Missing Data",
-        "Catchments layers is missing. Please go back to Set input parameters to upload catchments layer.",
+        "Catchments layer is missing. Please go back to Set input parameters to upload catchments layer.",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
@@ -804,7 +831,7 @@ server = function(input, output, session) {
   # REDUCE KBAs
   ####################################################################################################
   observeEvent(input$reduce_KBAs, {
-    #Test if catchments are uploaded
+    #Test on required layers
     if (is.null(kba_sf_reactive()) || is.null(upstream_reactive()) || is.null(streams())) {
       # Create the modal dialog
       showModal(modalDialog(
@@ -900,6 +927,7 @@ server = function(input, output, session) {
   # -Calculate hydro metrics
   ####################################################################################################
   observeEvent(input$calc_pasdci, {
+    #Test on required layers
     if(is.null(pas_sf_reactive())){
       showModal(modalDialog(
         title = "No protected areas layer has been uploaded",  
@@ -909,8 +937,20 @@ server = function(input, output, session) {
       )
       return()
     }
+    #Test if catchments are uploaded
+    if (is.null(streams())) {
+      # Create the modal dialog
+      showModal(modalDialog(
+        title = "Missing Data",
+        "Stream layer is missing. Please go back to Set input parameters to upload the stream layer.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
     req(pas_sf_reactive())
     req(catchments())
+    req(streams())
     
     catchments <- catchments()
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
@@ -1002,9 +1042,12 @@ server = function(input, output, session) {
     # -Render PAs map
     ####################################################################################################
     pas_4326 <- st_transform(pas, 4326)
+    stream_4326 <- st_transform(streams(), 4326)
     leafletProxy("map") %>%
       clearGroup("Protected areas") %>%
+      clearGroup("Streams") %>%
       addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
+      addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                        overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Protected areas","Streams"),
