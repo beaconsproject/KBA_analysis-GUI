@@ -1234,6 +1234,7 @@ server = function(input, output, session) {
   #-RUN REPRESENTATION
   #########################################################
   observeEvent(input$runRep, {
+    
     #Test on required objects
     if (is.null(refarea_reactive()) || is.null(streams()) || is.null(planreg()) || is.null(cmi()) || is.null(gpp()) || is.null(led()) || is.null(lcc())) {
       missing_layers <- c(
@@ -1399,6 +1400,14 @@ server = function(input, output, session) {
         }
       }else{
         kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_att")
+        if(!is.null(criteria5())){
+          if(!has_name(kba_sf, criteria5name())){
+            if(attr(kba_sf, "sf_column") != "geometry"){
+              kba_sf$geometry <- kba_sf$geom
+            }
+            kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+          }
+        }
         kba_sf_reactive(kba_sf)
         kba_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream")
         kba_upstream_reactive(kba_up)
@@ -1425,6 +1434,15 @@ server = function(input, output, session) {
         pas_sf_reactive(pas_sf)
         if ("KBAs_att" %in% layers) {
           kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_att")
+          if(!is.null(criteria5())){
+            if(!has_name(kba_sf, criteria5name())){
+              if(attr(kba_sf, "sf_column") != "geometry"){
+                kba_sf$geometry <- kba_sf$geom
+              }
+              kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+            }
+          }
+          kba_sf_reactive(kba_sf)
         }else{
           kba_sf <- NULL
         } 
@@ -1955,7 +1973,7 @@ server = function(input, output, session) {
           k <- as.numeric(input$set_net)
           network_names <- gen_network_names(in_names = potential_kbas$network, k = k)
         }
-        browser()
+        
         #Check and remove overlapping KBAs. 
         overlaps <- list_overlapping_polygons(conservation_areas_sf = potential_kbas)
         network_names <- network_names[!network_names %in% overlaps]
