@@ -61,6 +61,8 @@ The spatial datasets can be uploaded using a csv file created in a text editor (
 
 The column headings (Layer,Path) must not change. Layer names under the "Layer" column (e.g., catchments, streams, planning region, etc.) must not change except for the custom criteria (e.g., PROJCMI). See note above about naming the custom criteria under "Optional spatial dataset".
 
+Template can be downloaded [here](./accessPath.csv)
+
 **OPTION 2: Upload each spatial dataset individually.**
 
 Datasets are uploaded by navigating to the shapefile or tif, select the dataset, and click open. For shapefiles, select all files associated with the shapefile before clicking open.
