@@ -123,7 +123,7 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
                                                                    selected = NULL)),
                        actionButton("runRep", "Run representation analysis", icon = icon(name = "image", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
-                       div("Filter KBAs and/or PAs based on dissimilarity metrics (DMs)", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
+                       div("Filter KBAs and/or PAs based on dissimilarity metrics (DMs) and upstream area", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
                        div("DMs range from 0 to 1. 0 = low dissimilarity or high representation, 1 = high dissimilarity or low representation", style = "font-size: 12px; margin-top : 20px; margin-left : 20px; "),
                        div(style = "margin-top: 0px;",sliderInput("slideCMI", label="CMI:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideLED", label="LED:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
@@ -131,7 +131,7 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        uiOutput("slidercrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
-                       actionButton("filterRep", "Apply dissimilarity metrics filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
+                       actionButton("filterRep", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabNET'",
@@ -145,7 +145,7 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideNETLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        uiOutput("slideNETcrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideNETUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
-                       actionButton("filterNet", "Apply dissimilarity metrics filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
+                       actionButton("filterNet", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                        
                      ),
                      conditionalPanel(
