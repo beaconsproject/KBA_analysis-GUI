@@ -16,7 +16,9 @@ If the selected directory contains output from a prior analysis, a message will 
 
 **Upload spatial datasets**
 
-All spatial datasets for buildings KBAs are uploaded here, as well as the planning region boundary, and environmental criteria for assessing representation (CMI, LCC, LED, and GPP). This includes shapefiles and TIF files. 
+All spatial datasets for building KBAs are uploaded here, as well as the planning region boundary, and environmental criteria for assessing representation (CMI, LCC, LED, and GPP). This includes shapefiles and TIF files. 
+
+Shapefiles for protected areas and the reference area for the representation analysis can also be uploaded here via a csv file (see OPTION 1 below) or later in the App.
 
 A shapefile consists of multiple files with the same name but different extensions. All files associated with the shapefile must be uploaded and must include .shp, .shx, .dbf, .prj. 
 
