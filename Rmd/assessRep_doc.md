@@ -1,6 +1,6 @@
 ## Assess representation of KBAs and PAs
 
-KBAs and PAs representative of the planning region and/or reference area are identified using four biophysical indicators of environmental variation, which serve as surrogates for biodiversity: soil moisture (CMI), primary productivity (GPP), lake‐edge density (LED), and land cover (LCC). These indicators are described on the **Overview - Dataset** tab. A optional fifth indicator can be used - see "Set parameter inputs".
+KBAs and PAs representative of the planning region and/or reference area are identified using four biophysical indicators of environmental variation, which serve as surrogates for biodiversity: soil moisture (CMI), primary productivity (GPP), lake‐edge density (LED), and land cover (LCC). These indicators are described on the **Overview - Dataset** tab. An optional fifth indicator can be used - see **Set parameter inputs**.
 
 Representation is assessed using two dissimilarity metrics (DMs): Kolmogorov‐Smirnov (KS) for continuous indicators (CMI, GPP, LED) and Bray‐Curtis (BC) for categorical indicators (landcover or LCC). Dissimilarity metrics compare the distribution of indicators within KBAs and/or PAs against the distribution within a reference area. 
 
