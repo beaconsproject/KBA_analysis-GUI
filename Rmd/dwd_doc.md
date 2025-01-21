@@ -8,4 +8,4 @@ To download filtered KBA networks based on the last filter applied in the previo
 
 ### Output
 
-A spatial layer of the 
+A spatial layer of the filtered networks is added to the "KBA_analysis" geopackage. The naming convention adds "filtered" to the network spatial layer. For example, the 
