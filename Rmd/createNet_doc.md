@@ -1,29 +1,33 @@
 ## Create Networks
 
-Individual KBAs and/or PAs may not be sufficiently representative of the reference area. In those cases, networks of more than one KBA/PA can be created and assessed. The following network options are available:
+Individual KBAs and/or PAs may not be sufficiently representative of the reference area and a network may be required to achieve representation objectives. In those cases, networks of more than one KBA and PAs can be created and assessed. 
 
-1. Networks comprised of only KBAs to the specified number of KBAs per network. All combinations will be evaluated.
-3. Networks comprised of only PAs to the specified number of PAs per network. All combinations will be evaluated.
-4. Networks comprised of all combinations of KBAs and PAs.
+The following network options are available:
+
+1. Networks comprised of only KBAs to the specified number of KBAs per network (≥ 2). All combinations are evaluated.
+2. Networks comprised of KBAs with the specified number KBAs per network (≥ 1) with the PA network forced into all networks. All combinations of KBAs are evaluated.
+
+The KBAs used to create the networks can be restricted to filtered KBAs identified in the previous step **Upload reference area and assess representation** based on dissimilarity metrics. 
 
 ### Using the app
 
 First, specify the number of KBAs in the network. 
 
-**Upload reference area shapefile**
+**Set number of KBAs per network**
 
-To upload the shapefile, Browse to the location of the file and select all files associated with the shapefile (.shp, .shx, .dbf, .prj, etc.) and click "Open".
+Specify the number of KBAs per network by entering a number 
 
-Second, specify if KBAs and/or PAs are to be assessed. For PAs to be included, the PAs must first be evaluated under the **Evaluate PAs (optional)** step. 
+**Apply KBA filtering in the network**
 
-**Assess representation using:**
-- **Only KBAs** - select this option if only KBAs are to be assessed.
-- **Only PAs** - select this option if only PAs are to be assessed. **See note above regarding PAs.**  
-- **Both KBAs and PAs** - select this option if both KBAs and PAs are to be assessed. **See note above regarding PAs.** 
+Check the box if the KBAs used to create the network must ...
 
-Click on the orange **Run representation analysis** button to launch the representation analysis. Depending on the number of KBAs/PAs and the resolution of the indicators, this step can take a while to finish. Once completed, a spatial layer called "KBA_att" and/or "PA_att" will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below.
+**Force PAs in the network**
 
-Once the analysis is complete, the KBAs/PAs will appear in the map. The table in the upper right provides a count of the KBAs and protected areas (PAs) in the analysis. The attributes of each KBA/PA can be explored by selecting the KBA/PA from the dropdown menu. When selected, the KBA/PA and its upstream area will be highlighted in the map. 
+Check the box if **
+
+Click on the orange button **Build network** to launch the representation analysis. Depending on the number of KBAs/PAs and the resolution of the indicators, this step can take a while to finish. Once completed, a spatial layer will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below.
+
+Once the analysis is complete, the networks will appear in the map. The table in the upper right provides a count of the KBAs and protected areas (PAs) in the analysis. The attributes of each KBA/PA can be explored by selecting the network from the dropdown menu. When selected, the network and its upstream area will be highlighted in the map. 
 
 **Table Attributes:**
 - Area km2: area of KBA/PA in km2   
