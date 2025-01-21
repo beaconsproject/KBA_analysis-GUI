@@ -46,7 +46,7 @@ To explore the results, use the sliders to set maximum DM values for each indica
 
 **Interacting with the Map**
 
-Click on the icon in the top right corner of the map to view the full list of spatial layers available to turn on and off on the map.
+Click on the icon in the top right corner of the map to view the full list of spatial layers available to view on the map.
 
 ## Output
 
