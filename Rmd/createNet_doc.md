@@ -21,7 +21,7 @@ Specify the number of KBAs per network by entering a number
 
 Check the box if the KBAs used to create the network must ...
 
-**Force PAs in the network**
+**Force PAs in the network** (Change to "Include PAs in the network")
 
 Check the box if **
 
@@ -50,34 +50,33 @@ Click on the icon in the top right corner of the map to view the full list of sp
 
 ## Output
 
-The following naming convention is used for the network spatial layers added to the KBA_analysis geopackage: **net_kba*n*_force*FALSE or TRUE*_*includePA***
+**Spatial Layers**
 
-to If KBAs are include in the representation analysis, a spatial layer called "KBAs_att" is added to the "KBA_analysis" geopackage (KBA_analysis.gpkg) in the "output" subfolder. 
+Spatial
 
-**KBAs_att** - KBA polygons with the following attributes:
+The following naming convention is used for the network spatial layers added to the KBA_analysis geopackage: **net_** + *number of KBAs e.g., KBA2_* + *force filter - True or False e.g., forceFALSE or forceTRUE* + *P **force*FALSE or TRUE*_*includePA***
 
-- **Network** is the unique identifier for the KBA.  
-- **AWI** is the mean area-weighted catchment intactness of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **area_km2** is the area of the KBA in km2.  
-- **up_km2** is the total area upstream of the KBA in km2.  
-- **up_AWI** is the mean area-weighted catchment intactness of the area upstream of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **dci** is the Dendritic Connectivity Index (DCI) of the KBA.
-- **cmi** is the KS statistic measuring the KBA's representation of CMI.
-- **led** is the KS statistic measuring the KBA's representation of LED.
-- **gpp** is the KS statistic measuring the KBA's representation of GPP.
-- **lcc** is the KS statistic measuring the KBA's representation of landcover. 
+(**net_** + *number of KBAs e.g., KBA2_* + *apply KBA filtering: True or False e.g., filterFALSE or filterTRUE* + *force PAs in the network e.g., _includePAs* )
 
-If PAs are include in the representation analysis, a spatial layer called "PAs_att" is added to the "KBA_analysis" geopackage (KBA_analysis.gpkg) in the "output" subfolder. 
+Example 1, if number of KBAs per network = 2, KBA filtering is not applied (FALSE), and PAs are forced in the network, the name of the spatial layer is **net_KBA2_filterFALSE_includePAs**
 
-**PAs_att** - PA polygons with the following attributes:
+Example 2, if number of KBAs per network = 2, KBA filtering is applied (TRUE), and PAs are not forced in the network, the name of the spatial layer is **net_KBA2_filterTRUE**
 
-- **Network** is the unique identifier for the PA.  
-- **AWI** is the mean area-weighted catchment intactness of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **area_km2** is the area of the KBA in km2.  
-- **up_km2** is the total area upstream of the KBA in km2.  
-- **up_AWI** is the mean area-weighted catchment intactness of the area upstream of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **dci** is the Dendritic Connectivity Index (DCI) of the KBA.
-- **cmi** is the KS statistic measuring the KBA's representation of CMI.
-- **led** is the KS statistic measuring the KBA's representation of LED.
-- **gpp** is the KS statistic measuring the KBA's representation of GPP.
-- **lcc** is the KS statistic measuring the KBA's representation of landcover. 
+The network spatial layer has the following attributes:
+- **Network**: unique identifier for the network 
+- **AWI**: mean area-weighted catchment intactness of the network reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact) 
+- **area_km2**: total area of the network in km2  
+- **up_km2**: total area upstream of the networkin km2  
+- **up_AWI**: mean area-weighted catchment intactness of the area upstream of the network reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact)  
+- **dci**: Dendritic Connectivity Index (DCI) of the network (changes coming to this attribute)
+- **cmi**: KS statistic measuring the network's representation of CMI
+- **led**: KS statistic measuring the network's representation of LED
+- **gpp**: KS statistic measuring the network's representation of GPP
+- **lcc**: KS statistic measuring the network's representation of landcover 
+
+The upstream spatial layer has the following attribute: 
+- **Network**: unique identifier for the network 
+
+**Density and Bar Plots**
+
+Plots for the networks are saved to a folder with a name that includes the spatial layer name e.g., **plotnet_KBA2_filterFALSE_includePA**.
