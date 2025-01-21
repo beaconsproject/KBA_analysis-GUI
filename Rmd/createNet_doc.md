@@ -1,6 +1,6 @@
 ## Create Networks
 
-Individual KBAs and/or PAs may not be sufficiently representative of the reference area. In those cases, networks of more than one KBA/PA can be created and assessed. The following networks options are available:
+Individual KBAs and/or PAs may not be sufficiently representative of the reference area. In those cases, networks of more than one KBA/PA can be created and assessed. The following network options are available:
 
 1. Networks comprised of only KBAs to the specified number of KBAs per network. All combinations will be evaluated.
 3. Networks comprised of only PAs to the specified number of PAs per network. All combinations will be evaluated.
