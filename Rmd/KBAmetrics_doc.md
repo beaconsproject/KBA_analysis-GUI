@@ -32,6 +32,8 @@ Enter the grid cell size in metres e.g., 10000m produces a 10000m x 10000m cell.
 
 Reducing the number of KBAs is **not optional** and must be completed before moving on to **Assess representation**. 
 
+When the App is done, all potential KBAs will be displayed in the map. 
+
 ### Output
 
 Three spatial layers are added to the "KBA_analysis" geopackage (KBA_analysis.gpkg) in the "output" subfolder. 
