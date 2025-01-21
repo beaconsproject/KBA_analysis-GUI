@@ -50,7 +50,7 @@ Click on the icon in the top right corner of the map to view the full list of sp
 
 ## Output
 
-The following naming convention is used for the network spatial layers added to the KBA_analysis geopackage: **net_kba"n"_force"FALSE or TRUE"_includePAs**
+The following naming convention is used for the network spatial layers added to the KBA_analysis geopackage: **net_kba*n*_force*FALSE or TRUE*_*includePA***
 
 to If KBAs are include in the representation analysis, a spatial layer called "KBAs_att" is added to the "KBA_analysis" geopackage (KBA_analysis.gpkg) in the "output" subfolder. 
 
