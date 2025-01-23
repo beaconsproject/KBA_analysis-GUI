@@ -2029,8 +2029,9 @@ server = function(input, output, session) {
             mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
         }
                        
-        # DCI
-        networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
+        # DCI (ON HOLD)
+        #networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
+        
         #Criteria
         kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
         kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
@@ -2225,7 +2226,8 @@ server = function(input, output, session) {
     x$Values[x$Variables == "AWI"] <- round(as.numeric(selected_network$AWI) * 100, 2)
     x$Values[x$Variables == "Upstream area km2"] <- round(selected_network$up_km2, 2)
     x$Values[x$Variables == "Upstream AWI"] <- round(as.numeric(selected_network$up_AWI) * 100, 2)
-    x$Values[x$Variables == "DCI"] <- round(selected_network$dci, 3)
+    #(ON HOLD)x$Values[x$Variables == "DCI"] <- round(selected_network$dci, 3)
+    x$Values[x$Variables == "DCI"] <- NA
     x$Values[x$Variables == "CMI"] <- round(selected_network$cmi, 3)
     x$Values[x$Variables == "GPP"] <- round(selected_network$gpp, 3)
     x$Values[x$Variables == "LED"] <- round(selected_network$led, 3)
