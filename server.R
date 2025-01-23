@@ -1916,17 +1916,17 @@ server = function(input, output, session) {
         if(!is.null(criteria5())){
           potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & 
                                    !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
-          outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+          outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
           network_dir <- paste0("output/plot", outName)
           poly_reactive(potential_kbas)
         }else{
           potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
-          outName <- paste0("net", filtering, "_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+          outName <- paste0("net", filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
           network_dir <- paste0("output/plot", outName)
           poly_reactive(potential_kbas)
         }
       }else{
-        outName <- paste0("net_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+        outName <- paste0("net_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
         network_dir <- paste0("output/plot", outName)
       }
     } else {
@@ -1936,17 +1936,17 @@ server = function(input, output, session) {
         if(!is.null(criteria5())){
           potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & 
                                      !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
-          outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA))
+          outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA))
           network_dir <- paste0("output/plot", outName)
           poly_reactive(potential_kbas)
         }else{
           potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
-          outName <- paste0("net",  filtering, "_kba", input$set_net, "_force", as.character(input$forceKBA))
+          outName <- paste0("net",  filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA))
           network_dir <- paste0("output/plot", outName)
           poly_reactive(potential_kbas)
         }
       }else{
-        outName <- paste0("net", "_kba", input$set_net, "_force", as.character(input$forceKBA))
+        outName <- paste0("net", "_kba", input$set_net, "_filter", as.character(input$forceKBA))
         network_dir <- paste0("output/plot", outName)
       }
     }
@@ -2303,14 +2303,14 @@ server = function(input, output, session) {
         if(!is.null(criteria5())){
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
                                      !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
         }else{
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet", filtering, "_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+          outName <- paste0("filterednet", filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
         }
       }else{
         potential_net <- network_reactive()
-        outName <- paste0("filterednet_kba", input$set_net, "_force", as.character(input$forceKBA), "_includePAs")
+        outName <- paste0("filterednet_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
       }
     } else {
       if(input$filterNet>0){
@@ -2319,14 +2319,14 @@ server = function(input, output, session) {
         if(!is.null(criteria5())){
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
                                      !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_force", as.character(input$forceKBA))
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA))
         }else{
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_kba", input$set_net, "_force", as.character(input$forceKBA))
+          outName <- paste0("filterednet",  filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA))
         }
       }else{
         potential_net <- network_reactive()
-        outName <- paste0("filterednet", "_kba", input$set_net, "_force", as.character(input$forceKBA))
+        outName <- paste0("filterednet", "_kba", input$set_net, "_filter", as.character(input$forceKBA))
       }
     }
     st_write(potential_net, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
