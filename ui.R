@@ -50,8 +50,8 @@ ui = dashboardPage(skin="black",
                                           ),
                                  menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
                                           menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Upload reference area<br>and assess representation</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
-                                          menuSubItem("Create KBA Networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome")),
-                                          menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
+                                          menuSubItem("Create KBA Networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
+                                          #menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
                                           ),
                                  hr()
                      ),
@@ -129,11 +129,11 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        uiOutput("slidercrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
-                       actionButton("filterRep", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
+                       actionButton("filterRep", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabNET'",
-                       textInput("set_net", "Set numbers of KBAs per network", value = 0),
+                       div(style = "margin-top: -20px;", textInput("set_net", "Set numbers of KBAs per network", value = 0)),
                        div(style = "margin-top: -30px;", checkboxInput("forceKBA", label = "Apply KBA filtering in the network", value = F)),
                        div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Force PAs in the network", value = F)),
                        div(style = "margin-top: -20px;",selectInput("intactColNET", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = "intactKBA")),
@@ -145,13 +145,14 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideNETLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        uiOutput("slideNETcrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideNETUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
-                       actionButton("filterNet", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
+                       actionButton("filterNet", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
+                       div(style = "margin-top: 20px;",actionButton("downloadData", "Download Filtered Networks", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
                        
-                     ),
-                     conditionalPanel(
-                       condition="input.tabs=='download'",
-                       actionButton("downloadData", "Download Filtered Networks", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px")
-                     )
+                     )#,
+                     #conditionalPanel(
+                     #  condition="input.tabs=='download'",
+                     #  actionButton("downloadData", "Download Filtered Networks", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px")
+                     #)
                    ),     
                    dashboardBody(
                      useShinyjs(),
