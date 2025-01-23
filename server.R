@@ -2127,9 +2127,9 @@ server = function(input, output, session) {
     network_sf <- network_reactive()
     # criteria5
     if(!is.null(criteria5())){
-      network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
-    }else{
       network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & !!sym(criteria5name()) <=input$slideNETcrit5 & up_km2 <= input$slideNETUP)
+    }else{
+      network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED &  up_km2 <= input$slideNETUP)
     }
 
     x <- outfreqnet()
