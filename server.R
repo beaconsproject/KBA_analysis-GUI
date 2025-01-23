@@ -390,6 +390,8 @@ server = function(input, output, session) {
     updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="Area_land")
     updateSelectInput(session = getDefaultReactiveDomain(), "intactseedColname", choices = colnames, selected="intactKBA")
     updateSelectInput(session = getDefaultReactiveDomain(), "intactColpas", choices = colnames, selected="intactKBA")
+    updateSelectInput(session = getDefaultReactiveDomain(), "intactColNET", choices = colnames, selected = "intactKBA")
+    
   })
   
 
@@ -1888,7 +1890,7 @@ server = function(input, output, session) {
           footer = modalButton("OK")
         ))
         return() 
-      }else if(input$set_net > nrow(kba_sf_reactive())){
+      }else if(as.integer(input$set_net) > nrow(kba_sf_reactive())){
         showModal(modalDialog(
           title = "The number of KBAs set per network is above the number of KBAs available.",
           "Please revise the number of KBA per network.",
@@ -1987,7 +1989,7 @@ server = function(input, output, session) {
           get_stat_on_net(
             net_sf = network_group,
             catchments = catchments(),
-            intact_col = input$intactColname,
+            intact_col = input$intactColNET,
             upstream = upstream_reactive()
           )
         })
