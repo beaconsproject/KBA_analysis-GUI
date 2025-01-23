@@ -2,7 +2,7 @@
 required_packages <- c(
   "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", 
   "shinycssloaders", "devtools", "beaconsbuilder", "dplyr", "tidyr", "sf", 
-  "zip", "raster", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT"
+  "zip", "raster", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT","rlang"
 )
 
 # Install any missing packages
