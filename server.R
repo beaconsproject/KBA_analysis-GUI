@@ -1843,14 +1843,14 @@ server = function(input, output, session) {
           sort() %>%                   # Sort values (optional)
           paste(collapse = "__")
       }
-      if(input$set_net==0){
+      if(as.integer(input$set_net)==0){
         poly_reactive(pas_sf)
         showModal(modalDialog(
           title = "No KBA will be added. The representation analysis will run using only the protected areas",
           easyClose = TRUE,
           footer = modalButton("OK"))
         )
-      } else if (input$set_net>0){
+      } else if (as.integer(input$set_net)>0){
         if(input$assessKBAs=="Only PAs"){
           showModal(modalDialog(
             title = "You need to assess representation on KBAs prior to add KBAs into the network",
@@ -1859,7 +1859,7 @@ server = function(input, output, session) {
             footer = modalButton("OK")
           ))
           return() 
-        }else if(input$set_net > nrow(kba_sf_reactive())){
+        }else if(as.integer(input$set_net) > nrow(kba_sf_reactive())){
           showModal(modalDialog(
             title = "The number of KBAs set per network is above the number of KBAs available.",
             "Please revise the number of KBA per network.",
@@ -1882,7 +1882,7 @@ server = function(input, output, session) {
     } else {
       agg_pa_name <- NULL
       # Wait for user to set `input$set_net` to at least 2
-      if (is.null(input$set_net) || input$set_net < 2) {
+      if (is.null(input$set_net) || as.integer(input$set_net) < 2) {
         showModal(modalDialog(
           title = "A minimum of 2 KBAs per network is required",
           "Please adjust the network settings to include at least 2 KBAs.",
