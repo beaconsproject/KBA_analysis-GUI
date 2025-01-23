@@ -97,7 +97,21 @@ read_shp_from_upload <- function(upload_input) {
     purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y))
     shp_path <- file.path(dir, paste0(name, ".shp"))
     if (file.exists(shp_path)) {
-      return(sf::st_read(shp_path))
+      #return(sf::st_read(shp_path))
+      shp <- sf::st_read(shp_path)
+      #browser()
+      # Check CRS to ensure it's NAD_83_Albers
+      #if (isFALSE(st_crs(shp) == st_crs(4269))) {
+      #  #stop("The shapefile does not use the NAD_83_Albers projection. Please reproject prior to upload")
+     #   showModal(modalDialog(
+      #    title = "Wrong projection",
+      #    "The shapefile does not use the NAD_83_Albers projection. Please reproject prior to upload",
+     #     easyClose = TRUE,
+       #   footer = modalButton("OK")
+      #  ))
+     #   return()
+      #}
+      return(shp)
     } else {
       stop("Shapefile (.shp) is missing.")
     }
@@ -138,6 +152,7 @@ read_tif_from_upload <- function(upload_input) {
 # get_stat_on_net: compute stats on NET
 get_stat_on_net <- function(net_sf, catchments, intact_col, upstream) {
   # Union NET and intersect  with catchments
+  #browser()
   net_diss <- st_union(net_sf) 
   area_km2 <- net_diss %>% st_area(.)/1000000
   net_catch <- st_intersection(catchments, net_diss)

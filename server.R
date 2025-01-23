@@ -58,7 +58,6 @@ server = function(input, output, session) {
   observeEvent(input$set_wd, {
     req(input$set_wd)
     
-    #dirpath()
     treedir <- c("output","Builder_input","Builder_output")
     for(d in treedir){
       if(!dir.exists(file.path(dirpath(), d))){
@@ -173,7 +172,6 @@ server = function(input, output, session) {
   # Set streams
   ################################################################################################
   streams <- reactive({
-    #req(!is.null(input$csv_file) || !is.null(input$upload_stream))
     if (!is.null(input$csv_file)) {
       req(validate_csv())
       return(read_shp_from_csv(input$csv_file, "stream"))
@@ -190,13 +188,9 @@ server = function(input, output, session) {
     if (!is.null(input$csv_file)) {
       req(validate_csv())
       planreg <- read_shp_from_csv(input$csv_file, "planning region")
-      #st_write(planreg, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
-      #         layer = "planning region", driver = "GPKG", append = FALSE)
       return(planreg)
     } else if (!is.null(input$upload_planreg)) {
       planreg <- read_shp_from_upload(input$upload_planreg)
-      #st_write(planreg, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), 
-      #         layer = "planning region", driver = "GPKG", append = FALSE)
       return(planreg)
     }else{
       return(NULL)
@@ -1829,6 +1823,7 @@ server = function(input, output, session) {
   ################################################################################################
   observeEvent(input$buildNet, {
     req(catchments())
+    
     #Validate Force PAs
     if(input$forcePAs){
       if ((is.null(pas_sf_reactive()))){
@@ -1992,7 +1987,7 @@ server = function(input, output, session) {
           get_stat_on_net(
             net_sf = network_group,
             catchments = catchments(),
-            intact_col = input$intactColpas,
+            intact_col = input$intactColname,
             upstream = upstream_reactive()
           )
         })
