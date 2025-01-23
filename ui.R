@@ -50,9 +50,9 @@ ui = dashboardPage(skin="black",
                                           ),
                                  menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
                                           menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Upload reference area<br>and assess representation</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
-                                          menuSubItem("Create KBAs network", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))
+                                          menuSubItem("Create KBA Networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome")),
+                                          menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
                                           ),
-                                 menuItem("Download results", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome")),
                                  hr()
                      ),
                      conditionalPanel(
@@ -150,7 +150,7 @@ ui = dashboardPage(skin="black",
                      ),
                      conditionalPanel(
                        condition="input.tabs=='download'",
-                       actionButton("downloadData", "Download filtered KBAs network", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px")
+                       actionButton("downloadData", "Download Filtered Networks", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px")
                      )
                    ),     
                    dashboardBody(
