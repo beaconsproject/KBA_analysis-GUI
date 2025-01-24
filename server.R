@@ -174,9 +174,17 @@ server = function(input, output, session) {
   streams <- reactive({
     if (!is.null(input$csv_file)) {
       req(validate_csv())
-      return(read_shp_from_csv(input$csv_file, "stream"))
+      stream_sf <- read_shp_from_csv(input$csv_file, "stream")
+      stream_4326 <- stream_sf %>% st_transform(4326) %>% st_simplify(dTolerance = 0.001)
+      st_write(stream_4326, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"),
+               layer = "stream_4326", driver = "GPKG", append = FALSE)
+      return(stream_sf)
     } else if (!is.null(input$upload_stream)) {
-      return(read_shp_from_upload(input$upload_stream))
+      stream_sf <- read_shp_from_upload(input$upload_stream)
+      stream_4326 <- stream_sf %>% st_transform(4326) %>% st_simplify(dTolerance = 0.001)
+      st_write(stream_4326, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"),
+               layer = "stream_4326", driver = "GPKG", append = FALSE)
+      return(stream_sf)
     } else{
       return(NULL)
     }
@@ -203,7 +211,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
-      lcc(raster(file.path(dirpath(), "output/kba_lcc.tif")))
+      lcc(rast(file.path(dirpath(), "output/kba_lcc.tif")))
     } else if (!is.null(input$upload_lcc)) {
       # Read raster from file upload
       lcc(read_tif_from_upload(input$upload_lcc))
@@ -224,7 +232,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
-      led(raster(file.path(dirpath(), "output/kba_led.tif")))
+      led(rast(file.path(dirpath(), "output/kba_led.tif")))
     } else if (!is.null(input$upload_led)) {
       # Read raster from file upload
       led(read_tif_from_upload(input$upload_led))
@@ -243,7 +251,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
-      gpp(raster(file.path(dirpath(), "output/kba_gpp.tif")))
+      gpp(rast(file.path(dirpath(), "output/kba_gpp.tif")))
     } else if (!is.null(input$upload_gpp)) {
       # Read raster from file upload
       gpp(read_tif_from_upload(input$upload_gpp))
@@ -262,7 +270,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_cmi.tif"))) {
-      cmi(raster(file.path(dirpath(), "output/kba_cmi.tif")))
+      cmi(rast(file.path(dirpath(), "output/kba_cmi.tif")))
     } else if (!is.null(input$upload_cmi)) {
       # Read raster from file upload
       cmi(read_tif_from_upload(input$upload_cmi))
@@ -893,10 +901,10 @@ server = function(input, output, session) {
     req(input$set_grid)
     req(streams())
     req(planreg())
-    
+    browser()
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    layer_to_check <- "KBAs_reduced"
+    layer_to_check <- paste0("KBAs_reduced_", input$set_grid)
     if (!layer_to_check %in% layers) {
       showModal(modalDialog(
         title = "Processing",
@@ -917,7 +925,9 @@ server = function(input, output, session) {
       # Close the modal once processing is done
       removeModal()
       
-      st_write(kba_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reduced", driver = "GPKG", append = TRUE)
+      if(input$save_reduce){
+        st_write(kba_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced_", input$set_grid), driver = "GPKG", append = TRUE)
+      }
       kba_sf_reactive(kba_sf)
     } else {
       kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reduced")
@@ -931,7 +941,7 @@ server = function(input, output, session) {
     ))
     
     kba_sf_4326 <- st_transform(kba_sf, 4326)
-    stream_4326 <- streams() %>% st_intersection(planreg(), sparse = FALSE) %>% st_transform(4326)
+    stream_4326 <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "stream_4326")
     leafletProxy("map") %>%
       addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 0, weight=1, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
       addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
@@ -1089,7 +1099,7 @@ server = function(input, output, session) {
     # -Render PAs map
     ####################################################################################################
     pas_4326 <- st_transform(pas, 4326)
-    stream_4326 <- st_transform(streams(), 4326)
+    stream_4326 <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "stream_4326")
     leafletProxy("map") %>%
       clearGroup("Protected areas") %>%
       clearGroup("Streams") %>%
@@ -1287,7 +1297,7 @@ server = function(input, output, session) {
       cmi_4326 <- cmi$projected
     }else{
       kba_cmi <- cmi()
-      cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
+      cmi_4326 <- rast(file.path(dirpath(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
       led <- process_raster(led(), refarea_reactive(), dirpath(), "kba_led", fact = 4)
@@ -1295,7 +1305,7 @@ server = function(input, output, session) {
       led_4326 <- led$projected
     } else{
       kba_led <- led()
-      led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
+      led_4326 <- rast(file.path(dirpath(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
       gpp <- process_raster(gpp(), refarea_reactive(), dirpath(), "kba_gpp", fact = 4)
@@ -1303,7 +1313,7 @@ server = function(input, output, session) {
       gpp_4326 <- gpp$projected
     } else{
       kba_gpp <- gpp()
-      gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
+      gpp_4326 <- rast(file.path(dirpath(), "output/kba_gpp_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
       lcc <- process_raster(lcc(), refarea_reactive(), dirpath(), "kba_lcc", fact = 40, aggregation_fun = modal, ignored = c(15, 17))
@@ -1311,7 +1321,7 @@ server = function(input, output, session) {
       lcc_4326 <- lcc$projected
     }else{
       kba_lcc <- lcc()
-      lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
+      lcc_4326 <- rast(file.path(dirpath(), "output/kba_lcc_4326.tif"))
     }
     if(!is.null(criteria5())){
       if (!file.exists(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))) {
@@ -1319,8 +1329,8 @@ server = function(input, output, session) {
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
-        kba_criteria5 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))
-        crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
+        kba_criteria5 <- rast(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))
+        crit5_4326 <- rast(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
       }
     }
               
@@ -1458,7 +1468,8 @@ server = function(input, output, session) {
       "Please wait...",
       footer = NULL
     ))
-    stream_4326 <- streams() %>% st_intersection(planreg(), sparse = FALSE) %>% st_transform(4326)
+    
+    stream_4326 <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "stream_4326")
     
     #Delete previous dynamic label if
     labelKBA <- reactive_labelKBA()
@@ -1469,11 +1480,13 @@ server = function(input, output, session) {
       clearGroup("Protected areas") %>%
       clearGroup(labelKBA) %>%
       clearGroup("Streams") %>%
+      addTiles() %>%
       addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
-      addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC") %>%
-      addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED") %>%
-      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP") %>%
-      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI") %>%
+      addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 5 * 1024 * 1024) %>%
+      
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
                 position = "bottomright", group="LED", labFormat = labeller_function)  %>%
       addLegend(pal = gppxpal, values = values(gpp_4326), opacity = 1, title = "GPP",
@@ -2033,13 +2046,13 @@ server = function(input, output, session) {
         #networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
         
         #Criteria
-        kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
-        kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
-        kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
-        kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
+        kba_cmi <- rast(file.path(dirpath(), "output/kba_cmi.tif"))
+        kba_led <- rast(file.path(dirpath(), "output/kba_led.tif"))
+        kba_gpp <- rast(file.path(dirpath(), "output/kba_gpp.tif"))
+        kba_lcc <- rast(file.path(dirpath(), "output/kba_lcc.tif"))
 
         if(!is.null(criteria5())){
-          kba_crit5 <- raster(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
+          kba_crit5 <- rast(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
         } 
         #Prep criteria legend LCC
         unique_sorted_values <- sort(na.omit(unique(values(kba_lcc))))
