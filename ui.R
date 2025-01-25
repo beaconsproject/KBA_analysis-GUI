@@ -107,7 +107,8 @@ ui = dashboardPage(skin="black",
                        tags$br(),
                        div(style = "margin: 14px; font-size:15px; font-weight: bold", "2. Reduce number of KBAs "),
                        div(style = "margin-top: -20px;",textInput("set_grid", label = div(style = "font-size:13px;margin: 0px;", "Specify grid cell size"), value = 10000)),
-                       actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px")
+                       actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px"),
+                       actionButton(inputId = "save_reduce", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Save reduced KBAs in gpkg")), class = "btn-warning", style="width:250px")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabPAs'",
@@ -148,11 +149,7 @@ ui = dashboardPage(skin="black",
                        actionButton("filterNet", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
                        div(style = "margin-top: 20px;",actionButton("downloadData", "Download Filtered Networks", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
                        
-                     )#,
-                     #conditionalPanel(
-                     #  condition="input.tabs=='download'",
-                     #  actionButton("downloadData", "Download Filtered Networks", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-warning", style="width:250px")
-                     #)
+                     )
                    ),     
                    dashboardBody(
                      useShinyjs(),
