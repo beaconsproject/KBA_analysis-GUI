@@ -2,8 +2,18 @@
 required_packages <- c(
   "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", 
   "shinycssloaders", "devtools", "beaconsbuilder", "dplyr", "tidyr", "sf", 
-  "zip", "raster", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT","rlang"
+  "zip", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl"
 )
+
+terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
+
+
+bpcrs <- terra::crs("PROJCRS[\"NAD_1983_Albers\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,
+              LENGTHUNIT[\"metre\",1]],ID[\"EPSG\",6269]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"Degree\",0.0174532925199433]]],CONVERSION[\"unnamed\",METHOD[\"Albers Equal Area\",ID[\"EPSG\",9822]],
+              PARAMETER[\"Latitude of false origin\",63.4,ANGLEUNIT[\"Degree\",0.0174532925199433],ID[\"EPSG\",8821]],PARAMETER[\"Longitude of false origin\",-91.867,ANGLEUNIT[\"Degree\",0.0174532925199433],ID[\"EPSG\",8822]],
+              PARAMETER[\"Latitude of 1st standard parallel\",49,ANGLEUNIT[\"Degree\",0.0174532925199433],ID[\"EPSG\",8823]],PARAMETER[\"Latitude of 2nd standard parallel\",77,ANGLEUNIT[\"Degree\",0.0174532925199433],
+              ID[\"EPSG\",8824]],PARAMETER[\"Easting at false origin\",0,LENGTHUNIT[\"metre\",1],ID[\"EPSG\",8826]],PARAMETER[\"Northing at false origin\",0,LENGTHUNIT[\"metre\",1],
+              ID[\"EPSG\",8827]]],CS[Cartesian,2],AXIS[\"(E)\",east,ORDER[1],LENGTHUNIT[\"metre\",1,ID[\"EPSG\",9001]]],AXIS[\"(N)\",north,ORDER[2],LENGTHUNIT[\"metre\",1,ID[\"EPSG\",9001]]]]")
 
 # Install any missing packages
 missing_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
@@ -48,24 +58,25 @@ get_available_drives <- function() {
 }
 
 # process_raster: crop and mask criteria layer
-process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4, crs = "EPSG:4326", aggregation_fun = NULL, ignored = NULL) {
-  output_path <- file.path(dir_path, "output", file_name)
+process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4, aggregation_fun = NULL, ignored = NULL) {
+  output_path <- file.path(dir_path, "output", paste0(file_name, ".tif"))
   projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
-  
-  cropped <- crop(input_raster, ref_area)
-  masked <- mask(cropped, ref_area)
+  #browser()
+  #cropped <- crop(input_raster, ref_area, snap = "near")
+  #masked <- mask(cropped, ref_area)
+  masked <- crop(input_raster, ref_area, snap = "near")
   if (!is.null(ignored)) {
     masked[masked %in% ignored] <- NA # cropland = 15, urban = 17 are NA 
   }
-  raster::writeRaster(masked, output_path, format = "GTiff")
+  terra::writeRaster(masked, output_path, filetype = "GTiff")
   if (!is.null(aggregation_fun)) {
-    aggregated <- terra::aggregate(rast(masked), fact = fact, fun = aggregation_fun)
-    projected <- project(aggregated, crs)
+    aggregated <- terra::aggregate(masked, fact = fact, fun = aggregation_fun)
+    projected <- project(aggregated, "EPSG:4326")
     terra::writeRaster(projected, projected_path, filetype = "GTiff")
   } else {
     aggregated <- aggregate(masked, fact = fact)
-    projected <- projectRaster(aggregated, crs = crs)
-    raster::writeRaster(projected, projected_path, format = "GTiff")
+    projected <- project(aggregated, "EPSG:4326")
+    terra::writeRaster(projected, projected_path, filetype = "GTiff")
   }
   list(original = masked, projected = projected)
 }
@@ -129,7 +140,7 @@ read_tif_from_csv <- function(csv_file, layer_name) {
   if (layer_name %in% csv_data$Layer) {
     path <- csv_data$Path[csv_data$Layer == layer_name]
     if (file.exists(path)) {
-      return(raster::raster(path))  # Load raster using the raster package
+      return(terra::rast(path))  # Load raster using the raster package
     } else {
       stop(paste("The path for", layer_name, "in the CSV does not exist."))
     }
@@ -143,7 +154,7 @@ read_tif_from_upload <- function(upload_input) {
   req(upload_input)  # Ensure the file is uploaded
   path <- upload_input$datapath
   if (file.exists(path)) {
-    return(raster::raster(path))  # Load raster using the raster package
+    return(terra::rast(path))  # Load raster using the raster package
   } else {
     stop("The uploaded raster file does not exist.")
   }
