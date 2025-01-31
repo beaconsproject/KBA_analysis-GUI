@@ -163,7 +163,6 @@ read_tif_from_upload <- function(upload_input) {
 # get_stat_on_net: compute stats on NET
 get_stat_on_net <- function(net_sf, catchments, intact_col, upstream) {
   # Union NET and intersect  with catchments
-  #browser()
   net_diss <- st_union(net_sf) 
   area_km2 <- net_diss %>% st_area(.)/1000000
   net_catch <- st_intersection(catchments, net_diss)
