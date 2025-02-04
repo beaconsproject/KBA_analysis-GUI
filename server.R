@@ -446,10 +446,12 @@ server = function(input, output, session) {
                        overlayGroups = c("Intact areas"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c(""))
+  })
   
-    if(!is.null(catchments())){
+  observeEvent(catchments(), {
+    #req(!is.null(catchments()))
+    #if(!is.null(catchments())){
       req(catchments())
-  
       # show pop-up ...
       showModal(modalDialog(
        title = "Uploading layers. Please wait...",
@@ -463,7 +465,7 @@ server = function(input, output, session) {
       catch_extent <- st_transform(catch_bnd, 4326)
       map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
 
-      map <- map %>%
+      leafletProxy("map") %>%
        fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
        addPolygons(data=catch_extent, color='black', fill = F, weight=3, group="Catchments extent", options = leafletOptions(pane = "layer2")) %>%
        addLayersControl(position = "topright",
@@ -474,16 +476,17 @@ server = function(input, output, session) {
       
       # Close the modal once processing is done
       removeModal()
-    }
+    })
 
-    if(!is.null(planreg())){
+  observeEvent(planreg(), {
+    #if(!is.null(planreg())){
       #Test if catchments are uploaded
       if (is.null(catchments())) {
         # Create the modal dialog
         showModal(modalDialog(
           title = "Missing Data",
           "Catchments layers is missing. Please go back to Set input parameters to upload catchments layer.",
-          easyClose = TRUE,
+         easyClose = TRUE,
           footer = modalButton("OK")
         ))
         return()
@@ -492,19 +495,20 @@ server = function(input, output, session) {
       req(catchments())
       req(planreg())
       planreg_4326 <- st_transform(planreg(), 4326)
-      map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
+      #map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
       
-      map <- map %>%
-        fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
+      leafletProxy("map") %>%
+        #fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
         addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer1")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                          overlayGroups = c("Catchments extent", "Planning region", "Intact areas"),
                          options = layersControlOptions(collapsed = FALSE))  %>%
         hideGroup(c(""))
-    }
+    })
 
-    if(!is.null(pas_sf_reactive())){
+  observeEvent(pas_sf_reactive(), {
+    #if(!is.null(pas_sf_reactive())){
       #Test if catchments are uploaded
       if (is.null(catchments())) {
          # Create the modal dialog
@@ -520,9 +524,9 @@ server = function(input, output, session) {
       req(pas_sf_reactive())
       req(catchments())
       pas_4326 <- st_transform(pas_sf_reactive(), 4326)
-      map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
-      map <- map %>%
-        fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
+      #map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
+      leafletProxy("map") %>%
+        #fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
         addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, group="Protected areas", options = leafletOptions(pane = "layer1")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
@@ -531,10 +535,8 @@ server = function(input, output, session) {
         hideGroup(c(""))
       
       # Close the modal once processing is done
-      removeModal()
-    }
-    map
-  })
+     # removeModal()
+  }, once = TRUE)
 
   ####################################################################################################
   ####################################################################################################
@@ -883,8 +885,7 @@ server = function(input, output, session) {
     } 
     showModal(modalDialog(
       title = "Hydrology metrics added",
-      "  Display KBAs. Please wait...",
-      easyClose = TRUE,
+      easyClose = FALSE,
       footer = modalButton("OK"))
     )  
     
@@ -898,7 +899,7 @@ server = function(input, output, session) {
                        overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs (all)", "Intact areas","Streams"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams"))
-    removeModal()
+    #removeModal()
   })  
 
   ####################################################################################################
@@ -1127,17 +1128,35 @@ server = function(input, output, session) {
     # -Render PAs map
     ####################################################################################################
     pas_4326 <- st_transform(pas, 4326)
-    stream_4326 <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "stream_4326")
+    #stream_4326 <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "stream_4326")
     leafletProxy("map") %>%
       clearGroup("Protected areas") %>%
-      clearGroup("Streams") %>%
-      addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
-      addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
-      addLayersControl(position = "topright",
+      #clearGroup("Streams") %>%
+      addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) #%>%
+      #addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
+      
+    if(!is.null(kba_reduce_reactive())){
+      leafletProxy("map") %>%
+        addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Protected areas","Streams"),
+                       overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs (all)", "Potential KBAs (reduced)", "Intact areas", "Protected areas","Streams"),
                        options = layersControlOptions(collapsed = FALSE))  %>%
       hideGroup(c("Streams"))
+    }else if(!is.null(kba_sf_reactive())) {
+      leafletProxy("map") %>%
+        addLayersControl(position = "topright",
+                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
+                         overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs (all)", "Intact areas", "Protected areas","Streams"),
+                         options = layersControlOptions(collapsed = FALSE))  %>%
+        hideGroup(c("Streams"))
+    }else{
+      leafletProxy("map") %>%
+        addLayersControl(position = "topright",
+                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
+                         overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Protected areas","Streams"),
+                         options = layersControlOptions(collapsed = FALSE))  %>%
+        hideGroup(c("Streams"))
+    }
     
     ####################################################################################################
     # -Render PAs statistics table
@@ -1159,11 +1178,11 @@ server = function(input, output, session) {
       
       #############################
       # -Render PAs frequency table
-      x <- tibble(
-        Variables = c("PAs", "Filtered PAs"),
-        Count = c(nrow(pas),NA)
-      )
-      outfreqkba(x)
+      #x <- tibble(
+      #  Variables = c("PAs", "Filtered PAs"),
+      #  Count = c(nrow(pas),NA)
+      #)
+      #outfreqkba(x)
     
       return(final)
     })
