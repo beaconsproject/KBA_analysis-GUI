@@ -90,10 +90,22 @@ read_shp_from_csv <- function(csv_file, layer_name) {
     if (file.exists(path)) {
       return(sf::st_read(path))
     } else {
-      stop(paste("The path for", layer_name, "in the CSV does not exist."))
+      showModal(modalDialog(
+        title = paste("The path for", layer_name, "in the CSV does not exist."),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+      #stop(paste("The path for", layer_name, "in the CSV does not exist."))
     }
   } else {
-    stop(paste(layer_name, "layer not found in CSV."))
+    showModal(modalDialog(
+      title = paste(layer_name, "layer not found in CSV."),
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    return()
+    #stop(paste(layer_name, "layer not found in CSV."))
   }
 }
 
@@ -124,10 +136,22 @@ read_shp_from_upload <- function(upload_input) {
       #}
       return(shp)
     } else {
-      stop("Shapefile (.shp) is missing.")
+      showModal(modalDialog(
+        title = "Shapefile (.shp) is missing.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+      #stop("Shapefile (.shp) is missing.")
     }
   } else {
-    stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
+    showModal(modalDialog(
+      title = "Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).",
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    return()
+    #stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
   }
 }
 
@@ -142,10 +166,22 @@ read_tif_from_csv <- function(csv_file, layer_name) {
     if (file.exists(path)) {
       return(terra::rast(path))  # Load raster using the raster package
     } else {
-      stop(paste("The path for", layer_name, "in the CSV does not exist."))
+      showModal(modalDialog(
+        title = paste("The path for", layer_name, "in the CSV does not exist."),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+      #stop(paste("The path for", layer_name, "in the CSV does not exist."))
     }
   } else {
-    stop(paste(layer_name, "layer not found in CSV."))
+    showModal(modalDialog(
+      title = paste(layer_name, "layer not found in CSV."),
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    return()
+    #stop(paste(layer_name, "layer not found in CSV."))
   }
 }
 
@@ -156,7 +192,13 @@ read_tif_from_upload <- function(upload_input) {
   if (file.exists(path)) {
     return(terra::rast(path))  # Load raster using the raster package
   } else {
-    stop("The uploaded raster file does not exist.")
+    showModal(modalDialog(
+      title = "The uploaded raster file does not exist.",
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    return()
+    #stop("The uploaded raster file does not exist.")
   }
 }
 
