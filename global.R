@@ -58,7 +58,7 @@ get_available_drives <- function() {
 }
 
 # process_raster: crop and mask criteria layer
-process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4, crs=bpcrs,  aggregation_fun = NULL, ignored = NULL) {
+process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4,  aggregation_fun = NULL, ignored = NULL) {
   output_path <- file.path(dir_path, "output", paste0(file_name, ".tif"))
   projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
   cropped <- crop(input_raster, ref_area, snap = "near", extend = TRUE)
@@ -70,11 +70,11 @@ process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4
   raster::writeRaster(masked, output_path, format = "GTiff")
   if (!is.null(aggregation_fun)) {
     aggregated <- terra::aggregate(rast(masked), fact = fact, fun = aggregation_fun)
-    projected <- project(aggregated, crs)
+    projected <- project(aggregated, bpcrs)
     terra::writeRaster(projected, projected_path, filetype = "GTiff")
   } else {
     aggregated <- aggregate(masked, fact = fact)
-    projected <- projectRaster(aggregated, crs = crs)
+    projected <- projectRaster(aggregated, crs = bpcrs)
     raster::writeRaster(projected, projected_path, format = "GTiff")
     
   }
