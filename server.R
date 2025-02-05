@@ -214,7 +214,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
-      lcc(rast(file.path(dirpath(), "output/kba_lcc.tif")))
+      lcc(raster(file.path(dirpath(), "output/kba_lcc.tif")))
     } else if (!is.null(input$upload_lcc)) {
       # Read raster from file upload
       lcc(read_tif_from_upload(input$upload_lcc))
@@ -235,7 +235,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
-      led(rast(file.path(dirpath(), "output/kba_led.tif")))
+      led(raster(file.path(dirpath(), "output/kba_led.tif")))
     } else if (!is.null(input$upload_led)) {
       # Read raster from file upload
       led(read_tif_from_upload(input$upload_led))
@@ -254,7 +254,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
-      gpp(rast(file.path(dirpath(), "output/kba_gpp.tif")))
+      gpp(raster(file.path(dirpath(), "output/kba_gpp.tif")))
     } else if (!is.null(input$upload_gpp)) {
       # Read raster from file upload
       gpp(read_tif_from_upload(input$upload_gpp))
@@ -273,7 +273,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_cmi.tif"))) {
-      cmi(rast(file.path(dirpath(), "output/kba_cmi.tif")))
+      cmi(raster(file.path(dirpath(), "output/kba_cmi.tif")))
     } else if (!is.null(input$upload_cmi)) {
       # Read raster from file upload
       cmi(read_tif_from_upload(input$upload_cmi))
@@ -1338,7 +1338,7 @@ server = function(input, output, session) {
       cmi_4326 <- cmi$projected
     }else{
       kba_cmi <- cmi()
-      cmi_4326 <- rast(file.path(dirpath(), "output/kba_cmi_4326.tif"))
+      cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
       led <- process_raster(led(), refarea_reactive(), dirpath(), "kba_led", fact = 4)
@@ -1346,7 +1346,7 @@ server = function(input, output, session) {
       led_4326 <- led$projected
     } else{
       kba_led <- led()
-      led_4326 <- rast(file.path(dirpath(), "output/kba_led_4326.tif"))
+      led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
       gpp <- process_raster(gpp(), refarea_reactive(), dirpath(), "kba_gpp", fact = 4)
@@ -1354,7 +1354,7 @@ server = function(input, output, session) {
       gpp_4326 <- gpp$projected
     } else{
       kba_gpp <- gpp()
-      gpp_4326 <- rast(file.path(dirpath(), "output/kba_gpp_4326.tif"))
+      gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
       lcc <- process_raster(lcc(), refarea_reactive(), dirpath(), "kba_lcc", fact = 40, aggregation_fun = modal, ignored = c(15, 17))
@@ -1362,7 +1362,7 @@ server = function(input, output, session) {
       lcc_4326 <- lcc$projected
     }else{
       kba_lcc <- lcc()
-      lcc_4326 <- rast(file.path(dirpath(), "output/kba_lcc_4326.tif"))
+      lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
     }
     if(!is.null(criteria5())){
       if (!file.exists(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))) {
@@ -1370,8 +1370,8 @@ server = function(input, output, session) {
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
-        kba_criteria5 <- rast(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))
-        crit5_4326 <- rast(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
+        kba_criteria5 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))
+        crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
       }
     }
               
@@ -1440,10 +1440,11 @@ server = function(input, output, session) {
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
+        
         kba_sf$cmi <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
         kba_sf$led <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
         kba_sf$gpp <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
-        kba_lcc[kba_lcc %in% c(15, 17)] <- NA # cropland = 15, urban = 17 are NA 
+        #kba_lcc[kba_lcc %in% c(15, 17)] <- NA # cropland = 15, urban = 17 are NA 
         kba_sf$lcc <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
         # criteria5
         if(!is.null(criteria5())){
@@ -1482,6 +1483,7 @@ server = function(input, output, session) {
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
+        browser()
         pas_sf$cmi <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
         pas_sf$led <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
         pas_sf$gpp <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
