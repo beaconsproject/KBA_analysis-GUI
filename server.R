@@ -1483,7 +1483,7 @@ server = function(input, output, session) {
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
-        browser()
+        
         pas_sf$cmi <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
         pas_sf$led <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
         pas_sf$gpp <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
@@ -2208,13 +2208,13 @@ server = function(input, output, session) {
         #networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
         
         #Criteria
-        kba_cmi <- rast(file.path(dirpath(), "output/kba_cmi.tif"))
-        kba_led <- rast(file.path(dirpath(), "output/kba_led.tif"))
-        kba_gpp <- rast(file.path(dirpath(), "output/kba_gpp.tif"))
-        kba_lcc <- rast(file.path(dirpath(), "output/kba_lcc.tif"))
+        kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
+        kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
+        kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
+        kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
 
         if(!is.null(criteria5())){
-          kba_crit5 <- rast(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
+          kba_crit5 <- raster(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
         } 
         #Prep criteria legend LCC
         unique_sorted_values <- sort(na.omit(unique(values(kba_lcc))))
@@ -2223,16 +2223,16 @@ server = function(input, output, session) {
                                                                                         "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
                                                                                         "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
         # calculate dissimilarity metric 
-        networks_sf$lcc <- calc_dissimilarity(networks_sf, planreg(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), network_dir,"lcc"), categorical_class_labels = df_label)
+        networks_sf$lcc <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), network_dir,"lcc"), categorical_class_labels = df_label)
       
-        networks_sf$led <- calc_dissimilarity(networks_sf, planreg(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"led"))
+        networks_sf$led <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"led"))
       
-        networks_sf$cmi <- calc_dissimilarity(networks_sf, planreg(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"cmi"))
+        networks_sf$cmi <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"cmi"))
       
-        networks_sf$gpp <- calc_dissimilarity(networks_sf, planreg(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"gpp")) 
+        networks_sf$gpp <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"gpp")) 
         
         if(!is.null(criteria5())){
-          networks_sf[[criteria5name()]] <- calc_dissimilarity(networks_sf, planreg(), kba_crit5, 'continuous', plot_out_dir=file.path(dirpath(), network_dir, criteria5name())) 
+          networks_sf[[criteria5name()]] <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_crit5, 'continuous', plot_out_dir=file.path(dirpath(), network_dir, criteria5name())) 
         }
       
         st_write(networks_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = TRUE)
