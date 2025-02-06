@@ -57,6 +57,29 @@ get_available_drives <- function() {
   available_drives
 }
 
+# Function to check if all required shapefile components exist
+check_shp <- function(shapefile_path) {
+  folder_path <- dirname(shapefile_path)
+  base_name <- tools::file_path_sans_ext(basename(shapefile_path))
+  
+  required_extensions <- c(".shp", ".shx", ".dbf", ".prj")
+  required_files <- paste0(file.path(folder_path, base_name), required_extensions)
+  missing_files <- required_files[!file.exists(required_files)]
+  if (length(missing_files) > 0) {
+    showModal(modalDialog(
+      title = "Extension File Missing",
+      paste(paste(tools::file_ext(missing_files), collapse = ", "), " extension is missing from ", base_name, 
+            ". Make sure all required extension (.shp, .shx, .dbf, .prj) files exist prior to upload the shapefile."),
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    showNotification("Shapefile is incomplete. Please provide all required files.", type = "error")
+    req(FALSE)  # Stop further execution
+  }
+  
+  return(TRUE)  # Return TRUE if all files exist
+}
+
 # process_raster: crop and mask criteria layer
 process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4,  aggregation_fun = NULL, ignored = NULL) {
   output_path <- file.path(dir_path, "output", paste0(file_name, ".tif"))
@@ -81,39 +104,50 @@ process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4
   list(original = masked, projected = projected)
 }
 
+
+
+
 # read_shp_from_csv: read layer from path found in csv uploaded with fileInput
 read_shp_from_csv <- function(csv_file, layer_name) {
   req(csv_file)
-  csv_data <- read.csv(csv_file$datapath)
-  if (layer_name %in% csv_data$Layer) {
-    path <- csv_data$Path[csv_data$Layer == layer_name]
-    if (file.exists(path)) {
-      return(sf::st_read(path))
-    } else {
-      showModal(modalDialog(
-        title = paste("The path for", layer_name, "in the CSV does not exist."),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return()
-      #stop(paste("The path for", layer_name, "in the CSV does not exist."))
-    }
-  } else {
+  
+  csv_data <- read.csv(csv_file$datapath, stringsAsFactors = FALSE)
+  if (!(layer_name %in% csv_data$Layer)) {
     showModal(modalDialog(
-      title = paste(layer_name, "layer not found in CSV."),
+      title = "Layer Not Found",
+      paste("The layer", layer_name, "was not found in the CSV."),
       easyClose = TRUE,
       footer = modalButton("OK")
     ))
-    return()
-    #stop(paste(layer_name, "layer not found in CSV."))
+    showNotification("Layer not found in CSV. Check your file.", type = "error")
+    req(FALSE)  # Stop further execution
   }
+  
+  path <- csv_data$Path[csv_data$Layer == layer_name]
+  if (!file.exists(path)) {
+    showModal(modalDialog(
+      title = "Invalid Path",
+      paste("The path for", layer_name, "does not exist."),
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    showNotification("Invalid file path in CSV. Check your file.", type = "error")
+    req(FALSE)  # Stop further execution
+  }
+  
+  # Check if all required shapefile components are present
+  check_shp(path)
+  # If everything is okay, read the shapefile
+  return(sf::st_read(path))
 }
 
 # read_shp_from_upload: read a shapefile from fileInput
 read_shp_from_upload <- function(upload_input) {
   req(upload_input)
+  required_extensions <- c("shp", "shx", "dbf", "prj")
   infile <- upload_input
-  if (length(infile$datapath) > 1) {
+  file_extensions <- tools::file_ext(infile$name)
+  if (all(required_extensions %in% file_extensions)) {
     dir <- unique(dirname(infile$datapath))
     outfiles <- file.path(dir, infile$name)
     name <- tools::file_path_sans_ext(infile$name[1])
@@ -142,16 +176,15 @@ read_shp_from_upload <- function(upload_input) {
         footer = modalButton("OK")
       ))
       return()
-      #stop("Shapefile (.shp) is missing.")
     }
   } else {
     showModal(modalDialog(
-      title = "Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).",
+      title = "Extension file is missing",
+      "Please upload all necessary files for the shapefile (.shp, .shx, .dbf and .prj).",
       easyClose = TRUE,
       footer = modalButton("OK")
     ))
     return()
-    #stop("Upload all necessary files for the shapefile (.shp, .shx, .dbf, etc.).")
   }
 }
 
