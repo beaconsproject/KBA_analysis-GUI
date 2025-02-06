@@ -1440,15 +1440,28 @@ server = function(input, output, session) {
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
-        
-        kba_sf$cmi <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
-        kba_sf$led <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
-        kba_sf$gpp <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
-        #kba_lcc[kba_lcc %in% c(15, 17)] <- NA # cropland = 15, urban = 17 are NA 
-        kba_sf$lcc <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
-        # criteria5
-        if(!is.null(criteria5())){
-          kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+        error_occurred <- FALSE
+        tryCatch({
+          kba_sf$cmi <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
+          kba_sf$led <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
+          kba_sf$gpp <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
+          kba_sf$lcc <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
+          # criteria5
+          if(!is.null(criteria5())){
+            kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+          }
+        }, error = function(e) {
+          error_occurred <<- TRUE
+          # Show an error modal with the error message
+          showModal(modalDialog(
+            title = "Error calculating disimilarity",
+            paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
+            easyClose = FALSE,
+            footer = modalButton("OK")
+          ))
+        })
+        if (error_occurred) {
+          return(NULL)  # Stop execution of the rest of the observer
         }
         kba_sf <- kba_sf %>%
           dplyr::select(-Area_PB)
@@ -1466,7 +1479,22 @@ server = function(input, output, session) {
         }
         if(!is.null(criteria5())){
           if(!has_name(kba_sf, criteria5name())){
-            kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+            error_occurred <- FALSE
+            tryCatch({
+              kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+            }, error = function(err) {
+              error_occurred <- TRUE
+              # Show an error modal with the error message
+              showModal(modalDialog(
+                title = "Error calculating disimilarity",
+                paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
+                easyClose = TRUE,
+                footer = modalButton("OK")
+              ))
+            })
+            if (error_occurred) {
+              return(NULL)  # Stop execution of the rest of the observer
+            }
           }
         }
         kba_sf_reactive(kba_sf)
@@ -1483,14 +1511,28 @@ server = function(input, output, session) {
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
-        
-        pas_sf$cmi <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
-        pas_sf$led <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
-        pas_sf$gpp <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
-        pas_sf$lcc <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
-        # criteria5
-        if(!is.null(criteria5())){
-          pas_sf[[criteria5name()]] <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+        error_occurred <- FALSE
+        tryCatch({
+          pas_sf$cmi <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
+          pas_sf$led <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
+          pas_sf$gpp <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
+          pas_sf$lcc <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
+          # criteria5
+          if(!is.null(criteria5())){
+            pas_sf[[criteria5name()]] <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+          }
+          }, error = function(e) {
+            error_occurred <<- TRUE
+            # Show an error modal with the error message
+            showModal(modalDialog(
+              title = "Error calculating disimilarity",
+              paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
+              easyClose = FALSE,
+              footer = modalButton("OK")
+            ))
+        })
+        if (error_occurred) {
+          return(NULL)  # Stop execution of the rest of the observer
         }
         st_write(pas_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_rep", driver = "GPKG", append = FALSE)
         pas_sf_reactive(pas_sf)
@@ -2224,18 +2266,27 @@ server = function(input, output, session) {
                                                                                         "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
                                                                                         "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
         # calculate dissimilarity metric 
-        networks_sf$lcc <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), network_dir,"lcc"), categorical_class_labels = df_label)
-      
-        networks_sf$led <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"led"))
-      
-        networks_sf$cmi <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"cmi"))
-      
-        networks_sf$gpp <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"gpp")) 
-        
-        if(!is.null(criteria5())){
-          networks_sf[[criteria5name()]] <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_crit5, 'continuous', plot_out_dir=file.path(dirpath(), network_dir, criteria5name())) 
+        error_occurred <- FALSE
+        tryCatch({
+          networks_sf$lcc <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), network_dir,"lcc"), categorical_class_labels = df_label)
+          networks_sf$led <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"led"))
+          networks_sf$cmi <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"cmi"))
+          networks_sf$gpp <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"gpp")) 
+          if(!is.null(criteria5())){
+            networks_sf[[criteria5name()]] <- calc_dissimilarity(networks_sf, refarea_reactive(), kba_crit5, 'continuous', plot_out_dir=file.path(dirpath(), network_dir, criteria5name())) 
+          }
+        }, error = function(err) {
+          error_occurred <- TRUE
+          showModal(modalDialog(
+            title = "Error calculating disimilarity",
+            paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+        })
+        if (error_occurred) {
+          return(NULL)  # Stop execution of the rest of the observer
         }
-      
         st_write(networks_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = TRUE)
         network_reactive(networks_sf)
       }else{
