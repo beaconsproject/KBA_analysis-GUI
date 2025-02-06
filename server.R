@@ -1451,7 +1451,7 @@ server = function(input, output, session) {
           kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
         }
         kba_sf <- kba_sf %>%
-          dplyr::select(-Area_PB, -group_id)
+          dplyr::select(-Area_PB)
         st_write(kba_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_rep_", set_grid), driver = "GPKG", append = FALSE)
         kba_sf_reactive(kba_sf)
         #if ("PAs_rep" %in% layers) {
@@ -1964,14 +1964,15 @@ server = function(input, output, session) {
   
   observeEvent(input$buildNet, {
     req(catchments())
-
     kba_sf <- NULL
     pas_sf <- NULL
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     
-    if (!(input$KBAlayer=="No KBA generated")){
+    if (!(input$KBArep=="")){
       kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
+      kba_sf <- kba_sf %>%
+        dplyr::select(-any_of("group_id"))
       kba_sf_reactive(kba_sf)
       set_grid <- paste0("reduced", sub("^KBAs_rep_([^_]+)$", "\\1", input$KBArep))
       kba_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream")
