@@ -854,9 +854,13 @@ server = function(input, output, session) {
           rename_with(~ str_replace(.x, "PB", "KBA"))
         upstream_area <- dissolve_catchments_from_table(catchments(), upstream_list, "network")  
       
+        upstream_area <- upstream_area %>%
+          st_buffer(dist = 20) %>% 
+          st_buffer(dist = -20)
+        
         #Update reactiveVal
         upstream_reactive(upstream_area)
-      
+        
         # Export. Append the first layer to the GeoPackage
         st_write(upstream_area, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream", driver = "GPKG", append = TRUE)
   
@@ -1085,7 +1089,13 @@ server = function(input, output, session) {
           summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
         
         # Dissolve and merge upstream areas
-        upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network") %>%
+        upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
+        
+        upstream_area <- upstream_area %>%
+          st_buffer(dist = 20) %>% 
+          st_buffer(dist = -20)
+        
+        upstream_area <- upstream_area %>%
           left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
           mutate(up_km2 = st_area(.)/1000000,
                  up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
