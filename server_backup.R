@@ -25,18 +25,13 @@ server = function(input, output, session) {
   tab_upload_visited <- reactiveVal(FALSE)
   filtered_kba <- reactiveVal(NULL)
   filtered_pas <- reactiveVal(NULL)
-  filtered_rep <- reactiveVal(NULL)
   
-  outfreqhydro <- reactiveVal(
-    tibble(Variables = c("KBAs", "Reduced KBAs"), Count = NA_integer_)
-  )
   outfreqkba <- reactiveVal(
     tibble(Variables = c("KBAs", "Filtered KBAs", "PAs", "Filtered PAs"), Count = NA_integer_)
   )
   outfreqnet <- reactiveVal(
     tibble(Variables = c("KBAs", "Filtered KBAs", "PAs", "Filtered PAs", "Networks", "Filtered networks"), Count = NA_integer_)
   )
-  
   #outfreqnet <- reactiveVal(NULL)
   # Define root access points (change as needed for Windows/Linux/Mac)
   roots <- get_available_drives()
@@ -104,9 +99,9 @@ server = function(input, output, session) {
         upstream_area <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream")
         upstream_reactive(upstream_area)
       }
-      if ("KBAs" %in% layers) {
-        kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs")
-        kba_sf_reactive(kba_sf)
+      if ("KBAs_reduced" %in% layers) {
+        kba_reduced <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reduced")
+        kba_sf_reactive(kba_reduced)
       }
       showModal(modalDialog(
         title = "The output directory already exists and the necessary files are present.",
@@ -123,14 +118,14 @@ server = function(input, output, session) {
   })
   
   observeEvent(planreg(),{
-    if(input$set_wd[1]== 0){
+    if(input$set_wd==0){
       showModal(modalDialog(
         title = "Output directory is missing",
         "Please provide an output directory prior to upload the input files",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
-      return()  # Stop further execution
+      return(FALSE)  # Stop further execution
     }
   })
   ################################################################################################
@@ -142,17 +137,6 @@ server = function(input, output, session) {
   # Reactive function to validate the input file
   validate_csv <- reactive({
     req(input$csv_file)  # Ensure the file input is not NULL
-    # Make sure dirPath is confirmed
-    if (!is.null(dirpath()) && dirpath() != "" && input$set_wd[1] == 0) {
-      showModal(modalDialog(
-        title = "Please confirm the output directory",
-        "By confirming, the app will create all necessary subfolders for the analysis.",
-        easyClose = TRUE,
-        footer = modalButton("OK"),
-      ))
-      return(FALSE)
-    }
-    req(input$set_wd)
     # Read the uploaded CSV file
     csv_data <- read.csv(input$csv_file$datapath)
     
@@ -212,8 +196,6 @@ server = function(input, output, session) {
   # Set Planning region
   ################################################################################################
   planreg <- reactive({
-    req(input$set_wd)
-    
     if (!is.null(input$csv_file)) {
       req(validate_csv())
       planreg <- read_shp_from_csv(input$csv_file, "planning region")
@@ -232,7 +214,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
-      lcc(raster(file.path(dirpath(), "output/kba_lcc.tif")))
+      lcc(rast(file.path(dirpath(), "output/kba_lcc.tif")))
     } else if (!is.null(input$upload_lcc)) {
       # Read raster from file upload
       lcc(read_tif_from_upload(input$upload_lcc))
@@ -253,7 +235,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
-      led(raster(file.path(dirpath(), "output/kba_led.tif")))
+      led(rast(file.path(dirpath(), "output/kba_led.tif")))
     } else if (!is.null(input$upload_led)) {
       # Read raster from file upload
       led(read_tif_from_upload(input$upload_led))
@@ -272,7 +254,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
-      gpp(raster(file.path(dirpath(), "output/kba_gpp.tif")))
+      gpp(rast(file.path(dirpath(), "output/kba_gpp.tif")))
     } else if (!is.null(input$upload_gpp)) {
       # Read raster from file upload
       gpp(read_tif_from_upload(input$upload_gpp))
@@ -291,7 +273,7 @@ server = function(input, output, session) {
   observe({
     req(dirpath())
     if (file.exists(file.path(dirpath(), "output/kba_cmi.tif"))) {
-      cmi(raster(file.path(dirpath(), "output/kba_cmi.tif")))
+      cmi(rast(file.path(dirpath(), "output/kba_cmi.tif")))
     } else if (!is.null(input$upload_cmi)) {
       # Read raster from file upload
       cmi(read_tif_from_upload(input$upload_cmi))
@@ -352,7 +334,6 @@ server = function(input, output, session) {
   ################################################################################################
   # PAs upload shapefile
   observeEvent(input$upload_pas, {
-    req(input$set_wd)
     req(input$upload_pas)
     pas_sf <- read_shp_from_upload(input$upload_pas)
     st_write(pas_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"),
@@ -362,7 +343,6 @@ server = function(input, output, session) {
   
   # PAs upload using csv
   observeEvent(input$csv_file, {
-    req(input$set_wd)
     req(input$csv_file)
     csv_data <- read.csv(input$csv_file$datapath)
     layers_to_check <- "protected areas"
@@ -381,7 +361,6 @@ server = function(input, output, session) {
   ################################################################################################
   observeEvent(input$upload_refarea, {
     req(input$upload_refarea)
-    req(input$set_wd)
     refarea_sf <- read_shp_from_upload(input$upload_refarea)
     st_write(refarea_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"),
              layer = "reference area", driver = "GPKG", append = FALSE)
@@ -390,7 +369,6 @@ server = function(input, output, session) {
   
   observeEvent(input$csv_file, {
     req(input$csv_file)
-    req(input$set_wd)
     csv_data <- read.csv(input$csv_file$datapath)
     layers_to_check <- "reference area"
     
@@ -517,8 +495,10 @@ server = function(input, output, session) {
       req(catchments())
       req(planreg())
       planreg_4326 <- st_transform(planreg(), 4326)
-
+      #map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
+      
       leafletProxy("map") %>%
+        #fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
         addPolygons(data=planreg_4326, color='red', fill = F, weight=3, group="Planning region", options = leafletOptions(pane = "layer1")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
@@ -544,13 +524,18 @@ server = function(input, output, session) {
       req(pas_sf_reactive())
       req(catchments())
       pas_4326 <- st_transform(pas_sf_reactive(), 4326)
+      #map_bounds1 <- catch_extent %>% st_bbox() %>% as.character()
       leafletProxy("map") %>%
+        #fitBounds(map_bounds1[1], map_bounds1[2], map_bounds1[3], map_bounds1[4]) %>%
         addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, group="Protected areas", options = leafletOptions(pane = "layer1")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                          overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Protected areas"),
                          options = layersControlOptions(collapsed = FALSE))  %>%
         hideGroup(c(""))
+      
+      # Close the modal once processing is done
+     # removeModal()
   }, once = TRUE)
 
   ####################################################################################################
@@ -762,42 +747,6 @@ server = function(input, output, session) {
       }
   })
   
-  
-  ####################################################################################################
-  # -Render PAs statistics table
-  ####################################################################################################
-  observeEvent(input$tabs, {
-    req(input$tabs == 'tabDCI')
-    
-    # Initialize KBA/PAs freq table
-    x <- tibble(
-      Variables = c("KBAs", "Reduced KBAs"),
-      Count = c(NA, NA))  
-    
-    layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
-
-    if ("KBAs_reducedFALSE" %in% layers) {
-      kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE")
-      x <- x %>% 
-        mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
-                                 TRUE ~ Count))
-    }
-    if ("KBAs_reduced10000" %in% layers) {
-      kba_reduced_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reduced10000")
-      x <- x %>% 
-        mutate(Count = case_when(Variables == "Reduced KBAs" ~  nrow(kba_reduced_sf),
-                                 TRUE ~ Count))
-    }  
-    
-    # Generate Stat Tables    
-    outfreqhydro(x) 
-    
-    output$outkbahydro <- renderTable({
-      outfreqhydro()
-    })
-  })
-  
   ####################################################################################################
   # -Calculate hydro metrics on KBAs
   ####################################################################################################
@@ -833,7 +782,7 @@ server = function(input, output, session) {
     req(catchments())
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    layer_to_check <- "KBAs_reducedFALSE"
+    layer_to_check <- "KBAs_reduced_FALSE"
     
     if (!layer_to_check %in% layers) {
       showModal(modalDialog(
@@ -905,13 +854,9 @@ server = function(input, output, session) {
           rename_with(~ str_replace(.x, "PB", "KBA"))
         upstream_area <- dissolve_catchments_from_table(catchments(), upstream_list, "network")  
       
-        upstream_area <- upstream_area %>%
-          st_buffer(dist = 20) %>% 
-          st_buffer(dist = -20)
-        
         #Update reactiveVal
         upstream_reactive(upstream_area)
-        
+      
         # Export. Append the first layer to the GeoPackage
         st_write(upstream_area, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream", driver = "GPKG", append = TRUE)
   
@@ -927,7 +872,7 @@ server = function(input, output, session) {
         kba_sf_reactive(poly_sf)
     
         # Export. Append the first layer to the GeoPackage
-        st_write(poly_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE", driver = "GPKG", append = TRUE)
+        st_write(poly_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reduced_FALSE", driver = "GPKG", append = TRUE)
       
         # Close the modal once processing is done
         removeModal()
@@ -935,7 +880,7 @@ server = function(input, output, session) {
     } else{
       upstream_area <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream")
       upstream_reactive(upstream_area)
-      poly_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE")
+      poly_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reduced_FALSE")
       kba_sf_reactive(poly_sf)
     } 
     showModal(modalDialog(
@@ -954,19 +899,7 @@ server = function(input, output, session) {
                        overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs (all)", "Intact areas","Streams"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams"))
-    
-      # Initialize KBA/PAs freq table
-    x <- outfreqhydro()
-    x <- x %>% 
-      mutate(Count = case_when(Variables == "KBAs" ~  nrow(poly_sf),
-                               TRUE ~ Count))
-      
-      # Generate Stat Tables    
-      outfreqhydro(x) 
-      
-      output$outkbahydro <- renderTable({
-        outfreqhydro()
-      })
+    #removeModal()
   })  
 
   ####################################################################################################
@@ -975,7 +908,7 @@ server = function(input, output, session) {
   observeEvent(input$reduce_KBAs, {
     
     #Test on required layers
-    if (is.null(streams()) || is.null(planreg())) {
+    if (is.null(kba_sf_reactive()) || is.null(upstream_reactive()) || is.null(streams()) || is.null(planreg())) {
       # Create the modal dialog
       showModal(modalDialog(
         title = "Missing Data",
@@ -986,31 +919,16 @@ server = function(input, output, session) {
       ))
       return()
     }
+    
+    req(!is.null(kba_sf_reactive()))
+    req(!is.null(upstream_reactive()))
+    req(input$set_grid)
     req(streams())
     req(planreg())
     
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    if ("KBAs_reducedFALSE" %in% layers) {
-      kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE")
-      kba_sf_reactive(kba_sf)
-    } else {
-      #Test on required layers
-      showModal(modalDialog(
-          title = "Missing Data",
-          "Calculate DCI and add upstream attributes to KBAs prior to reduce the number.",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-      ))
-      return()
-    }
-    
-    req(!is.null(kba_sf_reactive()))
-    req(!is.null(upstream_reactive()))
-    
-    layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
-    layer_to_check <- paste0("KBAs_reduced", input$set_grid)
+    layer_to_check <- paste0("KBAs_reduced_", input$set_grid)
     if (!layer_to_check %in% layers) {
       showModal(modalDialog(
         title = "Processing",
@@ -1031,9 +949,10 @@ server = function(input, output, session) {
       # Close the modal once processing is done
       removeModal()
       
+      kba_sf_reactive(kba_sf)
       kba_reduce_reactive(kba_sf)
     } else {
-      kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced", input$set_grid))
+      kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced_", input$set_grid))
       kba_reduce_reactive(kba_sf)
     }
     
@@ -1054,19 +973,20 @@ server = function(input, output, session) {
     # Close the modal once processing is done
     removeModal()
     
-    # Initialize KBA/PAs freq table
-    x <- outfreqhydro()
-    
-    x <- x %>% 
-      mutate(Count = case_when(Variables == "Reduced KBAs" ~  nrow(kba_reduce_reactive()),
-                               TRUE ~ Count))
-    outfreqhydro(x)
-    
-    # Generate Stat Tables  
-    output$outkbahydro <- renderTable({
-      outfreqhydro()
-    })
-    
+    layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
+    layers <- layers_info$name
+    kba_count <- NA
+    pas_count <- NA
+    if ("PAs" %in% layers) {
+      pas <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
+      pas_count <- nrow(pas)
+    }
+    # Generate Stat Tables    
+    x <- tibble(
+      Variables = c("KBAs", "PAs", "Filtered KBAs", "Filtered PAs"),
+      Count = c(nrow(kba_sf), pas_count, NA, NA)  # Adjust other counts if needed
+    )
+    outfreqkba(x) 
   }) 
   
   observeEvent(input$save_reduce, {
@@ -1077,7 +997,7 @@ server = function(input, output, session) {
       easyClose = TRUE,
       footer = modalButton("OK"))
     )
-    st_write(kba_reduce_reactive(), dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced", input$set_grid), driver = "GPKG", append = FALSE)
+    st_write(kba_reduce_reactive(), dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced_", input$set_grid), driver = "GPKG", append = FALSE)
   }, ignoreInit = TRUE)
   ####################################################################################################
   ####################################################################################################
@@ -1165,13 +1085,7 @@ server = function(input, output, session) {
           summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
         
         # Dissolve and merge upstream areas
-        upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
-        
-        upstream_area <- upstream_area %>%
-          st_buffer(dist = 20) %>% 
-          st_buffer(dist = -20)
-        
-        upstream_area <- upstream_area %>%
+        upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network") %>%
           left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
           mutate(up_km2 = st_area(.)/1000000,
                  up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
@@ -1214,10 +1128,13 @@ server = function(input, output, session) {
     # -Render PAs map
     ####################################################################################################
     pas_4326 <- st_transform(pas, 4326)
+    #stream_4326 <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "stream_4326")
     leafletProxy("map") %>%
       clearGroup("Protected areas") %>%
+      #clearGroup("Streams") %>%
       addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) #%>%
-
+      #addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
+      
     if(!is.null(kba_reduce_reactive())){
       leafletProxy("map") %>%
         addLayersControl(position = "topright",
@@ -1305,43 +1222,28 @@ server = function(input, output, session) {
   observeEvent(input$tabs, {
     req(input$tabs == "tabKBA", dirpath())
     
-    # Initialize KBA/PAs freq table
-    x <- tibble(
-      Variables = c("KBAs", "PAs", "Filtered KBAs", "Filtered PAs"),
-      Count = c(NA, NA, NA, NA))  
-    
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     reduced_kba <- layers[grepl("^KBAs_reduced", layers)]
     if (length(reduced_kba) > 0) { 
-      if(paste0("KBAs_reduced", input$set_grid) %in% reduced_kba){
-        updateSelectInput(session = getDefaultReactiveDomain(), "KBAlayer", choices = reduced_kba, selected = paste0("KBAs_reduced", input$set_grid))
-        kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced", input$set_grid))
-        x <- x %>% 
-          mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
-                                   TRUE ~ Count))
+      if(paste0("KBAs_reduced_", input$set_grid) %in% reduced_kba){
+        updateSelectInput(session = getDefaultReactiveDomain(), "KBAlayer", choices = reduced_kba, selected = paste0("KBAs_reduced_", input$set_grid))
       }else{
         updateSelectInput(session = getDefaultReactiveDomain(), "KBAlayer", choices = reduced_kba, selected = reduced_kba[1])
-        kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = reduced_kba[1])
-        x <- x %>% 
-          mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
-                                   TRUE ~ Count))
       }
     }
-    
     if ("PAs" %in% layers) {
       pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
+      x <- outfreqkba()
       x <- x %>% 
-          mutate(Count = case_when(Variables == "PAs" ~  nrow(pas_sf),
-                                   TRUE ~ Count))
-      }
+        mutate(Count = case_when(Variables == "PAs" ~  nrow(pas_sf),
+                                 TRUE ~ Count))
+      outfreqkba(x)
       
-      # Generate Stat Tables    
-      outfreqkba(x) 
-
       output$outkbafreq <- renderTable({
         outfreqkba()
       })
+    } 
   })
   
   observeEvent(input$KBAlayer, {
@@ -1356,7 +1258,6 @@ server = function(input, output, session) {
       } 
       
       x <- outfreqkba()
-      
       x <- x %>% 
         mutate(Count = case_when(Variables == "KBAs" ~  ifelse(!is.null(kba_sf), nrow(kba_sf), NA_integer_),
                                  TRUE ~ Count))
@@ -1381,6 +1282,7 @@ server = function(input, output, session) {
   #-RUN REPRESENTATION
   #########################################################
   observeEvent(input$runRep, {
+    
     #Test on required objects
     if (is.null(refarea_reactive()) || is.null(streams()) || is.null(planreg()) || is.null(cmi()) || is.null(gpp()) || is.null(led()) || is.null(lcc())) {
       missing_layers <- c(
@@ -1437,7 +1339,7 @@ server = function(input, output, session) {
       cmi_4326 <- cmi$projected
     }else{
       kba_cmi <- cmi()
-      cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
+      cmi_4326 <- rast(file.path(dirpath(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_led.tif"))) {
       led <- process_raster(led(), refarea_reactive(), dirpath(), "kba_led", fact = 4)
@@ -1445,7 +1347,7 @@ server = function(input, output, session) {
       led_4326 <- led$projected
     } else{
       kba_led <- led()
-      led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
+      led_4326 <- rast(file.path(dirpath(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(dirpath(), "output/kba_gpp.tif"))) {
       gpp <- process_raster(gpp(), refarea_reactive(), dirpath(), "kba_gpp", fact = 4)
@@ -1453,15 +1355,16 @@ server = function(input, output, session) {
       gpp_4326 <- gpp$projected
     } else{
       kba_gpp <- gpp()
-      gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
+      gpp_4326 <- rast(file.path(dirpath(), "output/kba_gpp_4326.tif"))
     }
+    browser()
     if (!file.exists(file.path(dirpath(), "output/kba_lcc.tif"))) {
       lcc <- process_raster(lcc(), refarea_reactive(), dirpath(), "kba_lcc", fact = 40, aggregation_fun = modal, ignored = c(15, 17))
       kba_lcc <- lcc$original
       lcc_4326 <- lcc$projected
     }else{
       kba_lcc <- lcc()
-      lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
+      lcc_4326 <- rast(file.path(dirpath(), "output/kba_lcc_4326.tif"))
     }
     if(!is.null(criteria5())){
       if (!file.exists(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))) {
@@ -1469,8 +1372,8 @@ server = function(input, output, session) {
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
-        kba_criteria5 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))
-        crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
+        kba_criteria5 <- rast(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))
+        crit5_4326 <- rast(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
       }
     }
               
@@ -1519,6 +1422,7 @@ server = function(input, output, session) {
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     
+    
     if(input$assessKBAs == "Only KBAs" || input$assessKBAs == "Both KBAs and PAs"){
       if(is.null(kba_sf_reactive())){
         showModal(modalDialog(
@@ -1529,66 +1433,41 @@ server = function(input, output, session) {
         ))
         return()
       }
-      
-      set_grid <- sub("^KBAs_reduced([^_]+)$", "\\1", input$KBAlayer) 
+      set_grid <- sub("^KBAs_reduced_([^_]+)$", "\\1", input$KBAlayer) 
       kba_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream") %>%
         dplyr::select(network)
-      if(!(paste0("repKBAs_reduced", set_grid) %in% layers)) {
+      if(!(paste0("KBAs_rep_", set_grid) %in% layers)) {
         kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBAlayer)
 
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
-        error_occurred <- FALSE
-        tryCatch({
-          kba_sf$cmi <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
-          kba_sf$led <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
-          kba_sf$gpp <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
-          kba_sf$lcc <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
-          # criteria5
-          if(!is.null(criteria5())){
-            kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
-          }
-        }, error = function(e) {
-          error_occurred <<- TRUE
-          # Show an error modal with the error message
-          showModal(modalDialog(
-            title = "Error calculating disimilarity",
-            paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
-            easyClose = FALSE,
-            footer = modalButton("OK")
-          ))
-        })
-        if (error_occurred) {
-          return(NULL)  # Stop execution of the rest of the observer
+        kba_sf$cmi <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
+        kba_sf$led <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
+        kba_sf$gpp <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
+        kba_lcc[kba_lcc %in% c(15, 17)] <- NA # cropland = 15, urban = 17 are NA 
+        kba_sf$lcc <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
+        # criteria5
+        if(!is.null(criteria5())){
+          kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
         }
         kba_sf <- kba_sf %>%
-          dplyr::select(-any_of(c("group_id", "Area_PB")))
-        st_write(kba_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("repKBAs_reduced", set_grid), driver = "GPKG", append = FALSE)
+          dplyr::select(-Area_PB, -group_id)
+        st_write(kba_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_rep_", set_grid), driver = "GPKG", append = FALSE)
         kba_sf_reactive(kba_sf)
+        #if ("PAs_rep" %in% layers) {
+        #  pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_rep")
+        #}else{
+        #  pas_sf <- NULL
+        #}
       }else{
-        kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("repKBAs_reduced", set_grid))
+        kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_rep_", set_grid))
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
         if(!is.null(criteria5())){
           if(!has_name(kba_sf, criteria5name())){
-            error_occurred <- FALSE
-            tryCatch({
-              kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
-            }, error = function(err) {
-              error_occurred <- TRUE
-              # Show an error modal with the error message
-              showModal(modalDialog(
-                title = "Error calculating disimilarity",
-                paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
-                easyClose = TRUE,
-                footer = modalButton("OK")
-              ))
-            })
-            if (error_occurred) {
-              return(NULL)  # Stop execution of the rest of the observer
-            }
+            kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
           }
         }
         kba_sf_reactive(kba_sf)
@@ -1600,38 +1479,38 @@ server = function(input, output, session) {
     if(input$assessKBAs == "Only PAs" || input$assessKBAs == "Both KBAs and PAs"){
       pas_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_upstream") %>%
         dplyr::select(network)
-      if (!("repPAs" %in% layers)) {
+      if (!("PAs_rep" %in% layers)) {
         pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
-        error_occurred <- FALSE
-        tryCatch({
-          pas_sf$cmi <- round(calc_dissimilarity(pas_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi")),3)
-          pas_sf$led <- round(calc_dissimilarity(pas_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led")),3)
-          pas_sf$gpp <- round(calc_dissimilarity(pas_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp")),3)
-          pas_sf$lcc <- round(calc_dissimilarity(pas_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label),3)
-          # criteria5
-          if(!is.null(criteria5())){
-            pas_sf[[criteria5name()]] <- round(calc_dissimilarity(pas_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name())),3)
-          }
-          }, error = function(e) {
-            error_occurred <<- TRUE
-            # Show an error modal with the error message
-            showModal(modalDialog(
-              title = "Error calculating disimilarity",
-              paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
-              easyClose = FALSE,
-              footer = modalButton("OK")
-            ))
-        })
-        if (error_occurred) {
-          return(NULL)  # Stop execution of the rest of the observer
+        pas_sf$cmi <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/cmi"))
+        pas_sf$led <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/led"))
+        pas_sf$gpp <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot/gpp"))
+        pas_sf$lcc <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), "/output/plot/lcc"), categorical_class_labels = df_label)
+        # criteria5
+        if(!is.null(criteria5())){
+          pas_sf[[criteria5name()]] <- calc_dissimilarity(pas_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
         }
-        st_write(pas_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "repPAs", driver = "GPKG", append = FALSE)
+        st_write(pas_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_rep", driver = "GPKG", append = FALSE)
         pas_sf_reactive(pas_sf)
+        #if (paste0("KBAs_rep_", set_grid) %in% layers) {
+        #  set_grid <- sub("^KBAs_reduced_([^_]+)$", "\\1", input$KBAlayer) 
+        #  kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_rep_", set_grid))
+        #  if(!is.null(criteria5())){
+        #    if(!has_name(kba_sf, criteria5name())){
+        #      if(attr(kba_sf, "sf_column") != "geometry"){
+        #        kba_sf$geometry <- kba_sf$geom
+         #     }
+        #      kba_sf[[criteria5name()]] <- calc_dissimilarity(kba_sf, refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(dirpath(), "/output/plot", criteria5name()))
+         #   }
+         # }
+         # kba_sf_reactive(kba_sf)
+        #}else{
+        #  kba_sf <- NULL
+        #} 
       }else{
-        pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "repPAs")
+        pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_rep")
         pas_sf_reactive(pas_sf)
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
@@ -1654,7 +1533,6 @@ server = function(input, output, session) {
     
     #Delete previous dynamic label if
     labelKBA <- reactive_labelKBA()
-    refarea <- refarea_reactive() %>% st_transform(4326)
     
     leafletProxy("map") %>%
       clearControls() %>%
@@ -1665,7 +1543,6 @@ server = function(input, output, session) {
       clearGroup(labelKBA) %>%
       clearGroup("Streams") %>%
       addTiles() %>%
-      addPolygons(data=refarea, color='#6b4b38', fill = F, weight=3, group="Reference area", options = leafletOptions(pane = "layer1")) %>%
       addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
       addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
@@ -1682,7 +1559,7 @@ server = function(input, output, session) {
                 group="LCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
+                       overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Streams", legendcrit()),
                        options = layersControlOptions(collapsed = TRUE)) %>%
       hideGroup(c("Streams"))
 
@@ -1693,7 +1570,7 @@ server = function(input, output, session) {
                   position = "bottomright", group=criteria5name(), labFormat = labeller_function)  %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Streams", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)) %>%
           hideGroup(c("Streams"))
     }
@@ -1713,8 +1590,6 @@ server = function(input, output, session) {
     }
     if(input$assessKBAs == "Only PAs"){
       upstream_reactive(pas_up)
-      pas_sf <- pas_sf %>%
-        dplyr::select(-NAME, -intact_km2)
       poly_reactive(pas_sf)
       
       # Update max upstream slider
@@ -1727,17 +1602,13 @@ server = function(input, output, session) {
       )
     }
     if(input$assessKBAs == "Both KBAs and PAs"){
-      
       pas_up <- pas_up %>%
         dplyr::select(network)
       kbapas_up <- rbind(kba_up, pas_up)
       upstream_reactive(kbapas_up)
       pas_sf <- pas_sf %>%
-        dplyr::select(-any_of(c("NAME", "intact_km2")))
-      kba_sf <- kba_sf %>%
-        dplyr::select(-any_of("group_id"))
+        dplyr::select(-NAME, -intact_km2)
       kbapas_sf <- rbind(kba_sf, pas_sf)
-      st_write(kbapas_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("repKBAPAs_reduced", set_grid), driver = "GPKG", append = FALSE)
       poly_reactive(kbapas_sf)
       
       # Update max upstream slider
@@ -1787,7 +1658,7 @@ server = function(input, output, session) {
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
+                       overlayGroups = c("Catchments extent", "Planning region", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
                        options = layersControlOptions(collapsed = TRUE)
       )
     
@@ -1797,7 +1668,7 @@ server = function(input, output, session) {
         addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 1 , weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
               baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-              overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Potential KBAs", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
+              overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
               options = layersControlOptions(collapsed = TRUE)
         )
     }
@@ -1807,7 +1678,7 @@ server = function(input, output, session) {
         addPolygons(data=pas_sf_4326, color='#6b4b38', fillOpacity = 0.4, weight=2, layerId = pas_sf_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Protected areas", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)
         )
     }
@@ -1819,7 +1690,7 @@ server = function(input, output, session) {
         addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 0, weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Potential KBAs", "Protected areas", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Protected areas", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)
         )
     }
@@ -1831,25 +1702,25 @@ server = function(input, output, session) {
     # Prepare the table for display
     if(is.null(criteria5())){
       x <- tibble(
-        Variables = c("Area km2", "AWI (%)", "Upstream area km2", "Upstream AWI (%)", 
+        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
                     "DCI", "CMI", "GPP", "LED", "LCC"),
       Values = NA)
     }else{
       x <- tibble(
-        Variables = c("Area km2", "AWI (%)", "Upstream area km2", "Upstream AWI (%)", 
+        Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
                       "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
         Values = NA)
     }
     
     x$Values[x$Variables == "Area km2"] <- as.integer(selected_polygon$area_km2)
-    x$Values[x$Variables == "AWI (%)"] <- round(as.numeric(selected_polygon$AWI) * 100, 3)
+    x$Values[x$Variables == "AWI"] <- round(as.numeric(selected_polygon$AWI) * 100, 3)
     x$Values[x$Variables == "Upstream area km2"] <- as.integer(selected_polygon$up_km2)
-    x$Values[x$Variables == "Upstream AWI (%)"] <- round(as.numeric(selected_polygon$up_AWI) * 100, 2)
+    x$Values[x$Variables == "Upstream AWI"] <- round(as.numeric(selected_polygon$up_AWI) * 100, 2)
     x$Values[x$Variables == "DCI"] <- round(selected_polygon$dci, 3)
-    x$Values[x$Variables == "CMI"] <- selected_polygon$cmi
-    x$Values[x$Variables == "GPP"] <- selected_polygon$gpp
-    x$Values[x$Variables == "LED"] <- selected_polygon$led
-    x$Values[x$Variables == "LCC"] <- selected_polygon$lcc
+    x$Values[x$Variables == "CMI"] <- round(selected_polygon$cmi, 3)
+    x$Values[x$Variables == "GPP"] <- round(selected_polygon$gpp, 3)
+    x$Values[x$Variables == "LED"] <- round(selected_polygon$led, 3)
+    x$Values[x$Variables == "LCC"] <- round(selected_polygon$lcc, 3)
 
     if(!is.null(criteria5())){
       x$Values[x$Variables == criteria5name()] <- round(selected_polygon[[criteria5name()]], 3)
@@ -1859,7 +1730,7 @@ server = function(input, output, session) {
       mutate(
         Values = case_when(
           Variables %in% c("Area km2", "Upstream area km2") ~ as.character(as.integer(Values)),  # No decimals
-          Variables %in% c("AWI (%)", "Upstream AWI (%)") ~ formatC(as.numeric(Values), format = "f", digits = 2),  # 2 decimals
+          Variables %in% c("AWI", "Upstream AWI") ~ formatC(as.numeric(Values), format = "f", digits = 2),  # 2 decimals
           TRUE ~ formatC(as.numeric(Values), format = "f", digits = 3)  # 3 decimals for others
         )
       )
@@ -1918,13 +1789,6 @@ server = function(input, output, session) {
       filtered_sf_rep <- filter(filetred_sf, lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
     }
     
-    if(input$assessKBAs== "Only PAs" || input$assessKBAs == "Both KBAs and PAs"){
-      filtered_sf_rep <- filtered_sf_rep %>%
-        filter(str_starts(network, "KBA") | (str_starts(network, "PA") & area_km2 > input$slidePAs))
-    }
-    
-    filtered_rep(filtered_sf_rep)
-    
     if(nrow(filtered_sf_rep)>0){
       showModal(modalDialog(
         title = "Processing",
@@ -1947,7 +1811,7 @@ server = function(input, output, session) {
                       layerId = filtered_sf_4326$network, popup = ~network, group = "Potential KBAs", 
                       options = leafletOptions(pane = "layer2")) %>%
           addLayersControl(position = "topright",
-                           overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Potential KBAs", "Intact areas", "Streams", legendcrit()),
+                           overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs", "Intact areas", "Streams", legendcrit()),
                            options = layersControlOptions(collapsed = TRUE)) %>%
           hideGroup(c("Streams"))
         
@@ -1967,7 +1831,7 @@ server = function(input, output, session) {
           addPolygons(data = filtered_sf_4326, color='#6b4b38', fillOpacity = 0.4, weight=2, layerId = filtered_sf_4326$network, popup = ~network, group = "Protected areas", 
                       options = leafletOptions(pane = "layer2")) %>%
           addLayersControl(position = "topright",
-                           overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", legendcrit()),
+                           overlayGroups = c("Catchments extent", "Planning region", "Protected areas", "Intact areas", "Streams", legendcrit()),
                            options = layersControlOptions(collapsed = TRUE)) %>%
           hideGroup(c("Streams"))
         
@@ -1995,7 +1859,7 @@ server = function(input, output, session) {
           addPolygons(data = pas_4326, color='#6b4b38', fillOpacity = 0.4, weight=2, layerId = pas_4326$network, popup = ~network, group = "Protected areas", 
                       options = leafletOptions(pane = "layer2")) %>%
           addLayersControl(position = "topright",
-                           overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Potential KBAs", "Intact areas", "Streams", legendcrit()),
+                           overlayGroups = c("Catchments extent", "Planning region", "Protected areas", "Potential KBAs", "Intact areas", "Streams", legendcrit()),
                            options = layersControlOptions(collapsed = TRUE)) %>%
           hideGroup(c("Streams"))
         
@@ -2022,7 +1886,7 @@ server = function(input, output, session) {
         clearGroup('Protected areas') %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Intact areas", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE))
       
       showModal(modalDialog(
@@ -2031,48 +1895,6 @@ server = function(input, output, session) {
         footer = modalButton("OK"))
       )
     }
-  })
-  
-  ################################################################################################
-  # Download filtered KBAs
-  ################################################################################################  
-  observeEvent(input$downloadKBA, {
-    if(input$KBAlayer =="No KBA generated"){ 
-      set_grid <- "reducedFALSE"
-    }else{
-      #set_grid <- paste0("reduced", sub("^repKBAs_([^_]+)$", "\\1", input$KBAlayer))
-      set_grid <- sub("^repKBAs?_(", "", input$KBAlayer)
-    }
-    
-    if(input$assessKBAs == "Only KBAs"){
-      prefix <- "repKBA_"
-    }else if(input$assessKBAs == "Only PAs"){
-      prefix <- "repPAs_"
-    }else{
-      prefix <- "repKBAPAs_"
-    }
-    
-    filtered_sf_rep <- filtered_rep()
-    
-    outName <- paste0(prefix, set_grid, "_up", as.character(input$slideUP), "_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
-                        "_lcc", as.character(input$slideLCC))
-    
-    if(!is.null(criteria5())){
-      outName <- paste0(outName, "_", criteria5name(), as.character(input$slideNETcrit5))
-    }
-    
-    if(input$assessKBAs== "Only PAs" || input$assessKBAs == "Both KBAs and PAs"){
-      outName <- paste0(outName, "_PA", as.character(input$slidePAs))
-    }
-    
-    st_write(filtered_sf_rep, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
-    
-    showModal(modalDialog(
-      title = "Filtered KBAs/PAs downloaded",
-      paste0("Filtered KBAs/PAs were downloaded in the KBA_analysis.gpkg  under the name ", outName, " found in ", dirpath(), "/output"),
-      easyClose = TRUE,
-      footer = modalButton("OK"))
-    )
   })
   
   ################################################################################################
@@ -2085,21 +1907,16 @@ server = function(input, output, session) {
     
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    rep_kba <- layers[grepl("rep", layers)]
+    rep_kba <- layers[grepl("^KBAs_rep_", layers)]
     if (length(rep_kba) > 0) { 
-      #updateSelectInput(session = getDefaultReactiveDomain(), "KBArep", choices = rep_kba, selected = rep_kba[1])
-      updatePickerInput(session = getDefaultReactiveDomain(), "KBArep", choices = rep_kba, selected = rep_kba[1])
-    } else{
-      showModal(modalDialog(
-        title = "Layer missing", "You need to assess representation on either KBAs or PAs prior to build a network.",
-        easyClose = TRUE,
-        footer = modalButton("OK"))
-      )
-      return()
+      if(paste0("KBAs_rep_", input$set_grid) %in% rep_kba){
+        updateSelectInput(session = getDefaultReactiveDomain(), "KBArep", choices = rep_kba, selected = paste0("KBAs_rep_", input$set_grid))
+      }else{
+        updateSelectInput(session = getDefaultReactiveDomain(), "KBArep", choices = rep_kba, selected = rep_kba[1])
+      }
     }
-    
     if ("PAs" %in% layers) {
-      pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
+      pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_rep")
       x <- outfreqnet()
       x <- x %>% 
         mutate(Count = case_when(Variables == "PAs" ~  nrow(pas_sf),
@@ -2120,7 +1937,7 @@ server = function(input, output, session) {
       layers <- layers_info$name
       # Initialize kba_sf and pas_sf as NULL
       kba_sf <- NULL
-      if (!(is.null(input$KBArep))){
+      if (!(input$KBArep=="No KBA generated")){
         kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
       } 
       
@@ -2147,21 +1964,37 @@ server = function(input, output, session) {
   
   observeEvent(input$buildNet, {
     req(catchments())
-    req(!(input$KBArep==""))
+
     kba_sf <- NULL
     pas_sf <- NULL
-    
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    potential_kbas <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
-    potential_kbas <- potential_kbas %>%
-      dplyr::select(-any_of(c("cmi", "led", "lcc", "gpp")))
-      
-    if ("PAs" %in% layers) {
-      pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
+    
+    if (!(input$KBAlayer=="No KBA generated")){
+      kba_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
+      kba_sf_reactive(kba_sf)
+      set_grid <- paste0("reduced", sub("^KBAs_rep_([^_]+)$", "\\1", input$KBArep))
+      kba_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream")
+      kba_upstream_reactive(kba_up)
+    }else{
+      set_grid <- "reducedFALSE"
+    } 
+    if ("PAs_rep" %in% layers) {
+      pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_rep")
       pas_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_upstream") %>%
         dplyr::select(network)
       pas_upstream_reactive(pas_up)
+    }
+    
+    if(input$forceKBA){
+      if(!is.null(criteria5())){
+        potential_kbas <- filter(kba_sf_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & 
+                                   !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
+        kba_sf_reactive(potential_kbas)
+      }else{
+        potential_kbas <- filter(kba_sf_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
+        kba_sf_reactive(potential_kbas)
+      }
     }
     
     if(input$forcePAs){
@@ -2174,20 +2007,56 @@ server = function(input, output, session) {
         return()
       }else{
         pas_sf <- pas_sf %>% 
-          dplyr::select(-NAME, -intact_km2) %>%
-          filter(!network %in% potential_kbas$network)
+          dplyr::select(-NAME, -intact_km2)
         
         agg_pa_name <- pas_sf %>%
           dplyr::pull(network) %>%     # Extract the `network` column
           unique() %>%                 # Get unique values
           sort() %>%                   # Sort values (optional)
           paste(collapse = "__")
-        potential_kbas <- rbind(potential_kbas, pas_sf)
-        poly_reactive(potential_kbas)
+      }
+      if(as.integer(input$set_net)==0){
+        poly_reactive(pas_sf)
+        showModal(modalDialog(
+          title = "No KBA will be added. The representation analysis will run using only the protected areas",
+          easyClose = TRUE,
+          footer = modalButton("OK"))
+        )
+        upstream_reactive(pas_upstream_reactive())
+      } else if (as.integer(input$set_net)>0){
+        if(input$assessKBAs=="Only PAs"){
+          showModal(modalDialog(
+            title = "You need to assess representation on KBAs prior to add KBAs into the network",
+            "Please select Assess representation using 'Only on KBAs' or 'Both KBAs and PAs' prior to add them to the network",
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+          return() 
+        }else if(as.integer(input$set_net) > nrow(kba_sf_reactive())){
+          showModal(modalDialog(
+            title = "The number of KBAs set per network is above the number of KBAs available.",
+            "Please revise the number of KBA per network.",
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+          return()
+        } else {
+          kba_up <- kba_upstream_reactive()
+          
+          pas_up <- pas_upstream_reactive() %>%
+            dplyr::select(network)
+          kbapas_up <- rbind(kba_up, pas_up)
+          upstream_reactive(kbapas_up)
+          kba_sf <- kba_sf_reactive()
+          kbapas_sf <- rbind(kba_sf, pas_sf)
+          poly_reactive(kbapas_sf)
+        }
+   
       }
     } else {
       agg_pa_name <- NULL
-      poly_reactive(potential_kbas)
+      poly_reactive(kba_sf_reactive())
+      upstream_reactive(kba_upstream_reactive)
     }
     
     showModal(modalDialog(
@@ -2197,19 +2066,51 @@ server = function(input, output, session) {
     ))
     
     if(input$forcePAs){
-      netName <- gsub("rep", "", input$KBArep)
-      outName <- paste0("net",  netName, "_kba", input$set_net, "_includePAs")
-      network_dir <- paste0("output/plot", outName)
-    }else{
-      netName <- gsub("rep", "", input$KBArep)
-      outName <- paste0("net", netName, "_kba", input$set_net)
-      network_dir <- paste0("output/plot", outName)
+      if(input$forceKBA){
+        filtering <- paste0("_", set_grid, "_up", as.character(input$slideUP), "_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
+                          "_lcc", as.character(input$slideLCC))
+        if(!is.null(criteria5())){
+          #potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & 
+          #                         !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
+          outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
+          network_dir <- paste0("output/plot", outName)
+          #poly_reactive(potential_kbas)
+        }else{
+          #potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
+          outName <- paste0("net", filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
+          network_dir <- paste0("output/plot", outName)
+          #poly_reactive(potential_kbas)
+        }
+      }else{
+        outName <- paste0("net_", set_grid, "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
+        network_dir <- paste0("output/plot", outName)
+      }
+    } else {
+      if(input$forceKBA){
+        filtering <- paste0("_", set_grid, "_up", as.character(input$slideUP), "_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
+                            "_lcc", as.character(input$slideLCC))
+        if(!is.null(criteria5())){
+          #potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & 
+          #                           !!sym(criteria5name()) <= input$slidecrit5 & up_km2 <= input$slideUP)
+          outName <- paste0("net",  filtering, "_", criteria5name(), as.character(input$slidecrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA))
+          network_dir <- paste0("output/plot", outName)
+          #poly_reactive(potential_kbas)
+        }else{
+          #potential_kbas <- filter(poly_reactive(), lcc <= input$slideLCC & gpp <= input$slideGPP & cmi <= input$slideCMI & led <= input$slideLED & up_km2 <= input$slideUP)
+          outName <- paste0("net",  filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA))
+          network_dir <- paste0("output/plot", outName)
+          #poly_reactive(potential_kbas)
+        }
+      }else{
+        outName <- paste0("net_", set_grid, "_kba", input$set_net, "_filter", as.character(input$forceKBA))
+        network_dir <- paste0("output/plot", outName)
+      }
     }
     
     # Wait for user to set `input$set_net` to at least 2
     if (is.null(input$set_net) || as.integer(input$set_net) < 2) {
       showModal(modalDialog(
-        title = "A minimum of 2 potential KBAs per network is required",
+        title = "A minimum of 2 KBAs per network is required",
         "Please adjust the network settings to include at least 2 KBAs.",
         easyClose = TRUE,
         footer = modalButton("OK")
@@ -2237,9 +2138,8 @@ server = function(input, output, session) {
       }
   
       if(nrow(potential_kbas)>0){
-        
         if(input$forcePAs){
-          k <- nrow(pas_sf) + as.numeric(input$set_net)
+          k <- nrow(pas_sf_reactive()) + as.numeric(input$set_net)
           network_names <- gen_network_names(in_names = potential_kbas$network, k = k, force_in = agg_pa_name)
         }else {
           k <- as.numeric(input$set_net)
@@ -2252,81 +2152,43 @@ server = function(input, output, session) {
     
         # Build the list of networks using the conservation area polygons. Each network will become a single feature in the polygon object.
         networks_sf <- build_network_polygons(conservation_areas_sf = potential_kbas, network_list = network_names)
-        
-        
-        result_awi <- lapply(1:nrow(networks_sf), function(i) {
-          # Union NET and intersect  with catchments
-          net_diss <- st_union(networks_sf[i,]) 
-          area_km2 <- net_diss %>% st_area(.)/1000000
-          net_catch <- st_intersection(catchments(), net_diss)
-          
-          #Calculate total area and intactness for NET
-          AWI <- net_catch %>%
-            mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColNET]]) %>%
-            st_drop_geometry() %>%
-            summarize(AWI = sum(catch_awi, na.rm = TRUE) / 1000000) %>%
-            pull(AWI)
-          
-          #Return a tibble
-          tibble(network = networks_sf$network[i],
-                 area_km2 = round(as.numeric(area_km2,2)),
-                 AWI = round((AWI/as.numeric(area_km2)),4))
-        })
-        
-        
-        # Combine all results into a single dataframe
-        net_awi <- bind_rows(result_awi)
-        
-        networks_sf <- networks_sf %>%
-          left_join(net_awi[, c("network", "area_km2", "AWI")], by = "network")
+
+        # Split networks_sf into individual polygons by "network"
+        network_list <- split(networks_sf, networks_sf$network)
         
         #Upstream
         results_list <- list()
-        
-        # Compute upstream catchments for all polygons (if possible)
-        upstream_list <- lapply(1:nrow(networks_sf), function(i) {
-          get_upstream_catchments(networks_sf[i, ], "network", catchments())
+        upstream <- upstream_reactive()
+        # Use lapply to process each polygon
+        results_list <- lapply(network_list, function(network_group) {
+          get_stat_on_net(
+            net_sf = network_group,
+            catchments = catchments(),
+            intact_col = input$intactColNET,
+            upstream = upstream
+          )
         })
         
-        # Use mapply to iterate and return the results efficiently
-        results_list <- mapply(function(pa_id, upstream_list) {
-          if (nrow(upstream_list) == 0) return(NULL)
-          
-          # Dissolve and merge upstream areas
-          net_name <- colnames(upstream_list)
-          colnames(upstream_list) <- "network"
-          upstream_area <- dissolve_catchments_from_table(catchments(), upstream_list, "network", calc_area = TRUE, intactness_id  = input$intactColNET)
-          upstream_area$network <- net_name
-          
-          st_agr(upstream_area) <- "constant"
-          upstream_area <- upstream_area %>%
-            st_buffer(dist = 20) %>% 
-            st_buffer(dist = -20) %>%
-            dplyr::rename(up_km2 = area_km2,
-                          up_AWI = AWI) %>%
-            mutate(up_km2 = round(up_km2,2),
-                   up_AWI = round(up_AWI,4))
-          
-          return(upstream_area)
-        }, pa_id = networks_sf$network, upstream_list = upstream_list, SIMPLIFY = FALSE)
+        # Combine the results into a single data frame
+        networks_sf <- do.call(rbind, results_list)
         
-        upstream_network_sf <- do.call(rbind, results_list)
+        #upstream_network_sf <- get_upstream(networks_sf, upstream_reactive())
+        up_list <- lapply(network_list, function(network_group) {
+          get_upstream(
+            net_sf = network_group,
+            upstream = upstream_reactive()
+          )
+        })
+        # Combine the results into a single data frame
+        upstream_network_sf <- do.call(rbind, up_list)
         
         if(!is.null(agg_pa_name)){
-          # Remove elements of agg_pa_name from the network string
-          upstream_network_sf <- upstream_network_sf  %>% 
-            mutate(network = str_remove_all(network, paste(agg_pa_name, collapse = "|")),
-                   network = str_replace_all(network, "(__)+", "__"),
-                   network = str_replace(network, "^__|__$", ""),
-                   network = if_else(network =="", "PAs", paste0(network, "__PAs")))
-          
-          #upstream_network_sf <-upstream_network_sf %>% 
-          #  mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
+          upstream_network_sf <-upstream_network_sf %>% 
+            mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
         }
         
         upstream_network_reactive(upstream_network_sf)
         if(!is.null(upstream_network_sf)){
-          upstream_network_reactive(upstream_network_sf)
           st_write(upstream_network_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = paste0("upstream_", outName), driver = "GPKG", append = TRUE)
         }else{
           showModal(modalDialog(
@@ -2338,63 +2200,41 @@ server = function(input, output, session) {
         
         #Fix network name
         if(!is.null(agg_pa_name)){
-          networks_sf <- networks_sf  %>% 
-            mutate(network = str_remove_all(network, paste(agg_pa_name, collapse = "|")),
-                   network = str_replace_all(network, "(__)+", "__"),
-                   network = str_replace(network, "^__|__$", ""),
-                   network = if_else(network =="", "PAs", paste0(network, "__PAs")))
-          #networks_sf <-networks_sf %>% 
-          #  mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
+          networks_sf <-networks_sf %>% 
+            mutate(network = str_replace_all(network, agg_pa_name, "PAs"))                 
         }
-        
-        upstream_att <- upstream_network_sf %>%
-          st_drop_geometry()
-        
-        networks_sf <- networks_sf %>%
-          left_join(upstream_att[, c("network", "up_km2", "up_AWI")], by = "network")
+                       
         # DCI (ON HOLD)
         #networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
         
         #Criteria
-        kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
-        kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
-        kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
-        kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
+        kba_cmi <- rast(file.path(dirpath(), "output/kba_cmi.tif"))
+        kba_led <- rast(file.path(dirpath(), "output/kba_led.tif"))
+        kba_gpp <- rast(file.path(dirpath(), "output/kba_gpp.tif"))
+        kba_lcc <- rast(file.path(dirpath(), "output/kba_lcc.tif"))
 
         if(!is.null(criteria5())){
-          kba_crit5 <- raster(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
+          kba_crit5 <- rast(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
         } 
-        
-        lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
-        unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
+        #Prep criteria legend LCC
+        unique_sorted_values <- sort(na.omit(unique(values(kba_lcc))))
         df_label = data.frame(values=c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), labels=c("Temperate conifer forest", "Taiga conifer forest",
-                                                                                          "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
-                                                                                          "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
-                                                                                          "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
-        df_label <- df_label[df_label$values %in% unique_sorted_values, ]
-        
+                                                                                        "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
+                                                                                        "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
+                                                                                        "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
         # calculate dissimilarity metric 
-        error_occurred <- FALSE
-        tryCatch({
-          networks_sf$lcc <- round(calc_dissimilarity(networks_sf, refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), network_dir,"lcc"), categorical_class_labels = df_label),3)
-          networks_sf$led <- round(calc_dissimilarity(networks_sf, refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"led")),3)
-          networks_sf$cmi <- round(calc_dissimilarity(networks_sf, refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"cmi")),3)
-          networks_sf$gpp <- round(calc_dissimilarity(networks_sf, refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"gpp")),3)
-          if(!is.null(criteria5())){
-            networks_sf[[criteria5name()]] <- round(calc_dissimilarity(networks_sf, refarea_reactive(), kba_crit5, 'continuous', plot_out_dir=file.path(dirpath(), network_dir, criteria5name())),3) 
-          }
-        }, error = function(err) {
-          error_occurred <- TRUE
-          showModal(modalDialog(
-            title = "Error calculating disimilarity",
-            paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", err$message),
-            easyClose = TRUE,
-            footer = modalButton("OK")
-          ))
-        })
-        if (error_occurred) {
-          return(NULL)  # Stop execution of the rest of the observer
+        networks_sf$lcc <- calc_dissimilarity(networks_sf, planreg(), kba_lcc, 'categorical', plot_out_dir=file.path(dirpath(), network_dir,"lcc"), categorical_class_labels = df_label)
+      
+        networks_sf$led <- calc_dissimilarity(networks_sf, planreg(), kba_led, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"led"))
+      
+        networks_sf$cmi <- calc_dissimilarity(networks_sf, planreg(), kba_cmi, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"cmi"))
+      
+        networks_sf$gpp <- calc_dissimilarity(networks_sf, planreg(), kba_gpp, 'continuous', plot_out_dir=file.path(dirpath(), network_dir,"gpp")) 
+        
+        if(!is.null(criteria5())){
+          networks_sf[[criteria5name()]] <- calc_dissimilarity(networks_sf, planreg(), kba_crit5, 'continuous', plot_out_dir=file.path(dirpath(), network_dir, criteria5name())) 
         }
+      
         st_write(networks_sf, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = TRUE)
         network_reactive(networks_sf)
       }else{
@@ -2420,36 +2260,18 @@ server = function(input, output, session) {
     networks_4326 <- st_transform(networks_sf, 4326)
     labelKBA <- reactive_labelKBA()
     
-    cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
-    led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
-    gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
-    lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
-    
     leafletProxy("map") %>%
-      clearGroup(labelKBA) %>%
-      clearGroup("Potential KBAs") %>%
-      clearGroup("Protected areas") %>%
-      clearGroup("Upstream") %>%  # Clear previous highlight
-      addLayersControl(position = "topright",
-                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
-                       options = layersControlOptions(collapsed = TRUE)) %>%
-      hideGroup(c("Streams"))
-    
-    if(!is.null(criteria5())){
-      crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
-      leafletProxy("map") %>%
-        addRasterImage(crit5_4326, colors=val.color, opacity = 1, group=criteria5name()) %>%
-        addLegend(pal = crit_xpal, values = values(crit5_4326), opacity = 1, title = criteria5name(),
-                  position = "bottomright", group=criteria5name(), labFormat = labeller_function)  %>%
+        clearGroup(labelKBA) %>%
+        clearGroup("Potential KBAs") %>%
+        clearGroup("Protected areas") %>%
+        clearGroup("Upstream") %>%  # Clear previous highlight
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Intact areas", "Streams", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)) %>%
         hideGroup(c("Streams"))
-    }
-      
-    # Close the modal once processing is done
+    
+      # Close the modal once processing is done
     removeModal()
     
     # Update specific rows based on a condition or manually
@@ -2543,12 +2365,11 @@ server = function(input, output, session) {
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(
         position = "topright",
-        overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", input$network, "Upstream","Streams", legendcrit()),
+        overlayGroups = c("Catchments extent", "Planning region", "Intact areas", input$network, "Upstream","Streams", legendcrit()),
         options = layersControlOptions(collapsed = TRUE)
       )
     reactive_labelNET(input$network)
   })
-  
   ####################################################################################################
   # Render Rep Analysis per network
   ####################################################################################################
@@ -2558,14 +2379,14 @@ server = function(input, output, session) {
    if(is.null(criteria5())){
       # Prepare the table for display
       x <- tibble(
-          Variables = c("Area km2", "AWI (%)", "Upstream area km2", "Upstream AWI (%)", 
+          Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
                         "DCI", "CMI", "GPP", "LED", "LCC"),
           Values = NA
       )
     }else{
       # Prepare the table for display
       x <- tibble(
-          Variables = c("Area km2", "AWI (%)", "Upstream area km2", "Upstream AWI (%)", 
+          Variables = c("Area km2", "AWI", "Upstream area km2", "Upstream AWI", 
                         "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
           Values = NA
       )
@@ -2576,16 +2397,16 @@ server = function(input, output, session) {
     potential_net <- network_reactive()
     selected_network <- potential_net[potential_net$network == input$network, ]
     
-    x$Values[x$Variables == "Area km2"] <- as.numeric(st_area(selected_network))/1000000
-    x$Values[x$Variables == "AWI (%)"] <- as.numeric(selected_network$AWI) * 100
-    x$Values[x$Variables == "Upstream area km2"] <- selected_network$up_km2
-    x$Values[x$Variables == "Upstream AWI (%)"] <- as.numeric(selected_network$up_AWI) * 100
+    x$Values[x$Variables == "Area km2"] <- round(as.numeric(st_area(selected_network))/1000000, 2)
+    x$Values[x$Variables == "AWI"] <- round(as.numeric(selected_network$AWI) * 100, 2)
+    x$Values[x$Variables == "Upstream area km2"] <- round(selected_network$up_km2, 2)
+    x$Values[x$Variables == "Upstream AWI"] <- round(as.numeric(selected_network$up_AWI) * 100, 2)
     #(ON HOLD)x$Values[x$Variables == "DCI"] <- round(selected_network$dci, 3)
     x$Values[x$Variables == "DCI"] <- NA
-    x$Values[x$Variables == "CMI"] <- selected_network$cmi
-    x$Values[x$Variables == "GPP"] <- selected_network$gpp
-    x$Values[x$Variables == "LED"] <- selected_network$led
-    x$Values[x$Variables == "LCC"] <- selected_network$lcc
+    x$Values[x$Variables == "CMI"] <- round(selected_network$cmi, 3)
+    x$Values[x$Variables == "GPP"] <- round(selected_network$gpp, 3)
+    x$Values[x$Variables == "LED"] <- round(selected_network$led, 3)
+    x$Values[x$Variables == "LCC"] <- round(selected_network$lcc, 3)
 
     if(!is.null(criteria5())){
       x$Values[x$Variables == criteria5name()] <- round(selected_network[[criteria5name()]], 3)
@@ -2595,7 +2416,7 @@ server = function(input, output, session) {
       mutate(
         Values = case_when(
           Variables %in% c("Area km2", "Upstream area km2") ~ as.character(as.integer(Values)),  # No decimals
-          Variables %in% c("AWI (%)", "Upstream AWI (%)") ~ formatC(as.numeric(Values), format = "f", digits = 2),  # 2 decimals
+          Variables %in% c("AWI", "Upstream AWI") ~ formatC(as.numeric(Values), format = "f", digits = 2),  # 2 decimals
           TRUE ~ formatC(as.numeric(Values), format = "f", digits = 3)  # 3 decimals for others
         )
       )
@@ -2651,34 +2472,44 @@ server = function(input, output, session) {
   )
   
   # Save features to a geopackage
-  observeEvent(input$downloadNET, {
-    prefix <- sub("rep", "", input$KBArep)
-  
+  observeEvent(input$downloadData, {
+    if(input$KBArep =="No KBA generated"){ 
+      set_grid <- "reducedFALSE"
+    }else{
+      set_grid <- paste0("reduced", sub("^KBAs_rep_([^_]+)$", "\\1", input$KBArep))
+    }
+
     if(input$forcePAs){
       if(input$filterNet>0){
-        filtering <- paste0(prefix, "_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
+        filtering <- paste0("_", set_grid, "_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
                             "_lcc", as.character(input$slideNETLCC))
         if(!is.null(criteria5())){
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
                                      !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_includePAs")
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
         }else{
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet", filtering, "_kba", input$set_net, "_includePAs")
+          outName <- paste0("filterednet", filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
         }
+      }else{
+        potential_net <- network_reactive()
+        outName <- paste0("filterednet_",  set_grid, "_kba", input$set_net, "_filter", as.character(input$forceKBA), "_includePAs")
       }
     } else {
       if(input$filterNet>0){
-        filtering <- paste0(prefix, "_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
+        filtering <- paste0("_", set_grid, "_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
                             "_lcc", as.character(input$slideNETLCC))
         if(!is.null(criteria5())){
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
                                      !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net)
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_filter", as.character(input$forceKBA))
         }else{
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_kba", input$set_net)
+          outName <- paste0("filterednet",  filtering, "_kba", input$set_net, "_filter", as.character(input$forceKBA))
         }
+      }else{
+        potential_net <- network_reactive()
+        outName <- paste0("filterednet_", set_grid, "_kba", input$set_net, "_filter", as.character(input$forceKBA))
       }
     }
     st_write(potential_net, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)

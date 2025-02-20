@@ -1,8 +1,8 @@
 # Check and install packages if missing
 required_packages <- c(
-  "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", 
+  "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", "exactextractr",
   "shinycssloaders", "devtools", "beaconsbuilder", "dplyr", "tidyr", "sf", 
-  "zip", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl", "raster"
+  "zip", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl", "raster", "shinyWidgets"
 )
 
 terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
@@ -235,47 +235,7 @@ read_tif_from_upload <- function(upload_input) {
   }
 }
 
-# get_stat_on_net: compute stats on NET
-get_stat_on_net <- function(net_sf, catchments, intact_col, upstream) {
-  # Union NET and intersect  with catchments
-  net_diss <- st_union(net_sf) 
-  area_km2 <- net_diss %>% st_area(.)/1000000
-  net_catch <- st_intersection(catchments, net_diss)
-  
-  #Calculate total area and intactness for NET
-  AWI <- net_catch %>%
-    mutate(catch_awi = as.numeric(st_area(.)) * .[[intact_col]]) %>%
-    st_drop_geometry() %>%
-    summarize(AWI = sum(catch_awi, na.rm = TRUE) / 1000000)
 
-  #Calculate area and intactness for upstream NET
-  p_name <- sep_network_names(net_sf$network)
-  up_net <- upstream[upstream$network %in% p_name[[1]],]
-  
-  if(nrow(up_net)>0){
-    up_bind <- st_union(up_net)
-    up_km2 <- up_bind %>% st_area(.)/1000000
-    up_catch <- st_intersection(catchments, up_bind)
-  
-    up_intactkm <- up_catch %>%
-      mutate(catch_awi = as.numeric(st_area(.)) * .[[intact_col]]) %>%
-      st_drop_geometry() %>%
-      summarize(up_AWI = sum(catch_awi, na.rm = TRUE) / 1000000)
-    
-    up_km2 <- as.numeric(up_km2)
-    up_AWI <- as.numeric(up_intactkm)/as.numeric(up_km2)
-  }else{
-    up_km2 <- 0
-    up_AWI <- 0
-  } 
-  net_sf <- net_sf %>% 
-    st_as_sf() %>%
-    mutate(area_km2 = as.numeric(area_km2),
-           AWI = as.numeric(AWI)/as.numeric(area_km2),
-           up_km2 = up_km2,
-           up_AWI = up_AWI)
-  return(net_sf)
-}
 
 # get_stat_on_net: compute stats on NET
 get_upstream <- function(net_sf, upstream) {

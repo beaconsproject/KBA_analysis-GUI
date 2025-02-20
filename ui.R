@@ -123,7 +123,7 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
                                                                    selected = NULL)),
                        actionButton("runRep", "Run representation analysis", icon = icon(name = "image", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
-                       div("Filter KBAs and/or PAs based on dissimilarity metrics (DMs) and upstream area", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
+                       div("Filter KBAs and/or PAs based on dissimilarity metrics (DMs), upstream area and PAs area", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
                        div("DMs range from 0 to 1. 0 = low dissimilarity or high representation, 1 = high dissimilarity or low representation", style = "font-size: 12px; margin-top : 20px; margin-left : 20px; "),
                        div(style = "margin-top: 0px;",sliderInput("slideCMI", label="CMI:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        div(style = "margin-top: -30px;",sliderInput("slideLED", label="LED:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
@@ -131,14 +131,20 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
                        uiOutput("slidercrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
+                       div(style = "margin-top: -30px;",sliderInput("slidePAs", label="Minimum PAs area (sq.km):", min=0, max=10000, value = 5, step=100, ticks=FALSE)),
                        actionButton("filterRep", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
+                       div(style = "margin-top: 20px;",actionButton("downloadKBA", "Download Filtered KBAs", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabNET'",
-                       div(style = "margin-top: -20px;", selectInput("KBArep", "Select KBA layer", choices = NULL, multiple = FALSE)),
-                       textInput("set_net", "Set numbers of KBAs per network", value = 0),
-                       div(style = "margin-top: -30px;", checkboxInput("forceKBA", label = "Apply KBA filtering in the network", value = F)),
-                       div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include PAs in the network", value = F)),
+                       pickerInput("KBArep", "Select KBA Layer", 
+                                   choices = NULL, multiple = FALSE, options = list(
+                                     `live-search` = TRUE,
+                                     `style` = "btn-default",
+                                     `size` = 5)),
+                       #div(style = "margin-top: -20px;", selectInput("KBArep", "Select KBA layer", choices = NULL, multiple = FALSE)),
+                       textInput("set_net", "Set numbers of potential KBAs per network", value = 2),
+                       div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F)),
                        div(style = "margin-top: -20px;",selectInput("intactColNET", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = "intactKBA")),
                        actionButton("buildNet", "Build network", icon = icon(name = "link", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
                        div(style = "margin: 13px; margin-top: 20px; font-size:14px; font-weight: bold", "Filter Networks"), 
@@ -149,7 +155,7 @@ ui = dashboardPage(skin="black",
                        uiOutput("slideNETcrit5"),  # Dynamic UI for slidecrit5
                        div(style = "margin-top: -30px;",sliderInput("slideNETUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterNet", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
-                       div(style = "margin-top: 20px;",actionButton("downloadData", "Download Filtered Networks", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
+                       div(style = "margin-top: 20px;",actionButton("downloadNET", "Download Filtered Networks", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
                        
                      )
                    ),     
@@ -222,6 +228,17 @@ ui = dashboardPage(skin="black",
                                  ),
                                  conditionalPanel(
                                    #condition = "input.tabs == 'tabKBA'",  # Updated condition
+                                   condition = "input.tabs == 'tabDCI' && input.mapBox === 'Mapview'", 
+                                   tabBox(id = "metricsBox", width = 2,
+                                          tabsetPanel(id = "tabsethydro",
+                                                      tabPanel(HTML("<h4>Number of KBAs builded</h4>"), 
+                                                               tableOutput("outkbahydro")
+                                                      )
+                                          )
+                                   )
+                                 ),
+                                 conditionalPanel(
+                                   #condition = "input.tabs == 'tabKBA'",  # Updated condition
                                    condition = "input.tabs == 'tabKBA' && input.mapBox === 'Mapview'", 
                                    tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabset1",
@@ -237,7 +254,7 @@ ui = dashboardPage(skin="black",
                                   condition = "input.tabs == 'tabNET' && input.mapBox === 'Mapview'",  # Updated condition
                                   tabBox(id = "metricsNET", width = 2,
                                          tabsetPanel(id = "tabsetNET",
-                                                     tabPanel(HTML("<h4>Number of potential KBA network</h4>"), 
+                                                     tabPanel(HTML("<h4>Number of potential KBA networks</h4>"), 
                                                               tableOutput("outnetfreq"),
                                                               selectInput("network", label = "Select network:", choices = NULL),  # Initially empty, updated dynamically
                                                               tableOutput("outnet")

@@ -10,6 +10,21 @@ make_catchnum_integer <- function(catchments_sf){
   return(catchments_sf)
 }
 
+check_catchnum <- function(catchments_sf){
+  
+  # check CATCHNUM exists
+  if(!"CATCHNUM" %in% names(catchments_sf)){
+    stop("Catchments must contain column 'CATCHNUM'")
+  }
+}
+
+check_catchnum_class <- function(catchments_sf, builder_table){
+  col_classes <- sapply(colnames(builder_table), function(x) class(builder_table[[x]]))
+  if(!all(col_classes == class(catchments_sf$CATCHNUM))){
+    warning(paste0("Table column classes do not match class(catchments_sf$CATCHNUM) for columns: ", paste0(colnames(builder_table)[col_classes != class(catchments_sf$CATCHNUM)], collapse=", ")))
+  }
+}
+
 check_for_geometry <- function(in_sf){
   
   if(!"geometry" %in% names(in_sf)){
@@ -101,6 +116,23 @@ make_all_character <- function(x, cols = NULL){
   return(x)
 }
 
+# Check for rows
+check_for_rows <- function(in_table){
+  if(nrow(in_table) == 0){
+    stop("input_table has no data")
+  }
+}
+
+# remove OID from tables comgin out of BUILDER
+remove_oid <- function(in_table){
+  if("OID" %in% colnames(in_table)){
+    out_table <- in_table %>%
+      dplyr::select(-.data$OID)
+  } else{
+    out_table <- in_table
+  }
+  return(out_table)
+}
 # gen_network_names_zone
 #' Create a vector of network names sepcifying the zone.
 #'
