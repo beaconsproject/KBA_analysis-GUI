@@ -105,7 +105,7 @@ ui = dashboardPage(skin="black",
                        div(style = "margin: 13px; font-size:13px; font-weight: bold", "Calculate DCI and add upstream attributes to KBAs"), 
                        actionButton(inputId = "calc_dci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px"),
                        tags$br(),
-                       div(style = "margin: 14px; font-size:15px; font-weight: bold", "2. Reduce number of KBAs "),
+                       div(style = "margin: 14px; font-size:15px; font-weight: bold", "2. Reduce number of KBAs (OPTIONAL)"),
                        div(style = "margin-top: -20px;",textInput("set_grid", label = div(style = "font-size:13px;margin: 0px;", "Specify grid cell size"), value = 10000)),
                        actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px"),
                        actionButton(inputId = "save_reduce", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Save reduced KBAs in gpkg")), class = "btn-warning", style="width:250px")
@@ -231,7 +231,7 @@ ui = dashboardPage(skin="black",
                                    condition = "input.tabs == 'tabDCI' && input.mapBox === 'Mapview'", 
                                    tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabsethydro",
-                                                      tabPanel(HTML("<h4>Number of KBAs builded</h4>"), 
+                                                      tabPanel(HTML("<h4>Number of KBAs</h4>"), 
                                                                tableOutput("outkbahydro")
                                                       )
                                           )
