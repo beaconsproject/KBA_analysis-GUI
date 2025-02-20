@@ -1039,8 +1039,8 @@ server = function(input, output, session) {
     
     showModal(modalDialog(
       title = paste0("KBAs number reduced to ", as.character(nrow(kba_sf)), "."),
-      "  Display KBAs. Please wait...",
-      footer = NULL
+      easyClose = TRUE,
+      footer = modalButton("OK")
     ))
     
     kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
@@ -1051,8 +1051,6 @@ server = function(input, output, session) {
                        overlayGroups = c("Catchments extent", "Planning region", "Potential KBAs (all)", "Potential KBAs (reduced)", "Intact areas","Streams"),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams", "Potential KBAs (all)"))
-    # Close the modal once processing is done
-    removeModal()
     
     # Initialize KBA/PAs freq table
     x <- outfreqhydro()
@@ -2037,35 +2035,54 @@ server = function(input, output, session) {
   # Download filtered KBAs
   ################################################################################################  
   observeEvent(input$downloadKBA, {
-    if(input$KBAlayer =="No KBA generated"){ 
-      set_grid <- "reducedFALSE"
-    }else{
-      #set_grid <- paste0("reduced", sub("^repKBAs_([^_]+)$", "\\1", input$KBAlayer))
-      set_grid <- sub("^repKBAs?_(", "", input$KBAlayer)
-    }
     
     if(input$assessKBAs == "Only KBAs"){
-      prefix <- "repKBA_"
+      prefix <- paste0("repKBAs_", sub(".*(reduced\\d+).*", "\\1", input$KBAlayer))
     }else if(input$assessKBAs == "Only PAs"){
       prefix <- "repPAs_"
     }else{
-      prefix <- "repKBAPAs_"
+      prefix <- paste0("repKBAPAs_", sub(".*(reduced\\d+).*", "\\1", input$KBAlayer))
     }
     
     filtered_sf_rep <- filtered_rep()
     
-    outName <- paste0(prefix, set_grid, "_up", as.character(input$slideUP), "_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
+    outName <- paste0(prefix, "_up", as.character(input$slideUP), "_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
                         "_lcc", as.character(input$slideLCC))
     
     if(!is.null(criteria5())){
       outName <- paste0(outName, "_", criteria5name(), as.character(input$slideNETcrit5))
-    }
-    
-    if(input$assessKBAs== "Only PAs" || input$assessKBAs == "Both KBAs and PAs"){
-      outName <- paste0(outName, "_PA", as.character(input$slidePAs))
+      subfolders <- c("cmi", "lcc", "gpp", "led", criteria5name())
+    }else{
+      subfolders <- c("cmi", "lcc", "gpp", "led")
     }
     
     st_write(filtered_sf_rep, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
+    
+    d <- sub("rep","plot", outName)
+    source_parent_dir <- file.path(dirpath(), "output/plot")
+    destination_parent_dir <- file.path(dirpath(), "output", d)
+    
+    # Ensure the destination subdirectories exist
+    for (subfolder in subfolders) {
+      dir.create(file.path(destination_parent_dir, subfolder), recursive = TRUE, showWarnings = FALSE)
+    }
+    
+    # Get the list of networks from the sf object
+    network_names <- filtered_sf_rep$network
+    
+    # Iterate over each subfolder
+    for (subfolder in subfolders) {
+      for (network in network_names) {
+        # Define source and destination file paths
+        source_file <- file.path(source_parent_dir, subfolder, paste0(network, ".PNG"))
+        destination_file <- file.path(destination_parent_dir, subfolder, paste0(network, ".PNG"))
+        
+        # Check if the source file exists before copying
+        if (file.exists(source_file)) {
+          file.copy(source_file, destination_file, overwrite = TRUE)
+        }
+      }
+    }
     
     showModal(modalDialog(
       title = "Filtered KBAs/PAs downloaded",
@@ -2155,7 +2172,7 @@ server = function(input, output, session) {
     layers <- layers_info$name
     potential_kbas <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
     potential_kbas <- potential_kbas %>%
-      dplyr::select(-any_of(c("cmi", "led", "lcc", "gpp")))
+      dplyr::select(network, AWI, area_km2, up_km2, up_AWI, dci)
       
     if ("PAs" %in% layers) {
       pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
@@ -2198,11 +2215,11 @@ server = function(input, output, session) {
     
     if(input$forcePAs){
       netName <- gsub("rep", "", input$KBArep)
-      outName <- paste0("net",  netName, "_kba", input$set_net, "_includePAs")
+      outName <- paste0("net",  netName, "_n", input$set_net, "_includePAs")
       network_dir <- paste0("output/plot", outName)
     }else{
       netName <- gsub("rep", "", input$KBArep)
-      outName <- paste0("net", netName, "_kba", input$set_net)
+      outName <- paste0("net", netName, "_n", input$set_net)
       network_dir <- paste0("output/plot", outName)
     }
     
@@ -2225,6 +2242,63 @@ server = function(input, output, session) {
       return()
     }
     
+    # Set Criteria
+    kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
+    kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
+    kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
+    kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
+    
+    if(!is.null(criteria5())){
+      kba_crit5 <- raster(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
+    } 
+    
+    #set legend
+    cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
+    led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
+    gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
+    lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
+    
+    #Set legend
+    cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
+    cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
+    cmi_bins.seq <- seq(cmi_minVar, cmi_maxVar, (cmi_maxVar-cmi_minVar)/4)
+    xpal <- colorBin("RdYlBu", cmi_bins.seq, bins = cmi_bins.seq, na.color = "transparent")
+    val.color <- "RdYlBu"
+    
+    led_minVar <- min(floor(values(kba_led)), na.rm = TRUE)
+    led_maxVar <- max(ceiling(values(kba_led)), na.rm = TRUE)
+    led_bins.seq <- seq(led_minVar, led_maxVar, (led_maxVar-led_minVar)/4)
+    led_xpal <- colorBin("Blues", led_bins.seq, bins = led_bins.seq, na.color = NA)
+    led_val.color <- "Blues"
+    
+    gpp_minVar <- min(floor(values(kba_gpp)), na.rm = TRUE)
+    gpp_maxVar <- max(ceiling(values(kba_gpp)), na.rm = TRUE)
+    gpp_bins.seq <- seq(gpp_minVar, gpp_maxVar, (gpp_maxVar-gpp_minVar)/4)
+    gppxpal <- colorBin("RdYlBu", gpp_bins.seq, bins = gpp_bins.seq, na.color = "transparent")
+    
+    unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
+    df_label = data.frame(values=c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), labels=c("Temperate conifer forest", "Taiga conifer forest",
+                                                                                      "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
+                                                                                      "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
+                                                                                      "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
+    df_label <- df_label[df_label$values %in% unique_sorted_values, ]
+    cls <- df_label$labels
+    lcc_cols <- read.csv('www/lc_cols.csv') %>%
+      filter(value %in% unique_sorted_values) %>%
+      mutate(color=rgb(red,green,blue,maxColorValue=255)) %>%
+      pull(color)
+    selected_cols <- lcc_cols    
+    labeller_function <- function(type, breaks) {
+      return(c('Low', '', '', 'High'))
+    }
+    if(!is.null(criteria5())){
+      c5_minVar <- min(floor(values(kba_crit5)), na.rm = TRUE)
+      c5_maxVar <- max(ceiling(values(kba_crit5)), na.rm = TRUE)
+      c5_bins.seq <- seq(c5_minVar, c5_maxVar, (c5_maxVar-c5_minVar)/4)
+      crit_xpal <- colorBin("RdYlBu", c5_bins.seq, bins = c5_bins.seq, na.color = "transparent")
+      val.color <- "RdYlBu"
+    }
+    
     netDir(network_dir)
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
@@ -2245,11 +2319,20 @@ server = function(input, output, session) {
           k <- as.numeric(input$set_net)
           network_names <- gen_network_names(in_names = potential_kbas$network, k = k)
         }
-
+        
         #Check and remove overlapping KBAs. 
         overlaps <- list_overlapping_polygons(conservation_areas_sf = potential_kbas)
         network_names <- network_names[!network_names %in% overlaps]
     
+        if(length(network_names)==0){
+          showModal(modalDialog(
+            title = "Error: Potential KBAs provided can't be used to build networks.",
+            " Potential KBAs overlap within the network, which prevent the creation of network. ",
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+          return()  # Stop further execution
+        }
         # Build the list of networks using the conservation area polygons. Each network will become a single feature in the polygon object.
         networks_sf <- build_network_polygons(conservation_areas_sf = potential_kbas, network_list = network_names)
         
@@ -2354,25 +2437,7 @@ server = function(input, output, session) {
           left_join(upstream_att[, c("network", "up_km2", "up_AWI")], by = "network")
         # DCI (ON HOLD)
         #networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
-        
-        #Criteria
-        kba_cmi <- raster(file.path(dirpath(), "output/kba_cmi.tif"))
-        kba_led <- raster(file.path(dirpath(), "output/kba_led.tif"))
-        kba_gpp <- raster(file.path(dirpath(), "output/kba_gpp.tif"))
-        kba_lcc <- raster(file.path(dirpath(), "output/kba_lcc.tif"))
-
-        if(!is.null(criteria5())){
-          kba_crit5 <- raster(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
-        } 
-        
-        lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
-        unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
-        df_label = data.frame(values=c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), labels=c("Temperate conifer forest", "Taiga conifer forest",
-                                                                                          "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
-                                                                                          "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
-                                                                                          "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
-        df_label <- df_label[df_label$values %in% unique_sorted_values, ]
-        
+      
         # calculate dissimilarity metric 
         error_occurred <- FALSE
         tryCatch({
@@ -2420,16 +2485,28 @@ server = function(input, output, session) {
     networks_4326 <- st_transform(networks_sf, 4326)
     labelKBA <- reactive_labelKBA()
     
-    cmi_4326 <- raster(file.path(dirpath(), "output/kba_cmi_4326.tif"))
-    led_4326 <- raster(file.path(dirpath(), "output/kba_led_4326.tif"))
-    gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
-    lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
-    
     leafletProxy("map") %>%
       clearGroup(labelKBA) %>%
       clearGroup("Potential KBAs") %>%
       clearGroup("Protected areas") %>%
       clearGroup("Upstream") %>%  # Clear previous highlight
+      clearGroup("CMI") %>%
+      clearGroup("LED") %>%
+      clearGroup("LCC") %>%
+      clearGroup("GPP") %>%
+      addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 5 * 1024 * 1024) %>%
+      
+      addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
+                position = "bottomright", group="LED", labFormat = labeller_function)  %>%
+      addLegend(pal = gppxpal, values = values(gpp_4326), opacity = 1, title = "GPP",
+                position = "bottomright", group="GPP", labFormat = labeller_function)  %>%
+      addLegend(pal = xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
+                position = "bottomright", group="CMI", labFormat = labeller_function)  %>%
+      addLegend(colors = selected_cols, label = cls,  position=c("bottomleft"), opacity = 1, title = "LCC",
+                group="LCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
                        overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
@@ -2439,6 +2516,7 @@ server = function(input, output, session) {
     if(!is.null(criteria5())){
       crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
       leafletProxy("map") %>%
+        clearGroup(criteria5name()) %>%
         addRasterImage(crit5_4326, colors=val.color, opacity = 1, group=criteria5name()) %>%
         addLegend(pal = crit_xpal, values = values(crit5_4326), opacity = 1, title = criteria5name(),
                   position = "bottomright", group=criteria5name(), labFormat = labeller_function)  %>%
@@ -2653,7 +2731,7 @@ server = function(input, output, session) {
   # Save features to a geopackage
   observeEvent(input$downloadNET, {
     prefix <- sub("rep", "", input$KBArep)
-  
+   
     if(input$forcePAs){
       if(input$filterNet>0){
         filtering <- paste0(prefix, "_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
@@ -2661,10 +2739,12 @@ server = function(input, output, session) {
         if(!is.null(criteria5())){
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
                                      !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net, "_includePAs")
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_n", input$set_net, "_includePAs")
+          subfolders <- c("cmi", "lcc", "gpp", "led", criteria5name())
         }else{
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet", filtering, "_kba", input$set_net, "_includePAs")
+          outName <- paste0("filterednet", filtering, "_n", input$set_net, "_includePAs")
+          subfolders <- c("cmi", "lcc", "gpp", "led")
         }
       }
     } else {
@@ -2674,17 +2754,46 @@ server = function(input, output, session) {
         if(!is.null(criteria5())){
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & 
                                      !!sym(criteria5name()) <= input$slideNETcrit5 & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_kba", input$set_net)
+          outName <- paste0("filterednet",  filtering, "_", criteria5name(), as.character(input$slideNETcrit5), "_n", input$set_net)
+          subfolders <- c("cmi", "lcc", "gpp", "led", criteria5name())
         }else{
           potential_net <- filter(network_reactive(), lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED & up_km2 <= input$slideNETUP)
-          outName <- paste0("filterednet",  filtering, "_kba", input$set_net)
+          outName <- paste0("filterednet",  filtering, "_n", input$set_net)
+          subfolders <- c("cmi", "lcc", "gpp", "led")
         }
       }
     }
     st_write(potential_net, dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
+    
+    d <- sub("filtered","plot", outName)
+    source_parent_dir <- netDir()
+    destination_parent_dir <- file.path(dirpath(), "output", d)
+    
+    # Ensure the destination subdirectories exist
+    for (subfolder in subfolders) {
+      dir.create(file.path(destination_parent_dir, subfolder), recursive = TRUE, showWarnings = FALSE)
+    }
+    
+    # Get the list of networks from the sf object
+    network_names <- potential_net$network
+    
+    # Iterate over each subfolder
+    for (subfolder in subfolders) {
+      for (network in network_names) {
+        # Define source and destination file paths
+        source_file <- file.path(source_parent_dir, subfolder, paste0(network, ".PNG"))
+        destination_file <- file.path(destination_parent_dir, subfolder, paste0(network, ".PNG"))
+        
+        # Check if the source file exists before copying
+        if (file.exists(source_file)) {
+          file.copy(source_file, destination_file, overwrite = TRUE)
+        }
+      }
+    }
+    
     showModal(modalDialog(
       title = "Filtered networks downloaded",
-      paste0("Filtered networks were downloaded in the KBA_analysis.gpkg  under the name ", outName, " found in ", dirpath(), "/output"),
+      paste0("Filtered networks were downloaded in the KBA_analysis.gpkg  under the name ", outName, " found in ", paste0(dirpath(), "/output")),
       easyClose = TRUE,
       footer = modalButton("OK"))
     )
