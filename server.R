@@ -2020,7 +2020,7 @@ server = function(input, output, session) {
         clearGroup('Protected areas') %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE))
       
       showModal(modalDialog(
@@ -2167,7 +2167,7 @@ server = function(input, output, session) {
     req(!(input$KBArep==""))
     kba_sf <- NULL
     pas_sf <- NULL
-    
+    #browser()
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     potential_kbas <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
@@ -2225,13 +2225,15 @@ server = function(input, output, session) {
     
     # Wait for user to set `input$set_net` to at least 2
     if (is.null(input$set_net) || as.integer(input$set_net) < 2) {
-      showModal(modalDialog(
-        title = "A minimum of 2 potential KBAs per network is required",
-        "Please adjust the network settings to include at least 2 KBAs.",
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return() 
+      if(isFALSE(input$forcePAs)){
+        showModal(modalDialog(
+          title = "A minimum of 2 potential KBAs per network is required",
+          "Please adjust the network settings to include at least 2 KBAs.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return() 
+      }
     }else if(as.integer(input$set_net) > nrow(poly_reactive())){
       showModal(modalDialog(
         title = "The number of KBAs set per network is above the number of KBAs available.",
@@ -2240,6 +2242,22 @@ server = function(input, output, session) {
         footer = modalButton("OK")
       ))
       return()
+    }
+    
+    # Check if there is a 5 criteria and store the name
+    if (!is.null(input$upload_custom)) {
+      rastName <- sub("\\..*$", "", input$upload_custom$name)
+      criteria5name(rastName)
+      updated_grp <- c(legendcrit(), rastName)
+      legendcrit(updated_grp) # Update the reactive value
+    }
+    if (!is.null(input$csv_file)) {
+      csv_data <- read.csv(input$csv_file$datapath)
+      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
+      criteria5name(unexpected_layers)
+      updated_grp <- c(legendcrit(), unexpected_layers)
+      legendcrit(updated_grp) # Update the reactive value
     }
     
     # Set Criteria
@@ -2327,7 +2345,7 @@ server = function(input, output, session) {
         if(length(network_names)==0){
           showModal(modalDialog(
             title = "Error: Potential KBAs provided can't be used to build networks.",
-            " Potential KBAs overlap within the network, which prevent the creation of network. ",
+            " Potential KBAs overlap within the network, which prevent the creation of network.",
             easyClose = TRUE,
             footer = modalButton("OK")
           ))
@@ -2486,6 +2504,7 @@ server = function(input, output, session) {
     labelKBA <- reactive_labelKBA()
     
     leafletProxy("map") %>%
+      clearControls() %>%
       clearGroup(labelKBA) %>%
       clearGroup("Potential KBAs") %>%
       clearGroup("Protected areas") %>%
@@ -2494,22 +2513,26 @@ server = function(input, output, session) {
       clearGroup("LED") %>%
       clearGroup("LCC") %>%
       clearGroup("GPP") %>%
+      removeControl("legend_LCC") %>%
+      removeControl("legend_LED") %>%
+      removeControl("legend_GPP") %>%
+      removeControl("legend_CMI") %>%
       addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 5 * 1024 * 1024) %>%
       
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
-                position = "bottomright", group="LED", labFormat = labeller_function)  %>%
+                position = "bottomright", group="LED", layerId = "legend_LED", labFormat = labeller_function)  %>%
       addLegend(pal = gppxpal, values = values(gpp_4326), opacity = 1, title = "GPP",
-                position = "bottomright", group="GPP", labFormat = labeller_function)  %>%
+                position = "bottomright", group="GPP", layerId = "legend_GPP", labFormat = labeller_function)  %>%
       addLegend(pal = xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
-                position = "bottomright", group="CMI", labFormat = labeller_function)  %>%
+                position = "bottomright", group="CMI", layerId = "legend_CMI", labFormat = labeller_function)  %>%
       addLegend(colors = selected_cols, label = cls,  position=c("bottomleft"), opacity = 1, title = "LCC",
-                group="LCC") %>%
+                group="LCC", layerId = "legend_LCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
+                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", legendcrit()),
                        options = layersControlOptions(collapsed = TRUE)) %>%
       hideGroup(c("Streams"))
     
@@ -2517,12 +2540,13 @@ server = function(input, output, session) {
       crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
       leafletProxy("map") %>%
         clearGroup(criteria5name()) %>%
+        removeControl("legend_custom") %>%
         addRasterImage(crit5_4326, colors=val.color, opacity = 1, group=criteria5name()) %>%
         addLegend(pal = crit_xpal, values = values(crit5_4326), opacity = 1, title = criteria5name(),
-                  position = "bottomright", group=criteria5name(), labFormat = labeller_function)  %>%
+                  position = "bottomright", group=criteria5name(), layerId = "legend_custom", labFormat = labeller_function)  %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)) %>%
         hideGroup(c("Streams"))
     }
@@ -2621,7 +2645,7 @@ server = function(input, output, session) {
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(
         position = "topright",
-        overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", input$network, "Upstream","Streams", legendcrit()),
+        overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", input$network, "Upstream","Streams", legendcrit()),
         options = layersControlOptions(collapsed = TRUE)
       )
     reactive_labelNET(input$network)
