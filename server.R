@@ -1653,13 +1653,13 @@ server = function(input, output, session) {
     #Delete previous dynamic label if
     labelKBA <- reactive_labelKBA()
     refarea <- refarea_reactive() %>% st_transform(4326)
-    
+      
     leafletProxy("map") %>%
       clearControls() %>%
       clearGroup("Potential KBAs (all)") %>%
       clearGroup("Potential KBAs") %>%
       clearGroup("Potential KBAs (reduced)") %>%
-      clearGroup("Protected areas") %>%
+      #clearGroup("Protected areas") %>%
       clearGroup(labelKBA) %>%
       clearGroup("Streams") %>%
       addTiles() %>%
@@ -1680,7 +1680,7 @@ server = function(input, output, session) {
                 group="LCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
+                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", legendcrit()),
                        options = layersControlOptions(collapsed = TRUE)) %>%
       hideGroup(c("Streams"))
 
@@ -1691,11 +1691,21 @@ server = function(input, output, session) {
                   position = "bottomright", group=criteria5name(), labFormat = labeller_function)  %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", "Streams", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)) %>%
           hideGroup(c("Streams"))
     }
-    
+    if(!is.null(pas_sf_reactive())){
+      pas_4326 <- pas_sf %>% st_transform(4326)
+      leafletProxy("map") %>%
+        addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
+        addLayersControl(position = "topright",
+                           baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
+                           overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", legendcrit()),
+                           options = layersControlOptions(collapsed = TRUE)) %>%
+          hideGroup(c("Streams"))
+    }
+      
     if(input$assessKBAs == "Only KBAs"){
       upstream_reactive(kba_up)
       poly_reactive(kba_sf)
@@ -1785,7 +1795,7 @@ server = function(input, output, session) {
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
+                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
                        options = layersControlOptions(collapsed = TRUE)
       )
     
@@ -1795,7 +1805,7 @@ server = function(input, output, session) {
         addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 1 , weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
               baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-              overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Potential KBAs", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
+              overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Potential KBAs", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
               options = layersControlOptions(collapsed = TRUE)
         )
     }
@@ -1817,10 +1827,11 @@ server = function(input, output, session) {
         addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 0, weight=1, layerId = kba_sf_4326$network, popup = ~network, group="Potential KBAs", options = leafletOptions(pane = "layer2")) %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Potential KBAs", "Protected areas", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
+                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Potential KBAs", "Intact areas", input$KBA, "Upstream", "Streams", legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)
         )
     }
+    
     reactive_labelKBA(input$KBA)
 
     ####################################################################################################
@@ -1940,12 +1951,12 @@ server = function(input, output, session) {
         filtered_kba(filtered_sf_4326)
         leafletProxy("map") %>%
           clearGroup('Potential KBAs') %>% 
-          clearGroup('Protected areas') %>% 
+          #clearGroup('Protected areas') %>% 
           addPolygons(data = filtered_sf_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 3,
                       layerId = filtered_sf_4326$network, popup = ~network, group = "Potential KBAs", 
                       options = leafletOptions(pane = "layer2")) %>%
           addLayersControl(position = "topright",
-                           overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Potential KBAs", "Intact areas", "Streams", legendcrit()),
+                           overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Potential KBAs", "Intact areas", "Streams", legendcrit()),
                            options = layersControlOptions(collapsed = TRUE)) %>%
           hideGroup(c("Streams"))
         
@@ -2502,7 +2513,8 @@ server = function(input, output, session) {
     
     networks_4326 <- st_transform(networks_sf, 4326)
     labelKBA <- reactive_labelKBA()
-    
+    pas_4326 <- pas_sf %>% st_transform(4326)
+      
     leafletProxy("map") %>%
       clearControls() %>%
       clearGroup(labelKBA) %>%
@@ -2517,6 +2529,7 @@ server = function(input, output, session) {
       removeControl("legend_LED") %>%
       removeControl("legend_GPP") %>%
       removeControl("legend_CMI") %>%
+      addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
       addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
