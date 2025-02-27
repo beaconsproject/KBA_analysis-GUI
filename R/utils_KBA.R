@@ -192,3 +192,65 @@ gen_network_names <- function(in_names, k, force_in = c()){
   return(out_names)
 }
 
+prep_legend <- function(kba_cmi, kba_led, kba_gpp, lcc_4326, criteria5 = NULL) {
+  
+  # Set legend for CMI
+  cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
+  cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
+  cmi_bins.seq <- seq(cmi_minVar, cmi_maxVar, length.out = 5)
+  xpal <- colorBin("RdYlBu", cmi_bins.seq, bins = cmi_bins.seq, na.color = "transparent")
+  val.color <- "RdYlBu"
+  
+  # Set legend for LED
+  led_minVar <- min(floor(values(kba_led)), na.rm = TRUE)
+  led_maxVar <- max(ceiling(values(kba_led)), na.rm = TRUE)
+  led_bins.seq <- seq(led_minVar, led_maxVar, length.out = 5)
+  led_xpal <- colorBin("Blues", led_bins.seq, bins = led_bins.seq, na.color = NA)
+  led_val.color <- "Blues"
+  
+  # Set legend for GPP
+  gpp_minVar <- min(floor(values(kba_gpp)), na.rm = TRUE)
+  gpp_maxVar <- max(ceiling(values(kba_gpp)), na.rm = TRUE)
+  gpp_bins.seq <- seq(gpp_minVar, gpp_maxVar, length.out = 5)
+  gppxpal <- colorBin("RdYlBu", gpp_bins.seq, bins = gpp_bins.seq, na.color = "transparent")
+  
+  # Prepare labels for LCC
+  unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
+  df_label <- data.frame(values = c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), 
+                         labels = c("Temperate conifer forest", "Taiga conifer forest",
+                                    "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
+                                    "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
+                                    "Wetland", "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
+  df_label <- df_label[df_label$values %in% unique_sorted_values, ]
+  cls <- df_label$labels
+  
+  # Read LCC colors
+  lcc_cols <- read.csv('www/lc_cols.csv') %>%
+    filter(value %in% unique_sorted_values) %>%
+    mutate(color = rgb(red, green, blue, maxColorValue = 255)) %>%
+    pull(color)
+  selected_cols <- lcc_cols    
+  
+  # Labeller function
+  labeller_function <- function(type, breaks) {
+    return(c('Low', '', '', 'High'))
+  }
+  
+  # Set legend for criteria5 if it exists
+  if (!is.null(criteria5)) {
+    c5_minVar <- min(floor(values(criteria5)), na.rm = TRUE)
+    c5_maxVar <- max(ceiling(values(criteria5)), na.rm = TRUE)
+    c5_bins.seq <- seq(c5_minVar, c5_maxVar, length.out = 5)
+    crit_xpal <- colorBin("RdYlBu", c5_bins.seq, bins = c5_bins.seq, na.color = "transparent")
+    val.color <- "RdYlBu"
+  } else {
+    crit_xpal <- NULL
+  }
+  
+  # Return everything as a list
+  return(list(cmi_xpal = xpal, led_xpal = led_xpal, gpp_xpal = gppxpal, 
+              cmi_bins = cmi_bins.seq, led_bins = led_bins.seq, gpp_bins = gpp_bins.seq,
+              df_label = df_label, lcc_labels = cls, lcc_cols = selected_cols, crit_xpal = crit_xpal, val.color = val.color, 
+              led_val.color = led_val.color, labeller_function = labeller_function))
+}
+
