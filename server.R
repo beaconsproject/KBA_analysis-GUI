@@ -1,7 +1,6 @@
 server = function(input, output, session) {
   
   # Reactive values 
-  input_paths <- reactiveVal(data.frame(Layer = character(), Path = character()))
   kba_sf_reactive <- reactiveVal(NULL)
   kba_reduce_reactive <- reactiveVal(NULL)
   kba_upstream_reactive <- reactiveVal(NULL)
@@ -16,7 +15,6 @@ server = function(input, output, session) {
   reactive_labelNET <- reactiveVal(NULL)
   network_reactive <- reactiveVal()
   dir_exists <- reactiveVal(FALSE)
-  builder_exists <- reactiveVal(FALSE)
   criteria5name <- reactiveVal(NULL)
   netDir <- reactiveVal()
   legendcrit <-  reactiveVal(c("CMI", "LED", "GPP", "LCC"))
@@ -114,6 +112,7 @@ server = function(input, output, session) {
         easyClose = TRUE,
         footer = modalButton("OK"))
       )
+      dir_exists(TRUE)
     }
     if(!is.null(planreg())){
       req(planreg())
@@ -574,8 +573,21 @@ server = function(input, output, session) {
       return()
     }
     
+    if (dir_exists()) {
+      # show pop-up ...
+      showModal(modalDialog(
+        title = "Builder input already created.",
+        "The output directory already exists. The app used the data previously generated. 
+        If you plan on changing inputs or parameters for this analysis, please point to another directory."
+      ,
+      easyClose = TRUE,
+      footer = modalButton("OK")
+      ))
+      return()
+    }
     req(catchments())
     req(dirpath())
+    browser()
     # show pop-up ...
     showModal(modalDialog(
       title = "Creating BUILDER input. Please wait...",
@@ -636,19 +648,6 @@ server = function(input, output, session) {
         seed_reactive(seed)
       }
     }
-
-    # show pop-up ...
-    showModal(modalDialog(
-      title = "Builder input created.",
-      
-      # Conditional content based on input values
-      if (dir_exists()) {
-        "The output directory already exists. The app used the data previously generated. 
-        If you plan on changing inputs or parameters for this analysis, please point to another directory."
-      },
-      easyClose = TRUE,
-      footer = modalButton("OK")
-    ))
   })
     
   ####################################################################################################
@@ -2631,7 +2630,7 @@ server = function(input, output, session) {
   })
   
   ####################################################################################################
-  # Render Rep Analysis per network
+  # Render Rep Analysis Stats and plot per network
   ####################################################################################################
   observeEvent(input$network, {
     req(input$network)  # Ensure there is a selected KBA
@@ -2652,7 +2651,6 @@ server = function(input, output, session) {
       )
     }
     
-
     # Get the filtered polygons and select the one matching the KBA choice
     potential_net <- network_reactive()
     selected_network <- potential_net[potential_net$network == input$network, ]
@@ -2685,9 +2683,8 @@ server = function(input, output, session) {
       formatted_x
     }, digits = 0)  # digits is ignored since we manually formatted the values
     
-    ####################################################################################################
-    # Render Rep Analysis PLOT per KBA
-    ####################################################################################################
+    #############################
+    # Render Rep Analysis PLOT per NET
     # Define a route to serve images from the external directory
     shiny::addResourcePath("imageNET", file.path(dirpath(), netDir()))
 
@@ -2721,6 +2718,14 @@ server = function(input, output, session) {
     })
   })
 
+  
+  ################################################################################################
+  ################################################################################################
+  #
+  #    DOWNLOAD
+  #
+  ################################################################################################
+  ################################################################################################
   ################################################################################################
   # Save features to a geopackage
   output$downloadSample <- downloadHandler(
@@ -2731,7 +2736,7 @@ server = function(input, output, session) {
     }
   )
   
-  # Save features to a geopackage
+  # Download filtered NET and derived plot
   observeEvent(input$downloadNET, {
     prefix <- sub("rep", "", input$KBArep)
    
