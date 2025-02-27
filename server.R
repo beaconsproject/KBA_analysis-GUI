@@ -1390,7 +1390,6 @@ server = function(input, output, session) {
         if (is.null(led())) "LED",
         if (is.null(lcc())) "LCC"
       )
-      
       # Create the modal dialog
       showModal(modalDialog(
         title = "Missing Data",
@@ -1398,7 +1397,6 @@ server = function(input, output, session) {
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
-      
       return()
     }
     
@@ -1406,6 +1404,33 @@ server = function(input, output, session) {
     req(catchments())
     req(input$assessKBAs)
     
+    # Test on existing layers
+    layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
+    layers <- layers_info$name
+    
+    if(input$assessKBAs == "Only KBAs" || input$assessKBAs == "Both KBAs and PAs"){
+      if(is.null(kba_sf_reactive())){
+        showModal(modalDialog(
+          title = "KBAs are missing from your gpkg.",
+          "Please run Builder and calculate hydrology metrics prior to assess representation.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
+    }
+    
+    if(input$assessKBAs == "Only PAs" || input$assessKBAs == "Both KBAs and PAs"){
+      if (!("PAs" %in% layers)) {
+          showModal(modalDialog(
+            title = "Hydrology metrics were not calclulated on protected areas layers", "Make sure protected areas are uploaded and run the Evaluate PAs step",
+            easyClose = TRUE,
+            footer = modalButton("OK"))
+          )
+          return()
+      }
+    }
+    #Strat processing
     showModal(modalDialog(
       title = "Processing representation analysis",
       "Please wait...",
@@ -1470,64 +1495,24 @@ server = function(input, output, session) {
         kba_criteria5 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))
         crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
       }
-    }
-              
-    #Set legend
-    cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
-    cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
-    cmi_bins.seq <- seq(cmi_minVar, cmi_maxVar, (cmi_maxVar-cmi_minVar)/4)
-    xpal <- colorBin("RdYlBu", cmi_bins.seq, bins = cmi_bins.seq, na.color = "transparent")
-    val.color <- "RdYlBu"
+    }else{
+      kba_crit5 <- NULL
+    } 
     
-    led_minVar <- min(floor(values(kba_led)), na.rm = TRUE)
-    led_maxVar <- max(ceiling(values(kba_led)), na.rm = TRUE)
-    led_bins.seq <- seq(led_minVar, led_maxVar, (led_maxVar-led_minVar)/4)
-    led_xpal <- colorBin("Blues", led_bins.seq, bins = led_bins.seq, na.color = NA)
-    led_val.color <- "Blues"
+    # Access elements
+    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, lcc_4326, kba_crit5)
+    cmi_xpal <- legend_data$cmi_xpal
+    led_xpal <- legend_data$led_xpal
+    gpp_xpal <- legend_data$gpp_xpal
+    lcc_labels <- legend_data$lcc_labels
+    df_label <- legend_data$df_label
+    lcc_cols <- legend_data$lcc_cols
+    val.color <- legend_data$val.color
+    led_val.color <- legend_data$led_val.color
+    crit_xpal <- legend_data$crit_xpal
+    labeller_function <- legend_data$labeller_function
     
-    gpp_minVar <- min(floor(values(kba_gpp)), na.rm = TRUE)
-    gpp_maxVar <- max(ceiling(values(kba_gpp)), na.rm = TRUE)
-    gpp_bins.seq <- seq(gpp_minVar, gpp_maxVar, (gpp_maxVar-gpp_minVar)/4)
-    gppxpal <- colorBin("RdYlBu", gpp_bins.seq, bins = gpp_bins.seq, na.color = "transparent")
-    
-    unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
-    df_label = data.frame(values=c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), labels=c("Temperate conifer forest", "Taiga conifer forest",
-                                                                                      "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
-                                                                                      "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
-                                                                                      "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
-    df_label <- df_label[df_label$values %in% unique_sorted_values, ]
-    cls <- df_label$labels
-    lcc_cols <- read.csv('www/lc_cols.csv') %>%
-      filter(value %in% unique_sorted_values) %>%
-      mutate(color=rgb(red,green,blue,maxColorValue=255)) %>%
-      pull(color)
-    selected_cols <- lcc_cols    
-    labeller_function <- function(type, breaks) {
-      return(c('Low', '', '', 'High'))
-    }
-    if(!is.null(criteria5())){
-      c5_minVar <- min(floor(values(kba_criteria5)), na.rm = TRUE)
-      c5_maxVar <- max(ceiling(values(kba_criteria5)), na.rm = TRUE)
-      c5_bins.seq <- seq(c5_minVar, c5_maxVar, (c5_maxVar-c5_minVar)/4)
-      crit_xpal <- colorBin("RdYlBu", c5_bins.seq, bins = c5_bins.seq, na.color = "transparent")
-      val.color <- "RdYlBu"
-    }
-    
-    # Select type of analysis
-    layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
-    
-    if(input$assessKBAs == "Only KBAs" || input$assessKBAs == "Both KBAs and PAs"){
-      if(is.null(kba_sf_reactive())){
-        showModal(modalDialog(
-          title = "KBAs are missing from your gpkg.",
-          "Please run Builder and calculate hydrology metrics prior to assess representation.",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        ))
-        return()
-      }
-      
+    if(input$assessKBAs == "Only KBAs" || input$assessKBAs == "Both KBAs and PAs"){  
       set_grid <- sub("^KBAs_reduced([^_]+)$", "\\1", input$KBAlayer) 
       kba_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "KBAs_upstream") %>%
         dplyr::select(network)
@@ -1596,10 +1581,11 @@ server = function(input, output, session) {
     } 
     
     if(input$assessKBAs == "Only PAs" || input$assessKBAs == "Both KBAs and PAs"){
+      pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
       pas_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_upstream") %>%
         dplyr::select(network)
+      
       if (!("repPAs" %in% layers)) {
-        pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
@@ -1665,18 +1651,18 @@ server = function(input, output, session) {
       addTiles() %>%
       addPolygons(data=refarea, color='#6b4b38', fill = F, weight=3, group="Reference area", options = leafletOptions(pane = "layer1")) %>%
       addPolylines(data=stream_4326, color='#0066FF', weight=1.2, group="Streams", options = leafletOptions(pane = "layer1")) %>%
-      addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(lcc_4326, colors=lcc_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 5 * 1024 * 1024) %>%
       
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
                 position = "bottomright", group="LED", labFormat = labeller_function)  %>%
-      addLegend(pal = gppxpal, values = values(gpp_4326), opacity = 1, title = "GPP",
+      addLegend(pal = gpp_xpal, values = values(gpp_4326), opacity = 1, title = "GPP",
                 position = "bottomright", group="GPP", labFormat = labeller_function)  %>%
-      addLegend(pal = xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
+      addLegend(pal = cmi_xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
                 position = "bottomright", group="CMI", labFormat = labeller_function)  %>%
-      addLegend(colors = selected_cols, label = cls,  position=c("bottomleft"), opacity = 1, title = "LCC",
+      addLegend(colors = lcc_cols, label = lcc_labels,  position=c("bottomleft"), opacity = 1, title = "LCC",
                 group="LCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
@@ -1765,7 +1751,6 @@ server = function(input, output, session) {
     removeModal()
   })
   
-
   #######################################
   ### Render map, tables and plot based on select KBA/PA
   observeEvent(input$KBA, {
@@ -2110,13 +2095,15 @@ server = function(input, output, session) {
   ################################################################################################
   observeEvent(input$tabs, {
     req(input$tabs == "tabNET", dirpath())
-    
+
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    rep_kba <- layers[grepl("rep", layers)]
+    rep_kba <- layers[grepl("^rep", layers)]
+    reduced_kba <- layers[grepl("^KBAs_reduced", layers)]
+    pas_ls <- layers[grepl("^PAs", layers) & !grepl("PAs_upstream", layers)]
+    net_list <- c(rep_kba, reduced_kba, pas_ls)
     if (length(rep_kba) > 0) { 
-      #updateSelectInput(session = getDefaultReactiveDomain(), "KBArep", choices = rep_kba, selected = rep_kba[1])
-      updatePickerInput(session = getDefaultReactiveDomain(), "KBArep", choices = rep_kba, selected = rep_kba[1])
+      updatePickerInput(session = getDefaultReactiveDomain(), "KBArep", choices = net_list, selected = net_list[1])
     } else{
       showModal(modalDialog(
         title = "Layer missing", "You need to assess representation on either KBAs or PAs prior to build a network.",
@@ -2178,7 +2165,7 @@ server = function(input, output, session) {
     req(!(input$KBArep==""))
     kba_sf <- NULL
     pas_sf <- NULL
-    #browser()
+    
     layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     potential_kbas <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
@@ -2187,9 +2174,6 @@ server = function(input, output, session) {
       
     if ("PAs" %in% layers) {
       pas_sf <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs")
-      pas_up <- st_read(dsn = file.path(dirpath(), "output/KBA_analysis.gpkg"), layer = "PAs_upstream") %>%
-        dplyr::select(network)
-      pas_upstream_reactive(pas_up)
     }
     
     if(input$forcePAs){
@@ -2202,14 +2186,17 @@ server = function(input, output, session) {
         return()
       }else{
         pas_sf <- pas_sf %>% 
-          dplyr::select(-NAME, -intact_km2) %>%
-          filter(!network %in% potential_kbas$network)
-        
+          dplyr::select(-NAME, -intact_km2) 
+
         agg_pa_name <- pas_sf %>%
           dplyr::pull(network) %>%     # Extract the `network` column
           unique() %>%                 # Get unique values
           sort() %>%                   # Sort values (optional)
           paste(collapse = "__")
+          
+        pas_sf <- pas_sf %>% 
+          filter(!network %in% potential_kbas$network)
+          
         potential_kbas <- rbind(potential_kbas, pas_sf)
         poly_reactive(potential_kbas)
       }
@@ -2224,17 +2211,18 @@ server = function(input, output, session) {
       footer = NULL
     ))
     
+    #Define outdir name
     if(input$forcePAs){
       netName <- gsub("rep", "", input$KBArep)
       outName <- paste0("net",  netName, "_n", input$set_net, "_includePAs")
-      network_dir <- paste0("output/plot", outName)
     }else{
       netName <- gsub("rep", "", input$KBArep)
       outName <- paste0("net", netName, "_n", input$set_net)
-      network_dir <- paste0("output/plot", outName)
     }
+    network_dir <- paste0("output/plot", outName)
+    netDir(network_dir)
     
-    # Wait for user to set `input$set_net` to at least 2
+    # Raise warning on `input$set_net`
     if (is.null(input$set_net) || as.integer(input$set_net) < 2) {
       if(isFALSE(input$forcePAs)){
         showModal(modalDialog(
@@ -2279,6 +2267,8 @@ server = function(input, output, session) {
     
     if(!is.null(criteria5())){
       kba_crit5 <- raster(file.path(dirpath(), "output",paste0(criteria5name(),".tif")))
+    }else{
+      kba_crit5 <- NULL
     } 
     
     #set legend
@@ -2287,52 +2277,20 @@ server = function(input, output, session) {
     gpp_4326 <- raster(file.path(dirpath(), "output/kba_gpp_4326.tif"))
     lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
     
-    #Set legend
-    cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
-    cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
-    cmi_bins.seq <- seq(cmi_minVar, cmi_maxVar, (cmi_maxVar-cmi_minVar)/4)
-    xpal <- colorBin("RdYlBu", cmi_bins.seq, bins = cmi_bins.seq, na.color = "transparent")
-    val.color <- "RdYlBu"
+    # Access legend elements
+    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, lcc_4326, kba_crit5)
+    cmi_xpal <- legend_data$cmi_xpal
+    led_xpal <- legend_data$led_xpal
+    gpp_xpal <- legend_data$gpp_xpal
+    lcc_labels <- legend_data$lcc_labels
+    df_label <- legend_data$df_label
+    lcc_cols <- legend_data$lcc_cols
+    val.color <- legend_data$val.color
+    led_val.color <- legend_data$led_val.color
+    crit_xpal <- legend_data$crit_xpal
+    labeller_function <- legend_data$labeller_function
     
-    led_minVar <- min(floor(values(kba_led)), na.rm = TRUE)
-    led_maxVar <- max(ceiling(values(kba_led)), na.rm = TRUE)
-    led_bins.seq <- seq(led_minVar, led_maxVar, (led_maxVar-led_minVar)/4)
-    led_xpal <- colorBin("Blues", led_bins.seq, bins = led_bins.seq, na.color = NA)
-    led_val.color <- "Blues"
-    
-    gpp_minVar <- min(floor(values(kba_gpp)), na.rm = TRUE)
-    gpp_maxVar <- max(ceiling(values(kba_gpp)), na.rm = TRUE)
-    gpp_bins.seq <- seq(gpp_minVar, gpp_maxVar, (gpp_maxVar-gpp_minVar)/4)
-    gppxpal <- colorBin("RdYlBu", gpp_bins.seq, bins = gpp_bins.seq, na.color = "transparent")
-    
-    unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
-    df_label = data.frame(values=c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), labels=c("Temperate conifer forest", "Taiga conifer forest",
-                                                                                      "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
-                                                                                      "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
-                                                                                      "Wetland",  "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
-    df_label <- df_label[df_label$values %in% unique_sorted_values, ]
-    cls <- df_label$labels
-    lcc_cols <- read.csv('www/lc_cols.csv') %>%
-      filter(value %in% unique_sorted_values) %>%
-      mutate(color=rgb(red,green,blue,maxColorValue=255)) %>%
-      pull(color)
-    selected_cols <- lcc_cols    
-    labeller_function <- function(type, breaks) {
-      return(c('Low', '', '', 'High'))
-    }
-    if(!is.null(criteria5())){
-      c5_minVar <- min(floor(values(kba_crit5)), na.rm = TRUE)
-      c5_maxVar <- max(ceiling(values(kba_crit5)), na.rm = TRUE)
-      c5_bins.seq <- seq(c5_minVar, c5_maxVar, (c5_maxVar-c5_minVar)/4)
-      crit_xpal <- colorBin("RdYlBu", c5_bins.seq, bins = c5_bins.seq, na.color = "transparent")
-      val.color <- "RdYlBu"
-    }
-    
-    netDir(network_dir)
-    layers_info <- st_layers(file.path(dirpath(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
     layer_to_check <- outName
-    
     if (!layer_to_check %in% layers) {
       potential_kbas <- poly_reactive()
       if(attr(potential_kbas, "sf_column") != "geometry"){
@@ -2342,8 +2300,16 @@ server = function(input, output, session) {
       if(nrow(potential_kbas)>0){
         
         if(input$forcePAs){
-          k <- nrow(pas_sf) + as.numeric(input$set_net)
-          network_names <- gen_network_names(in_names = potential_kbas$network, k = k, force_in = agg_pa_name)
+          rep_pas <- layers[grepl("^repPAs", layers)]
+          pas_ls <- layers[grepl("^PAs", layers) & !grepl("PAs_upstream", layers)]
+          pas_list <- c(rep_pas, pas_ls)
+          if(input$KBArep %in% pas_list){
+            k <- nrow(potential_kbas)
+            network_names <- gen_network_names(in_names = potential_kbas$network, k = k, force_in = agg_pa_name)
+          }else{
+            k <- nrow(pas_sf) + as.numeric(input$set_net)
+            network_names <- gen_network_names(in_names = potential_kbas$network, k = k, force_in = agg_pa_name)
+          }
         }else {
           k <- as.numeric(input$set_net)
           network_names <- gen_network_names(in_names = potential_kbas$network, k = k)
@@ -2530,18 +2496,18 @@ server = function(input, output, session) {
       removeControl("legend_GPP") %>%
       removeControl("legend_CMI") %>%
       addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
-      addRasterImage(lcc_4326, colors=selected_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(lcc_4326, colors=lcc_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 5 * 1024 * 1024) %>%
       
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
                 position = "bottomright", group="LED", layerId = "legend_LED", labFormat = labeller_function)  %>%
-      addLegend(pal = gppxpal, values = values(gpp_4326), opacity = 1, title = "GPP",
+      addLegend(pal = gpp_xpal, values = values(gpp_4326), opacity = 1, title = "GPP",
                 position = "bottomright", group="GPP", layerId = "legend_GPP", labFormat = labeller_function)  %>%
-      addLegend(pal = xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
+      addLegend(pal = cmi_xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
                 position = "bottomright", group="CMI", layerId = "legend_CMI", labFormat = labeller_function)  %>%
-      addLegend(colors = selected_cols, label = cls,  position=c("bottomleft"), opacity = 1, title = "LCC",
+      addLegend(colors = lcc_cols, label = lcc_labels,  position=c("bottomleft"), opacity = 1, title = "LCC",
                 group="LCC", layerId = "legend_LCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
