@@ -1,8 +1,8 @@
 # Check and install packages if missing
 required_packages <- c(
   "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", "exactextractr",
-  "shinycssloaders", "devtools", "beaconsbuilder", "dplyr", "tidyr", "sf", 
-  "zip", "readr", "beaconstools", "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl", "raster", "shinyWidgets"
+  "shinycssloaders", "devtools", "dplyr", "tidyr", "sf", 
+  "zip", "readr",  "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl", "raster", "shinyWidgets", "usethis"
 )
 
 terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
@@ -24,9 +24,7 @@ if (length(missing_packages) > 0) {
 # Load the packages
 invisible(lapply(required_packages, library, character.only = TRUE))
 
-source("./R/utils_KBA.R")
-source("./R/builder_KBA.R")
-
+for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f)
 
 bnd <- st_read("./www/Canada_WGS84.shp")
 intact <- st_read("./www/KBAIntactAreasbnd_nad83.shp")
@@ -143,49 +141,37 @@ read_shp_from_csv <- function(csv_file, layer_name) {
 
 # read_shp_from_upload: read a shapefile from fileInput
 read_shp_from_upload <- function(upload_input) {
-  req(upload_input)
-  required_extensions <- c("shp", "shx", "dbf", "prj")
-  infile <- upload_input
-  file_extensions <- tools::file_ext(infile$name)
-  if (all(required_extensions %in% file_extensions)) {
-    dir <- unique(dirname(infile$datapath))
-    outfiles <- file.path(dir, infile$name)
-    name <- tools::file_path_sans_ext(infile$name[1])
-    purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y))
-    shp_path <- file.path(dir, paste0(name, ".shp"))
-    if (file.exists(shp_path)) {
-      #return(sf::st_read(shp_path))
-      shp <- sf::st_read(shp_path)
-      #browser()
-      # Check CRS to ensure it's NAD_83_Albers
-      #if (isFALSE(st_crs(shp) == st_crs(4269))) {
-      #  #stop("The shapefile does not use the NAD_83_Albers projection. Please reproject prior to upload")
-     #   showModal(modalDialog(
-      #    title = "Wrong projection",
-      #    "The shapefile does not use the NAD_83_Albers projection. Please reproject prior to upload",
-     #     easyClose = TRUE,
-       #   footer = modalButton("OK")
-      #  ))
-     #   return()
-      #}
-      return(shp)
+    req(upload_input)
+    required_extensions <- c("shp", "shx", "dbf", "prj")
+    infile <- upload_input
+    file_extensions <- tools::file_ext(infile$name)
+    if (all(required_extensions %in% file_extensions)) {
+      dir <- unique(dirname(infile$datapath))
+      outfiles <- file.path(dir, infile$name)
+      name <- tools::file_path_sans_ext(infile$name[1])
+      purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y))
+      shp_path <- file.path(dir, paste0(name, ".shp"))
+      if (file.exists(shp_path)) {
+        shp <- sf::st_read(shp_path)
+        attr(shp, "name") <- name
+        return(shp)
+      } else {
+        showModal(modalDialog(
+          title = "Shapefile (.shp) is missing.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
     } else {
       showModal(modalDialog(
-        title = "Shapefile (.shp) is missing.",
+        title = "Extension file is missing",
+        "Please upload all necessary files for the shapefile (.shp, .shx, .dbf and .prj).",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
       return()
     }
-  } else {
-    showModal(modalDialog(
-      title = "Extension file is missing",
-      "Please upload all necessary files for the shapefile (.shp, .shx, .dbf and .prj).",
-      easyClose = TRUE,
-      footer = modalButton("OK")
-    ))
-    return()
-  }
 }
 
 # read_tif_from_csv: Read raster file from CSV
