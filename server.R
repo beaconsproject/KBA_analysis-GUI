@@ -255,11 +255,11 @@ server = function(input, output, session) {
       led(raster(file.path(dirpath(), "output/kba_led.tif")))
     } else if (!is.null(input$upload_led)) {
       # Read raster from file upload
-      led(read_tif_from_upload(input$upload_led))
+      led(read_tif_from_upload(input$upload_led)) 
     } else if (!is.null(input$csv_file)) {
       req(validate_csv())
       # Read raster from CSV
-      led(read_tif_from_csv(input$csv_file, "LED"))
+      led(read_tif_from_csv(input$csv_file, "LED")) 
     } else{
       led(NULL)
     }
@@ -1542,6 +1542,7 @@ server = function(input, output, session) {
       kba_lcc <- lcc()
       lcc_4326 <- raster(file.path(dirpath(), "output/kba_lcc_4326.tif"))
     }
+    
     if(!is.null(criteria5())){
       if (!file.exists(file.path(dirpath(), "output", paste0(criteria5name(), ".tif")))) {
         crit5 <- process_raster(criteria5(), refarea_reactive(), dirpath(), criteria5name(), fact = 4)
@@ -1552,11 +1553,11 @@ server = function(input, output, session) {
         crit5_4326 <- raster(file.path(dirpath(), "output", paste0(criteria5name(), "_4326.tif")))
       }
     }else{
-      kba_crit5 <- NULL
+      kba_criteria5 <- NULL
     } 
     
     # Access elements
-    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, lcc_4326, kba_crit5)
+    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, lcc_4326, kba_criteria5)
     cmi_xpal <- legend_data$cmi_xpal
     led_xpal <- legend_data$led_xpal
     gpp_xpal <- legend_data$gpp_xpal

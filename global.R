@@ -91,11 +91,11 @@ process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4
   raster::writeRaster(masked, output_path, format = "GTiff")
   if (!is.null(aggregation_fun)) {
     aggregated <- terra::aggregate(rast(masked), fact = fact, fun = aggregation_fun)
-    projected <- project(aggregated, crs(bpcrs))
+    projected <- project(aggregated, crs(ref_area))
     terra::writeRaster(projected, projected_path, filetype = "GTiff")
   } else {
     aggregated <- aggregate(masked, fact = fact)
-    projected <- projectRaster(aggregated, crs = bpcrs)
+    projected <- projectRaster(aggregated, crs = crs(ref_area))
     raster::writeRaster(projected, projected_path, format = "GTiff")
     
   }
