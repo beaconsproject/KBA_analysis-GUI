@@ -212,7 +212,7 @@ server = function(input, output, session) {
   ################################################################################################
   planreg <- reactive({
     req(input$set_wd)
-    
+    browser()
     if (!is.null(input$csv_file)) {
       req(validate_csv())
       planreg <- read_shp_from_csv(input$csv_file, "planning region")
