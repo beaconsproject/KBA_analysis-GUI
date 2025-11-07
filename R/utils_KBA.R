@@ -18,121 +18,6 @@ check_catchnum <- function(catchments_sf){
   }
 }
 
-check_catchnum_class <- function(catchments_sf, builder_table){
-  col_classes <- sapply(colnames(builder_table), function(x) class(builder_table[[x]]))
-  if(!all(col_classes == class(catchments_sf$CATCHNUM))){
-    warning(paste0("Table column classes do not match class(catchments_sf$CATCHNUM) for columns: ", paste0(colnames(builder_table)[col_classes != class(catchments_sf$CATCHNUM)], collapse=", ")))
-  }
-}
-
-check_for_geometry <- function(in_sf){
-  
-  if(!"geometry" %in% names(in_sf)){
-    stop("Must contain column: geometry")
-  }
-}
-
-logical_to_integer <- function(x){
-  
-  if(!x %in% c(TRUE, FALSE)){
-    stop("input must be TRUE or FALSE")
-  }
-  
-  return(as.integer(x))
-}
-
-check_seeds_areatargets <- function(seeds){
-  if(!all(seeds$Areatarget > 0)){
-    stop("All Areatarget values must be > 0")
-  }
-}
-
-check_seeds_in_catchments <- function(seeds, catchments_sf){
-  if(!all(seeds$CATCHNUM %in% catchments_sf$CATCHNUM)){
-    if(any(seeds$CATCHNUM %in% catchments_sf$CATCHNUM)){
-      warning("Not all seeds are in catchments_sf") # warning if some are present and builder can run
-    } else{
-      stop("None of the seeds are in catchments_sf") # error if no seeds are present
-    }
-  }
-}
-
-check_colnames <- function(x, x_name, cols){
-  for(col in cols){
-    if(!col %in% colnames(x)){
-      stop(paste0("Column '", col, "' not in table '", x_name, "'"))
-    }
-  }
-}
-
-make_all_integer <- function(x, cols = NULL){
-  if(is.null(cols)){
-    colss <- colnames(x)
-  }else{
-    colss <- cols
-  }
-  for(col in colss){
-    if(col %in% colnames(x)){
-      if(!is.integer(x[[col]])){
-        warning(paste0("is.integer(", col, ") == FALSE; converting to integer"))
-        x[[col]] <- as.integer(x[[col]])
-      }
-    }
-  }
-  return(x)
-}
-
-make_all_numeric <- function(x, cols = NULL){
-  if(is.null(cols)){
-    colss <- colnames(x)
-  }else{
-    colss <- cols
-  }
-  for(col in colss){
-    if(col %in% colnames(x)){
-      if(!is.numeric(x[[col]])){
-        warning(paste0("is.numeric(", col, ") == FALSE; converting to numeric"))
-        x[[col]] <- as.numeric(x[[col]])
-      }
-    }
-  }
-  return(x)
-}
-
-make_all_character <- function(x, cols = NULL){
-  if(is.null(cols)){
-    colss <- colnames(x)
-  }else{
-    colss <- cols
-  }
-  for(col in colss){
-    if(col %in% colnames(x)){
-      if(!is.character(x[[col]])){
-        warning(paste0("is.character(", col, ") == FALSE; converting to character"))
-        x[[col]] <- as.character(x[[col]])
-      }
-    }
-  }
-  return(x)
-}
-
-# Check for rows
-check_for_rows <- function(in_table){
-  if(nrow(in_table) == 0){
-    stop("input_table has no data")
-  }
-}
-
-# remove OID from tables comgin out of BUILDER
-remove_oid <- function(in_table){
-  if("OID" %in% colnames(in_table)){
-    out_table <- in_table %>%
-      dplyr::select(-.data$OID)
-  } else{
-    out_table <- in_table
-  }
-  return(out_table)
-}
 # gen_network_names_zone
 #' Create a vector of network names sepcifying the zone.
 #'
@@ -252,5 +137,59 @@ prep_legend <- function(kba_cmi, kba_led, kba_gpp, lcc_4326, criteria5 = NULL) {
               cmi_bins = cmi_bins.seq, led_bins = led_bins.seq, gpp_bins = gpp_bins.seq,
               df_label = df_label, lcc_labels = cls, lcc_cols = selected_cols, crit_xpal = crit_xpal, val.color = val.color, 
               led_val.color = led_val.color, labeller_function = labeller_function))
+}
+
+### group_conservation_areas ###
+#
+#' Group conservation areas based on overlap using a grid.
+#' 
+#' Groups are assigned based on polygon centroid membership within 
+#' an intersecting grid. Centroids in the same grid cell are assigned the same group id.
+#'
+#' @param conservation_areas_sf sf object of conservation areas.
+#' @param grid_size Numeric size of grid cells to create in units matching the crs of \code{conservation_areas_sf}.
+#'
+#' @return Vector of group ids matching the input polygons.
+#'
+#' @importFrom magrittr %>%
+#' @importFrom rlang .data
+#' @export
+#'
+#' @examples
+#' reserves <- dissolve_catchments_from_table(
+#'   catchments_sample, 
+#'   builder_table_sample,
+#'   "network", 
+#'   dissolve_list = c("PB_0001", "PB_0002", "PB_0003"))
+#' group_conservation_areas(reserves, 10000)
+group_conservation_areas <- function(conservation_areas_sf, grid_size){
+  
+  sf::st_agr(conservation_areas_sf) = "constant"
+  
+  # Make centroids - or pointOnPoly
+  points_sf <- conservation_areas_sf %>%
+    sf::st_centroid()
+  
+  # Make grid covering points
+  grid_sf <- sf::st_make_grid(points_sf, cellsize = c(grid_size, grid_size), what = 'polygons')
+  grid_sf <- sf::st_sf(geometry = grid_sf, data.frame('grid_id' = 1:length(grid_sf)))
+  
+  # remove grid_id if it already exists
+  if("grid_id" %in% colnames(points_sf)){
+    points_sf <- points_sf %>%
+      dplyr::select(-.data$grid_id)
+  }
+  
+  # spatial join fishnet grid id to conservation areas
+  points_sf <- points_sf %>%
+    sf::st_join(grid_sf)
+  
+  # convert grid ids to ordered vector starting at 1
+  mappings <- data.frame(grid_id = unique(points_sf$grid_id), new_val = 1:length(unique(points_sf$grid_id)))
+  
+  points_sf <- points_sf %>%
+    dplyr::left_join(mappings, by = "grid_id")
+  
+  return(points_sf$new_val)
 }
 
