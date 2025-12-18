@@ -1,19 +1,11 @@
 # Check and install packages if missing
 required_packages <- c(
   "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", "exactextractr",
-  "shinycssloaders", "devtools", "dplyr", "tidyr", "sf", 
-  "zip", "readr",  "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl", "raster", "shinyWidgets", "usethis"
+  "shinycssloaders", "devtools", "dplyr", "tidyr", "sf", "leaflet.extras2", "ggplot2",
+  "zip", "readr",  "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl", "raster", "shinyWidgets", "usethis", "qs"
 )
 
 terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
-
-
-bpcrs <- "PROJCRS[\"NAD_1983_Albers\",BASEGEOGCRS[\"NAD83\",DATUM[\"North American Datum 1983\",ELLIPSOID[\"GRS 1980\",6378137,298.257222101,
-              LENGTHUNIT[\"metre\",1]],ID[\"EPSG\",6269]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"Degree\",0.0174532925199433]]],CONVERSION[\"unnamed\",METHOD[\"Albers Equal Area\",ID[\"EPSG\",9822]],
-              PARAMETER[\"Latitude of false origin\",63.4,ANGLEUNIT[\"Degree\",0.0174532925199433],ID[\"EPSG\",8821]],PARAMETER[\"Longitude of false origin\",-91.867,ANGLEUNIT[\"Degree\",0.0174532925199433],ID[\"EPSG\",8822]],
-              PARAMETER[\"Latitude of 1st standard parallel\",49,ANGLEUNIT[\"Degree\",0.0174532925199433],ID[\"EPSG\",8823]],PARAMETER[\"Latitude of 2nd standard parallel\",77,ANGLEUNIT[\"Degree\",0.0174532925199433],
-              ID[\"EPSG\",8824]],PARAMETER[\"Easting at false origin\",0,LENGTHUNIT[\"metre\",1],ID[\"EPSG\",8826]],PARAMETER[\"Northing at false origin\",0,LENGTHUNIT[\"metre\",1],
-              ID[\"EPSG\",8827]]],CS[Cartesian,2],AXIS[\"(E)\",east,ORDER[1],LENGTHUNIT[\"metre\",1,ID[\"EPSG\",9001]]],AXIS[\"(N)\",north,ORDER[2],LENGTHUNIT[\"metre\",1,ID[\"EPSG\",9001]]]]"
 
 # Install any missing packages
 missing_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
@@ -33,6 +25,9 @@ MB <- 1024^2
 
 UPLOAD_SIZE_MB <- 5000
 options(shiny.maxRequestSize = UPLOAD_SIZE_MB*MB)
+
+# turn off scientifc notation to avoid 1e10
+options(scipen = 999)
 #########################################################
 #########################################################
 #         ADDON FUNCTIONS
@@ -81,24 +76,21 @@ check_shp <- function(shapefile_path) {
 # process_raster: crop and mask criteria layer
 process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4,  aggregation_fun = NULL, ignored = NULL) {
   output_path <- file.path(dir_path, "output", paste0(file_name, ".tif"))
+  
   projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
   cropped <- crop(input_raster, ref_area, snap = "near", extend = TRUE)
   masked <- mask(cropped, ref_area)
-  #masked <- crop(input_raster, ref_area, snap = "near")
+  masked <- terra::trim(masked, value = NA)
+
   if (!is.null(ignored)) {
     masked[masked %in% ignored] <- NA # cropland = 15, urban = 17 are NA 
   }
-  raster::writeRaster(masked, output_path, format = "GTiff")
-  if (!is.null(aggregation_fun)) {
-    aggregated <- terra::aggregate(rast(masked), fact = fact, fun = aggregation_fun)
-    projected <- project(aggregated, crs(ref_area))
-    terra::writeRaster(projected, projected_path, filetype = "GTiff")
-  } else {
-    aggregated <- aggregate(masked, fact = fact)
-    projected <- projectRaster(aggregated, crs = crs(ref_area))
-    raster::writeRaster(projected, projected_path, format = "GTiff")
-    
-  }
+  
+  terra::writeRaster(masked, output_path, filetype = "GTiff")
+  aggregated <- terra::aggregate(masked, fact = fact, fun = aggregation_fun)
+  projected <- project(aggregated, "EPSG:4326")
+  terra::writeRaster(projected, projected_path, filetype = "GTiff")
+  
   list(original = masked, projected = projected)
 }
 
@@ -117,8 +109,8 @@ read_shp_from_csv <- function(csv_file, layer_name) {
       easyClose = TRUE,
       footer = modalButton("OK")
     ))
-    showNotification("Layer not found in CSV. Check your file.", type = "error")
-    req(FALSE)  # Stop further execution
+    #showNotification("Layer not found in CSV. Check your file.", type = "error")
+    return(NULL)  # Stop further execution
   }
   
   path <- csv_data$Path[csv_data$Layer == layer_name]
@@ -183,7 +175,7 @@ read_tif_from_csv <- function(csv_file, layer_name) {
   if (layer_name %in% csv_data$Layer) {
     path <- csv_data$Path[csv_data$Layer == layer_name]
     if (file.exists(path)) {
-      return(raster::raster(path))  # Load raster using the raster package
+      return(terra::rast(path))  # Load raster using the terra package
     } else {
       showModal(modalDialog(
         title = paste("The path for", layer_name, "in the CSV does not exist."),
@@ -191,7 +183,6 @@ read_tif_from_csv <- function(csv_file, layer_name) {
         footer = modalButton("OK")
       ))
       return()
-      #stop(paste("The path for", layer_name, "in the CSV does not exist."))
     }
   } else {
     showModal(modalDialog(
@@ -200,7 +191,6 @@ read_tif_from_csv <- function(csv_file, layer_name) {
       footer = modalButton("OK")
     ))
     return()
-    #stop(paste(layer_name, "layer not found in CSV."))
   }
 }
 
@@ -209,7 +199,7 @@ read_tif_from_upload <- function(upload_input) {
   req(upload_input)  # Ensure the file is uploaded
   path <- upload_input$datapath
   if (file.exists(path)) {
-    return(raster::raster(path))  # Load raster using the raster package
+    return(terra::rast(path))  # Load terra using the raster package
   } else {
     showModal(modalDialog(
       title = "The uploaded raster file does not exist.",
@@ -237,3 +227,67 @@ get_upstream <- function(net_sf, upstream) {
     return(NULL)
   } 
 }
+
+
+prep_legend <- function(kba_cmi, kba_led, kba_gpp, lcc_4326, criteria5 = NULL) {
+  
+  # Set legend for CMI
+  cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
+  cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
+  cmi_bins.seq <- seq(cmi_minVar, cmi_maxVar, length.out = 5)
+  xpal <- colorBin("RdYlBu", cmi_bins.seq, bins = cmi_bins.seq, na.color = "transparent")
+  val.color <- "RdYlBu"
+  
+  # Set legend for LED
+  led_minVar <- min(floor(values(kba_led)), na.rm = TRUE)
+  led_maxVar <- max(ceiling(values(kba_led)), na.rm = TRUE)
+  led_bins.seq <- seq(led_minVar, led_maxVar, length.out = 5)
+  led_xpal <- colorBin("Blues", led_bins.seq, bins = led_bins.seq, na.color = NA)
+  led_val.color <- "Blues"
+  
+  # Set legend for GPP
+  gpp_minVar <- min(floor(values(kba_gpp)), na.rm = TRUE)
+  gpp_maxVar <- max(ceiling(values(kba_gpp)), na.rm = TRUE)
+  gpp_bins.seq <- seq(gpp_minVar, gpp_maxVar, length.out = 5)
+  gppxpal <- colorBin("RdYlBu", gpp_bins.seq, bins = gpp_bins.seq, na.color = "transparent")
+  
+  # Prepare labels for LCC
+  unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
+  df_label <- data.frame(values = c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), 
+                         labels = c("Temperate conifer forest", "Taiga conifer forest",
+                                    "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
+                                    "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
+                                    "Wetland", "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
+  df_label <- df_label[df_label$values %in% unique_sorted_values, ]
+  cls <- df_label$labels
+  
+  # Read LCC colors
+  lcc_cols <- read.csv('www/lc_cols.csv') %>%
+    filter(value %in% unique_sorted_values) %>%
+    mutate(color = rgb(red, green, blue, maxColorValue = 255)) %>%
+    pull(color)
+  selected_cols <- lcc_cols    
+  
+  # Labeller function
+  labeller_function <- function(type, breaks) {
+    return(c('Low', '', '', 'High'))
+  }
+  
+  # Set legend for criteria5 if it exists
+  if (!is.null(criteria5)) {
+    c5_minVar <- min(floor(values(criteria5)), na.rm = TRUE)
+    c5_maxVar <- max(ceiling(values(criteria5)), na.rm = TRUE)
+    c5_bins.seq <- seq(c5_minVar, c5_maxVar, length.out = 5)
+    crit_xpal <- colorBin("RdYlBu", c5_bins.seq, bins = c5_bins.seq, na.color = "transparent")
+    val.color <- "RdYlBu"
+  } else {
+    crit_xpal <- NULL
+  }
+  
+  # Return everything as a list
+  return(list(cmi_xpal = xpal, led_xpal = led_xpal, gpp_xpal = gppxpal, 
+              cmi_bins = cmi_bins.seq, led_bins = led_bins.seq, gpp_bins = gpp_bins.seq,
+              df_label = df_label, lcc_labels = cls, lcc_cols = selected_cols, crit_xpal = crit_xpal, val.color = val.color, 
+              led_val.color = led_val.color, labeller_function = labeller_function))
+}
+

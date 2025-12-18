@@ -23,9 +23,9 @@ ui = dashboardPage(skin="black",
                          badgeStatus = NULL,
                          icon = icon("life-ring"),  # Life-ring icon triggering dropdown
                          headerText = "",  # No header text in dropdown
-                         menuItem("Website", href = "https://beaconsproject.ualberta.ca/", icon = icon("globe")),
-                         menuItem("GitHub", href = "https://github.com/beaconsproject/", icon = icon("github")),
-                         menuItem("Contact us", href = "mailto: beacons@ualberta.ca", icon = icon("address-book"))
+                         shinydashboard::menuItem("Website", href = "https://beaconsproject.ualberta.ca/", icon = icon("globe")),
+                         shinydashboard::menuItem("GitHub", href = "https://github.com/beaconsproject/", icon = icon("github")),
+                         shinydashboard::menuItem("Contact us", href = "mailto: beacons@ualberta.ca", icon = icon("address-book"))
                        ),
                        # Plain Text "About Us" Positioned Next to Dropdown
                        tags$span(
@@ -37,18 +37,15 @@ ui = dashboardPage(skin="black",
                    dashboardSidebar(
                      width = 275,
                      sidebarMenu(id = "tabs",
-                                 menuItem("Overview", tabName = "overview", icon = icon("th")),
-                                 menuItem("Set input parameters", tabName = "tabUpload", icon = icon("th"), startExpanded = FALSE),
-                                 menuItem("Build KBAs (optional)", tabName = "build_kbas", icon = icon(name = "fas fa-tools", lib = "font-awesome"), startExpanded = FALSE,
-                                          #menuSubItem("Step 1: Set input parameters", tabName = "tabUpload", icon = icon("th")),
+                                 shinydashboard::menuItem("Overview", tabName = "overview", icon = icon("th")),
+                                 shinydashboard::menuItem("Set input parameters", tabName = "tabUpload", icon = icon("th"), startExpanded = FALSE),
+                                 shinydashboard::menuItem("Build KBAs (optional)", tabName = "build_kbas", icon = icon(name = "fas fa-tools", lib = "font-awesome"), startExpanded = FALSE,
                                           menuSubItem("Create Builder input", tabName = "tabinput", icon = icon("th")),                
                                           menuSubItem("Run Builder", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
                                           menuSubItem("Calculate hydrology metrics (KBAs)", tabName = "tabDCI", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
                                           ),
-                                 menuItem("Evaluate PAs (optional)", tabName = "load_pas", icon = icon(name = "fas fa-search", lib = "font-awesome"), startExpanded = FALSE,
-                                          menuSubItem("Calculate hydrology metrics (PAs)", tabName = "tabPAs", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
-                                          ),
-                                 menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
+                                 shinydashboard::menuItem("Evaluate PAs (optional)", tabName = "tabPAs", icon = icon(name = "fas fa-search", lib = "font-awesome"), startExpanded = FALSE),
+                                 shinydashboard::menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
                                           menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Upload reference area<br>and assess representation</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
                                           menuSubItem("Create KBA Networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
                                           #menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
@@ -57,22 +54,12 @@ ui = dashboardPage(skin="black",
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabUpload'",
-                       shinyDirButton("directory", "Select output Directory", "Please select a folder", icon = icon(name = "fas fa-folder", lib = "font-awesome")),
+                       shinyDirButton("directory", "Select output directory", "Please select a folder", icon = icon(name = "fas fa-folder", lib = "font-awesome")),
                        div(style = "width: 250px;margin-left: 20px;", verbatimTextOutput("dirpath")), 
-                       actionButton("set_wd", "Confirm", icon = icon(name = "check", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
+                       actionButton("set_wd", "Confirm", class = "btn-warning", style="width:200px"),
                        tags$br(),
-                       HTML("<h4>&nbsp; &nbsp; Upload spatial dataset</h4>"),
-                       # File input to upload CSV
-                       fileInput("csv_file", "Use csv with file pathways", accept = ".csv"),
-                       div(style = "margin: 15px; margin-top: -10px; font-size:13px;font-weight: bold", "  --  Or upload individual layer --"),
-                       div(style = "margin-top: -20px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_stream", label = "Streams dataset", multiple = TRUE)),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_planreg", label = "Planning region", multiple = TRUE)),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_lcc", label = "LCC", multiple = FALSE)),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_led", label = "LED", multiple = FALSE)),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_gpp", label = "GPP", multiple = FALSE)),
-                       div(style = "margin-top: -30px;",fileInput(inputId = "upload_custom", label = "Custom criteria", multiple = FALSE)),
+                       uiOutput("project_ui"), 
+                       uiOutput("newproject_ui")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  
@@ -85,7 +72,10 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -20px;", textInput("seedintact", label = div(style = "font-size:13px;", "Specify minimum seed intactness (0-1)"), value = "0")),
                        div(style = "margin-top: -20px;", textInput("set_strahler", label = div(style = "font-size:13px;","Specify Strahler Order ≤"), value = 1)),
                        div(style = "margin-top: -20px;", textInput("set_areatarget", label = div(style = "font-size:13px;","Specify area target (m2)"), value = 10000000000)),
-                       actionButton("runBuilderInput", "Run Builder input", icon = icon(name = "file-csv", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
+                       tags$br(),
+                       tags$br(),
+                       tags$hr(),
+                       actionButton("runBuilderInput", "Set Builder input", icon = icon(name = "play", lib = "font-awesome"), class = "btn-warning", style="width:200px"),
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabBuilder'", 
@@ -97,7 +87,10 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -20px;",selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "--intactness"), choices = "intactKBA")),
                        div(style = "margin-top: -20px;",selectInput("zoneColname", label = div(style = "font-size:13px;", "--zone"), choices = c("MDAzone", "ecoMDAzone", "ecoZone"), selected = "ecoMDAzone")),
                        div(style = "margin-top: -20px;",selectInput("arealandColname", label = div(style = "font-size:13px;margin: 0px;", "--area land"), choices = "Area_land")),
-                       actionButton("runBuilder", "Run Builder", icon = icon(name = "file-csv", lib = "font-awesome"), class = "btn-warning", style="width:200px")                     
+                       tags$br(),
+                       tags$br(),
+                       tags$hr(),
+                       actionButton("runBuilder", "Run Builder", icon = icon(name = "play", lib = "font-awesome"), class = "btn-warning", style="width:200px")                     
                        ),
                      conditionalPanel(
                        condition="input.tabs=='tabDCI'",
@@ -112,28 +105,13 @@ ui = dashboardPage(skin="black",
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabPAs'",
-                       fileInput(inputId = "upload_pas", label = "Upload protected areas shapefile", multiple = TRUE),
-                       div(style = "margin-top: -20px;",selectInput("intactColpas", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = "intactKBA")),
-                       div(style = "margin: 13px; font-size:13px; font-weight: bold", "Calculate DCI and add upstream attributes to KBAs"), 
-                       actionButton(inputId = "calc_pasdci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px")                     ),
+                       uiOutput("dciPAs")
+                     ),
                      conditionalPanel(
                        condition="input.tabs=='tabKBA'",
-                       selectInput("KBAlayer", "Select KBA layer", choices = "No KBA generated", multiple = FALSE),
-                       fileInput(inputId = "upload_refarea", label = "Upload reference area shapefile", multiple = TRUE),
-                       div(style = "margin-top: 0px;",radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs","Both KBAs and PAs"),
-                                                                   selected = NULL)),
-                       actionButton("runRep", "Run representation analysis", icon = icon(name = "image", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
-                       div("Filter KBAs and/or PAs based on dissimilarity metrics (DMs), upstream area and PAs area", style = "font-size: 14px;font-weight: bold; margin-top : 20px; margin-left : 20px; "),
-                       div("DMs range from 0 to 1. 0 = low dissimilarity or high representation, 1 = high dissimilarity or low representation", style = "font-size: 12px; margin-top : 20px; margin-left : 20px; "),
-                       div(style = "margin-top: 0px;",sliderInput("slideCMI", label="CMI:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
-                       div(style = "margin-top: -30px;",sliderInput("slideLED", label="LED:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
-                       div(style = "margin-top: -30px;",sliderInput("slideGPP", label="GPP:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
-                       div(style = "margin-top: -30px;",sliderInput("slideLCC", label="LCC:", min=0, max=1, value = 0.2, step=0.001, ticks=FALSE)),
-                       uiOutput("slidercrit5"),  # Dynamic UI for slidecrit5
-                       div(style = "margin-top: -30px;",sliderInput("slideUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
-                       div(style = "margin-top: -30px;",sliderInput("slidePAs", label="Minimum PAs area (sq.km):", min=0, max=10000, value = 5, step=100, ticks=FALSE)),
-                       actionButton("filterRep", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
-                       div(style = "margin-top: 20px;",actionButton("downloadKBA", "Download Filtered KBAs", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
+                       selectInput("KBAlayer", "Select potential KBAs layer", choices = "No KBA generated", multiple = FALSE),
+                       uiOutput("assessRep"),
+                       uiOutput("filterRep")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabNET'",
@@ -143,7 +121,7 @@ ui = dashboardPage(skin="black",
                                      `style` = "btn-default",
                                      `size` = 5)),
                        #div(style = "margin-top: -20px;", selectInput("KBArep", "Select KBA layer", choices = NULL, multiple = FALSE)),
-                       textInput("set_net", "Set numbers of potential KBAs per network", value = 2),
+                       numericInput(inputId = "set_net", label   = "Set number of potential KBAs per network", value = 2, min = 2, step = 1),
                        div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F)),
                        div(style = "margin-top: -20px;",selectInput("intactColNET", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = "intactKBA")),
                        actionButton("buildNet", "Build network", icon = icon(name = "link", lib = "font-awesome"), class = "btn-warning", style="width:250px"),
@@ -163,8 +141,30 @@ ui = dashboardPage(skin="black",
                      useShinyjs(),
                      tags$head(
                        # Link to custom CSS for the orange theme
-                       tags$link(rel = "stylesheet", type = "text/css", href = "green-theme.css")
+                       tags$link(rel = "stylesheet", type = "text/css", href = "green-theme.css"),
+                       tags$script(HTML("
+  // Disable PA choices
+  Shiny.addCustomMessageHandler('disablePAchoices', function(message) {
+    $('input[value=\"Only PAs\"]').prop('disabled', true);
+    $('input[value=\"Both KBAs and PAs\"]').prop('disabled', true);
+  });
+
+  // Enable PA choices
+  Shiny.addCustomMessageHandler('enablePAchoices', function(message) {
+    $('input[value=\"Only PAs\"]').prop('disabled', false);
+    $('input[value=\"Both KBAs and PAs\"]').prop('disabled', false);
+  });
+"))
                      ),
+                     # Custom JS to delay removing modal
+                     tags$script(HTML("
+      Shiny.addCustomMessageHandler('remove_modal_js', function(message) {
+        setTimeout(function() {
+          Shiny.setInputValue('remove_modal', Math.random());
+        }, 1500); // Adjust delay in ms as needed
+      });
+    ")),
+                     
                      tabItems(
                        # Overview tab: three tabPanels
                        tabItem(tabName = "overview",
@@ -228,8 +228,9 @@ ui = dashboardPage(skin="black",
                                  ),
                                  conditionalPanel(
                                    #condition = "input.tabs == 'tabKBA'",  # Updated condition
-                                   condition = "input.tabs == 'tabDCI' && input.mapBox === 'Mapview'", 
-                                   tabBox(id = "metricsBox", width = 2,
+                                   #condition = "input.tabs == 'tabDCI' && input.mapBox === 'Mapview'", 
+                                   condition = "(input.tabs == 'tabBuilder' ||input.tabs == 'tabDCI') && input.mapBox === 'Mapview'",
+                                     tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabsethydro",
                                                       tabPanel(HTML("<h4>Number of KBAs</h4>"), 
                                                                tableOutput("outkbahydro")

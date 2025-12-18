@@ -30,7 +30,7 @@ catchnums_in_polygon <- function(CAs_sf, CAs_id, catchments_sf){
   tbl_long <- catch_within %>%
     dplyr::left_join(sf_catch_key, by = c("row.id" = "key")) %>%
     dplyr::left_join(CAs_key, by = c("col.id" = "key")) %>%
-    dplyr::select(.data$CATCHNUM, .data[[CAs_id]]) %>%
+    dplyr::select(all_of(c("CATCHNUM", CAs_id))) %>%
     dplyr::arrange(.data[[CAs_id]])
   
   # convert long table to wide table with missing values as NA
@@ -327,7 +327,7 @@ append_reserve <- function(conservation_areas_sf, conservation_areas_id, add_res
 
 build_network_polygons <- function(conservation_areas_sf, conservation_areas_id, network_list){
   
-  conservation_areas_sf <- check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  check_colnames(conservation_areas_sf, cols = conservation_areas_id)
   check_for_geometry(conservation_areas_sf)
   
   my_list <- list()
@@ -335,11 +335,11 @@ build_network_polygons <- function(conservation_areas_sf, conservation_areas_id,
     
     # get benchmark names and check they are in conservation_areas_sf$network
     nets <- sep_network_names(net)
-    check_conservation_area_names(nets, conservation_areas_sf)
+    check_conservation_area_names(nets, conservation_areas_sf, conservation_areas_id)
     
     # dissolve the network
     row_sfc <- conservation_areas_sf %>%
-      dplyr::filter(.data$network %in% nets) %>%
+      dplyr::filter(.data[[conservation_areas_id]] %in% nets)  %>%
       sf::st_union()
     row <- sf::st_sf(network = net, geometry = row_sfc)
     
@@ -383,7 +383,7 @@ build_network_polygons <- function(conservation_areas_sf, conservation_areas_id,
 
 list_overlapping_polygons <- function(conservation_areas_sf, conservation_areas_id){
   
-  conservation_areas_sf <- check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  check_colnames(conservation_areas_sf, cols = conservation_areas_id)
   
   df <- as.data.frame(sf::st_intersects(conservation_areas_sf, conservation_areas_sf)) # get pairwise intersects
   
