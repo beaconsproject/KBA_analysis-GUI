@@ -44,7 +44,7 @@ ui = dashboardPage(skin="black",
                                           menuSubItem("Run Builder", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
                                           menuSubItem("Calculate hydrology metrics (KBAs)", tabName = "tabDCI", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
                                           ),
-                                 shinydashboard::menuItem("Evaluate PAs (optional)", tabName = "tabPAs", icon = icon(name = "fas fa-search", lib = "font-awesome"), startExpanded = FALSE),
+                                 #shinydashboard::menuItem("Evaluate PAs (optional)", tabName = "tabPAs", icon = icon(name = "fas fa-search", lib = "font-awesome"), startExpanded = FALSE),
                                  shinydashboard::menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
                                           menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Assess single KBAs (optional)</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
                                           menuSubItem("Create and assess KBA networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
