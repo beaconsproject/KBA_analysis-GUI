@@ -46,8 +46,8 @@ ui = dashboardPage(skin="black",
                                           ),
                                  shinydashboard::menuItem("Evaluate PAs (optional)", tabName = "tabPAs", icon = icon(name = "fas fa-search", lib = "font-awesome"), startExpanded = FALSE),
                                  shinydashboard::menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
-                                          menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Upload reference area<br>and assess representation</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
-                                          menuSubItem("Create KBA Networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
+                                          menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Assess single KBAs (optional)</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
+                                          menuSubItem("Create and assess KBA networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
                                           #menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
                                           ),
                                  hr()
