@@ -11,7 +11,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = colnames, selected = "ecoMDAzone")
     updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="Area_land")
   })
-  
+ 
   ####################################################################################################
   # -Create BUILDER input
   ####################################################################################################
@@ -541,7 +541,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     output$outkbahydro <- renderTable({
       rv$outfreqhydro()
     })
-    
+
   }) 
   
   observeEvent(input$save_reduce, {

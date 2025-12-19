@@ -42,6 +42,7 @@ server = function(input, output, session) {
                             selected_polygon = reactiveVal(NULL) , # Track the selected polygon on map
                             refarea_reactive = reactiveVal(NULL),
                             tab_upload_visited = reactiveVal(FALSE),
+                            pas_ready = reactiveVal(FALSE),
                             filtered_kba = reactiveVal(NULL),
                             filtered_pas = reactiveVal(NULL),
                             filtered_rep = reactiveVal(NULL),
@@ -103,7 +104,7 @@ server = function(input, output, session) {
   buildKBAServer(input, output, session, project, myMap, reactiveValsList)
   
   #Evaluate PAs (hydro metrics)
-  evalPAsServer(input, output, session, project, myMap, reactiveValsList)
+  #evalPAsServer(input, output, session, project, myMap, reactiveValsList)
   
   #Assess representation
   assessRepServer(input, output, session, project, myMap, reactiveValsList)

@@ -7,6 +7,12 @@ setParamsServer <- function(input, output, session, project, map, rv){
     updateActionButton(session, "set_wd", label = "Confirmed", icon = icon("check", lib = "font-awesome"))
   })
   
+  #***  
+  # Observe map click events to update the selected polygon
+  observeEvent(input$map_shape_click, {
+    rv$selected_polygon(input$map_shape_click$id)  # Store the layerId of the clicked polygon
+  })
+  #***
   ################################################################################################
   # Set dir
   ################################################################################################
@@ -518,23 +524,101 @@ setParamsServer <- function(input, output, session, project, map, rv){
   
   })
   
-  observeEvent(rv$layers_rv$pas_sf, {
-    req(rv$layers_rv$pas_sf)
+  observeEvent(list(rv$layers_rv$pas_sf, input$intactColname), {
+    req(rv$layers_rv$pas_sf,
+        input$intactColname,
+        input$intactColname != "Please select")
     
     legend <- c(rv$overlayGroups(), "Protected areas")
     rv$overlayGroups(legend)
     
-    pas_4326 <- rv$layers_rv_4326$pas_sf
+    showModal(modalDialog(
+      title = "Calculating hydrology metrics on protected areas. Please wait...",
+      easyClose = TRUE,
+      footer = modalButton("OK"))
+    )
+    
+   catchments <- rv$layers_rv$catchments
+    pas_sf <- rv$layers_rv$pas_sf %>%
+      mutate(network = sprintf("PA_%02d", row_number()),
+             area_km2 = st_area(.)/1000000,
+      )
+    
+    pas_catch <- st_intersection(pas_sf, catchments)
+    area_catch <- pas_catch %>%
+      mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColname]]) %>%
+      st_drop_geometry() %>%
+      group_by(network) %>%
+      summarize(intact_km2 = sum(catch_awi, na.rm = TRUE)/1000000)
+    pas <- merge(pas_sf[,c("network", "NAME", "area_km2")], area_catch[,c("network", "intact_km2")], by = "network", all.x = TRUE)
+    pas$AWI <- round(pas$intact_km2/pas$area_km2, 3)
+    
+    #Upstream
+    results_list <- list()
+    
+    # Compute upstream catchments for all polygons (if possible)
+    upstream_catchments_list <- lapply(1:nrow(pas), function(i) {
+      get_upstream_catchments(pas[i, ], "network", catchments)
+    })
+    
+    # Use mapply to iterate and return the results efficiently
+    results_list <- mapply(function(pa_id, upstream_list) {
+      if (nrow(upstream_list) == 0) return(NULL)
+      
+      # Filter catchments for upstream list
+      area_intact <- catchments[catchments$CATCHNUM %in% upstream_list[[pa_id]], ] %>%
+        st_drop_geometry() %>%
+        mutate(up_cAWI = as.numeric(Area_total * .[[input$intactColname]]), 
+               network = pa_id) %>%
+        group_by(network) %>%
+        summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
+      
+      # Dissolve and merge upstream areas
+      upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
+      
+      upstream_area <- upstream_area %>%
+        st_buffer(dist = 20) %>% 
+        st_buffer(dist = -20)
+      
+      upstream_area <- upstream_area %>%
+        left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
+        mutate(up_km2 = st_area(.)/1000000,
+               up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
+      
+      return(upstream_area)
+    }, pa_id = pas$network, upstream_list = upstream_catchments_list, SIMPLIFY = FALSE)
+    
+    pas_up <- do.call(rbind, results_list)
+    
+    # Export  and update reactive value 
+    st_write(pas_up, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream", driver = "GPKG", append = FALSE)
+    rv$pas_upstream_reactive(pas_up)
+    
+    pas_up <- pas_up %>% st_drop_geometry()
+    pas <- merge(pas, pas_up[,c("network","up_km2", "up_AWI")], by = "network", all.x= TRUE)
+    
+    ####################################################################################################
+    # Calculate DCI
+    ####################################################################################################
+    pas$dci <- calc_dci(conservation_area_sf = pas, 
+                        stream_sf = rv$layers_rv$streams)
+    # Export  and update reactive value 
+    st_write(pas, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas", driver = "GPKG", append = FALSE)
+    rv$pas_ready(TRUE)
+    
+    pas_4326 <- pas %>% st_transform(4326)
     
     leafletProxy("map") %>%
-      addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, group="Protected areas", options = leafletOptions(pane = "ground")) %>%
+      addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "over")) %>% 
       addLayersControl(position = "topright",
-                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery", "Blank Background"),
-                       overlayGroups = rv$overlayGroups(),
-                       options = layersControlOptions(collapsed = FALSE))  %>%
+                     baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery", "Blank Background"),
+                     overlayGroups = rv$overlayGroups(),
+                     options = layersControlOptions(collapsed = FALSE))  %>%
       hideGroup(c("Streams"))
-  }, once = TRUE)
-  
+    
+    removeModal()
+  }, ignoreInit = TRUE)
+
   observeEvent(rv$refarea_reactive(), {
     req(rv$refarea_reactive())
     
@@ -555,5 +639,51 @@ setParamsServer <- function(input, output, session, project, map, rv){
   observeEvent(input$remove_modal, {
     removeModal()
     updateActionButton(session, "confirm_project", label = "Confirmed", icon = icon("check", lib = "font-awesome"))
+  })
+  
+  ####################################################################################################
+  # -Render bottom PAs statistics table
+  ####################################################################################################
+  outtabPA <- reactive({
+    req(input$tabs == 'tabUpload')
+    req(rv$pas_ready())
+    
+    pas <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas") %>%
+      st_drop_geometry()
+    
+    final <- pas %>%
+      mutate(PA_ID = network,
+             Name = NAME,
+             'Area (km2)' = round(area_km2,3),
+             'AWI (%)' = AWI,
+             DCI = dci, 
+             'Upstream area (km2)' = round(up_km2,3),
+             'Upstream AWI (%)' = up_AWI) %>%
+      dplyr::select(PA_ID, Name, 'Area (km2)', 'AWI (%)', DCI, 'Upstream area (km2)', 'Upstream AWI (%)')
+    
+    return(final)
+  })
+  
+  output$pastbl <- renderDataTable({
+    req(input$tabs == 'tabUpload')
+    req(rv$pas_ready())
+    # Get the reactive data and the selected polygon ID
+    table_data <- outtabPA()
+    selected_id <- rv$selected_polygon()
+    if (is.null(selected_id)) {selected_id <- ""}  # Default to no selection if nothing is clicked
+    
+    # Create a vector of background colors
+    highlight_colors <- ifelse(
+      table_data$PA_ID == selected_id,  # Match the selected polygon ID
+      "yellow",  # Highlight the matching row
+      "white"    # Default background for other rows
+    )
+    
+    # Create the datatable and apply conditional highlight on selected
+    datatable(table_data, caption = 'Protected areas statistics', rownames = FALSE, options = list(dom = 'tip', scrollX = TRUE, pageLength = 5),
+              class = "compact") %>%
+      formatStyle('PA_ID', target = 'row', backgroundColor = styleEqual(
+        table_data$PA_ID,  
+        highlight_colors))  # Apply corresponding background colors
   })
 }

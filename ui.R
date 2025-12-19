@@ -184,7 +184,7 @@ ui = dashboardPage(skin="black",
                                           tabPanel("Mapview",
                                                    leafletOutput("map", height = 750),
                                                    conditionalPanel(
-                                                     condition = "input.tabs == 'tabPAs'",
+                                                     condition = "input.tabs == 'tabUpload'",
                                                      dataTableOutput("pastbl")  # Use tableOutput for basic table
                                                    ),
                                                    fluidRow(uiOutput("images"))  # Placeholder for images below the map
