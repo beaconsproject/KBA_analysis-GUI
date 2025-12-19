@@ -9,9 +9,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     
     # Update the choices of the selectInput elements with column names
     updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = colnames, selected = "ecoMDAzone")
-    updateSelectInput(session = getDefaultReactiveDomain(), "intactColname", choices = colnames, selected = "intactKBA")
     updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="Area_land")
-    updateSelectInput(session = getDefaultReactiveDomain(), "intactseedColname", choices = colnames, selected="intactKBA")
   })
   
   ####################################################################################################
@@ -65,7 +63,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
     }else{
       seed <- rv$layers_rv$catchments %>%
-        filter(input$intactseedColname >= input$seedintact, STRAHLER == as.numeric(input$set_strahler), refarea ==1) %>%
+        filter(input$intactColname >= input$seedintact, STRAHLER == as.numeric(input$set_strahler), refarea ==1) %>%
         seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
       rv$seed_reactive(seed)
       write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
@@ -423,6 +421,8 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     output$outkbahydro <- renderTable({
       rv$outfreqhydro()
     })
+    
+    updateActionButton(session, "calc_dci", label = "Done!", icon = icon("check", lib = "font-awesome"))
   })  
   
   ####################################################################################################
@@ -514,6 +514,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     leafletProxy("map") %>%
       clearControls() %>%
       clearGroup('Potential KBAs') %>%
+      clearGroup('Potential KBAs (reduced)') %>%
       clearGroup('Upstream') %>%
       clearGroup(rv$reactive_labelKBA()) %>%
       clearGroup(rv$reactive_labelNET()) %>%

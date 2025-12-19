@@ -1,13 +1,13 @@
 buildNetServer <- function(input, output, session, project, map, rv){
   
   # Observe on intactness column
-  observe({
-    req(rv$layers_rv$catchments)  # Ensure the catchments data is available
-    catchment_data <- rv$layers_rv$catchments
+  #observe({
+  #  req(rv$layers_rv$catchments)  # Ensure the catchments data is available
+  #  catchment_data <- rv$layers_rv$catchments
 
-    colnames <- names(catchment_data)
-    updateSelectInput(session = getDefaultReactiveDomain(), "intactColNET", choices = c("Please select", colnames), selected = "Please select")
-  })
+   # colnames <- names(catchment_data)
+   # updateSelectInput(session = getDefaultReactiveDomain(), "intactColNET", choices = c("Please select", colnames), selected = "Please select")
+  #})
   
   
   observeEvent(input$tabs, {
@@ -80,7 +80,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
   
   observeEvent(input$buildNet, {
     
-    if(input$intactColNET == "Please select"){
+    if(input$intactColname == "Please select"){
       showModal(modalDialog(
         title = "Missing intactness column",
         "You must select the column representing the level of intactness in your catchment layer (rangion from 0-1).",
@@ -270,7 +270,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
           
           #Calculate total area and intactness for NET
           AWI <- net_catch %>%
-            mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColNET]]) %>%
+            mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColname]]) %>%
             st_drop_geometry() %>%
             summarize(AWI = sum(catch_awi, na.rm = TRUE) / 1000000) %>%
             pull(AWI)
@@ -303,7 +303,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
           # Dissolve and merge upstream areas
           net_name <- colnames(upstream_list)
           colnames(upstream_list) <- "network"
-          upstream_area <- dissolve_catchments_from_table(rv$layers_rv$catchments, upstream_list, "network", calc_area = TRUE, intactness_id  = input$intactColNET)
+          upstream_area <- dissolve_catchments_from_table(rv$layers_rv$catchments, upstream_list, "network", calc_area = TRUE, intactness_id  = input$intactColname)
           upstream_area$network <- net_name
           
           st_agr(upstream_area) <- "constant"
@@ -544,7 +544,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       rv$reactive_labelNET(input$network)
     }
     labelNET <- rv$reactive_labelNET()
-    browser()
+    
     # Highlight the selected KBA on the map
     leafletProxy("map") %>%
       clearGroup('Potential KBAs') %>%

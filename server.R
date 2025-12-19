@@ -94,7 +94,7 @@ server = function(input, output, session) {
   myMap <- leafletProxy("map", session)
   
   #Control on tab
-  modalServer(input, output, session, project)
+  modalServer(input, output, session, project, reactiveValsList)
   
   #Set input parameters
   setParamsServer(input, output, session, project, myMap, reactiveValsList)

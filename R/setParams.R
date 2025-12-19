@@ -72,7 +72,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
         conditionalPanel(
           condition = "input.project_choice == 'new'",
           textInput("new_project", "Enter a name for your new project:")
-        ),
+        )
       )
     }
     # -------------------------------------------
@@ -81,6 +81,20 @@ setParamsServer <- function(input, output, session, project, map, rv){
       tags$br(),
       actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
     )
+  })
+  
+  # reactive UI on existing project
+  output$intactCol_ui <- renderUI({
+    req(rv$layers_rv$catchments)
+    
+    catch_nm <- colnames(rv$layers_rv$catchments)
+    tagList(
+      br(),
+      div(style = "margin-top: -20px;", selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = c("Please select", catch_nm))),
+      #br(),
+      #actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
+    )
+  
   })
   #---------
   # Confirm project

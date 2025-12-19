@@ -1,20 +1,30 @@
-# Check and install packages if missing
-required_packages <- c(
-  "leaflet", "shiny", "purrr", "markdown", "shinydashboard", "shinyjs", "exactextractr",
-  "shinycssloaders", "devtools", "dplyr", "tidyr", "sf", "leaflet.extras2", "ggplot2",
-  "zip", "readr",  "terra", "stringr", "shinyFiles", "DT","rlang", "leafgl", "raster", "shinyWidgets", "usethis", "qs"
-)
+# Load the packages
+library(leaflet)
+library(shiny)
+library(purrr)
+library(markdown)
+library(shinydashboard)
+library(shinyjs)
+library(exactextractr)
+library(dplyr)
+library(tidyr)
+library(sf)
+library(leaflet.extras2)
+library(ggplot2)
+library(zip)
+library(readr)
+library(terra)
+library(stringr)
+library(shinyFiles)
+library(DT)
+library(rlang)
+library(leafgl)
+library(raster)
+library(shinyWidgets)
+library(usethis)
+library(qs)
 
 terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
-
-# Install any missing packages
-missing_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
-if (length(missing_packages) > 0) {
-  install.packages(missing_packages)
-}
-
-# Load the packages
-invisible(lapply(required_packages, library, character.only = TRUE))
 
 for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f)
 
