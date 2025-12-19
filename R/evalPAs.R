@@ -2,7 +2,7 @@ evalPAsServer <- function(input, output, session, project, map, rv){
 
   # Observe map click events to update the selected polygon
   observeEvent(input$map_shape_click, {
-    selected_polygon(input$map_shape_click$id)  # Store the layerId of the clicked polygon
+    rv$selected_polygon(input$map_shape_click$id)  # Store the layerId of the clicked polygon
   })
   
   # RENDER PAs UI
