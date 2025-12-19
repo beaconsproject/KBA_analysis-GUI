@@ -16,7 +16,6 @@ evalPAsServer <- function(input, output, session, project, map, rv){
             style = "font-size:15px; margin-left:20px; margin-top:20px;")
       },
       div("Calculate hydrology metrics (PAs)", style = "font-size: 15px; font-weight: bold; margin-left: 15px;margin-top: 40px;"),
-      selectInput("intactColpas", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = names(rv$layers_rv$catchments), selected = "intactKBA"),
       div(style = "margin: 13px; font-size:13px; font-weight: bold", "Calculate DCI and add upstream attributes to KBAs"), 
       actionButton(inputId = "calc_pasdci", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px")                     
     )
@@ -68,7 +67,7 @@ evalPAsServer <- function(input, output, session, project, map, rv){
     
     pas_catch <- st_intersection(pas_sf, catchments)
     area_catch <- pas_catch %>%
-      mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColpas]]) %>%
+      mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColname]]) %>%
       st_drop_geometry() %>%
       group_by(network) %>%
       summarize(intact_km2 = sum(catch_awi, na.rm = TRUE)/1000000)
@@ -90,7 +89,7 @@ evalPAsServer <- function(input, output, session, project, map, rv){
       # Filter catchments for upstream list
       area_intact <- catchments[catchments$CATCHNUM %in% upstream_list[[pa_id]], ] %>%
         st_drop_geometry() %>%
-        mutate(up_cAWI = as.numeric(Area_total * .[[input$intactColpas]]), 
+        mutate(up_cAWI = as.numeric(Area_total * .[[input$intactColname]]), 
                network = pa_id) %>%
         group_by(network) %>%
         summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")

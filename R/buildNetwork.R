@@ -1,22 +1,12 @@
 buildNetServer <- function(input, output, session, project, map, rv){
   
-  # Observe on intactness column
-  #observe({
-  #  req(rv$layers_rv$catchments)  # Ensure the catchments data is available
-  #  catchment_data <- rv$layers_rv$catchments
-
-   # colnames <- names(catchment_data)
-   # updateSelectInput(session = getDefaultReactiveDomain(), "intactColNET", choices = c("Please select", colnames), selected = "Please select")
-  #})
-  
-  
   observeEvent(input$tabs, {
     req(input$tabs == "tabNET", rv$outdir())
     
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    rep_kba <- layers[grepl("^rep", layers)]
-    #reduced_kba <- layers[grepl("^KBAs_reduced", layers)]
+    #rep_kba <- layers[grepl("^rep", layers)]
+    rep_kba <- layers[grepl("^KBAs_reduced", layers)]
     pas_ls <- layers[grepl("^protected_areas", layers) & !grepl("protected_areas_upstream", layers)]
     #net_list <- c(rep_kba, reduced_kba, pas_ls)
     net_list <- c(rep_kba, pas_ls)
@@ -95,7 +85,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     req(!(input$KBArep==""))
     kba_sf <- NULL
     pas_sf <- NULL
-    #browser()
+    
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     potential_kbas <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
@@ -189,26 +179,55 @@ buildNetServer <- function(input, output, session, project, map, rv){
       rv$legendcrit(updated_grp) # Update the reactive value
     }
     
-    # Set Criteria
-    kba_cmi <- raster(file.path(rv$outdir(), "output/kba_cmi.tif"))
-    kba_led <- raster(file.path(rv$outdir(), "output/kba_led.tif"))
-    kba_gpp <- raster(file.path(rv$outdir(), "output/kba_gpp.tif"))
-    kba_lcc <- raster(file.path(rv$outdir(), "output/kba_lcc.tif"))
+    #Prep criteria
+    if (!file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))) {
+      cmi <- process_raster(rv$layers_rv$cmi, rv$refarea_reactive(), rv$outdir(), "kba_cmi", fact = 2, aggregation_fun = "mean")
+      kba_cmi <- cmi$original
+      cmi_4326 <- cmi$projected
+    }else{
+      kba_cmi <- rv$layers_rv$cmi
+      cmi_4326 <- raster(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
+    }
+    if (!file.exists(file.path(rv$outdir(), "output/kba_led.tif"))) {
+      led <- process_raster(rv$layers_rv$led, rv$refarea_reactive(), rv$outdir(), "kba_led", fact = 4, aggregation_fun = "mean")
+      kba_led <- led$original
+      led_4326 <- led$projected
+    } else{
+      kba_led <- rv$layers_rv$led
+      led_4326 <- raster(file.path(rv$outdir(), "output/kba_led_4326.tif"))
+    }
+    if (!file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))) {
+      gpp <- process_raster(rv$layers_rv$gpp, rv$refarea_reactive(), rv$outdir(), "kba_gpp", fact = 4, aggregation_fun = "mean")
+      kba_gpp <- gpp$original
+      gpp_4326 <- gpp$projected
+    } else{
+      kba_gpp <- rv$layers_rv$gpp
+      gpp_4326 <- raster(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
+    }
+    if (!file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))) {
+      lcc <- process_raster(rv$layers_rv$lcc, rv$refarea_reactive(), rv$outdir(), "kba_lcc", fact = 40, aggregation_fun = "modal", ignored = c(15, 17))
+      kba_lcc <- lcc$original
+      lcc_4326 <- lcc$projected
+    }else{
+      kba_lcc <- rv$layers_rv$lcc
+      lcc_4326 <- raster(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+    }
     
     if(!is.null(rv$layers_rv$criteria5)){
-      kba_crit5 <- raster(file.path(rv$outdir(), "output",paste0(rv$criteria5name(),".tif")))
+      if (!file.exists(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))) {
+        crit5 <- process_raster(rv$layers_rv$criteria5, rv$refarea_reactive(), rv$outdir(), rv$criteria5name(), fact = 4)
+        kba_criteria5 <- crit5$original
+        crit5_4326 <- crit5$projected
+      }else{
+        kba_criteria5 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))
+        crit5_4326 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
+      }
     }else{
-      kba_crit5 <- NULL
+      kba_criteria5 <- NULL
     } 
     
-    #set legend
-    cmi_4326 <- raster(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
-    led_4326 <- raster(file.path(rv$outdir(), "output/kba_led_4326.tif"))
-    gpp_4326 <- raster(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
-    lcc_4326 <- raster(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
-    
     # Access legend elements
-    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, lcc_4326, kba_crit5)
+    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, lcc_4326, kba_criteria5)
     cmi_xpal <- legend_data$cmi_xpal
     led_xpal <- legend_data$led_xpal
     gpp_xpal <- legend_data$gpp_xpal
@@ -370,8 +389,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
           networks_sf$led <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"led")),3)
           networks_sf$cmi <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"cmi")),3)
           networks_sf$gpp <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"gpp")),3)
-          if(!is.null(criteria5())){
-            networks_sf[[criteria5name()]] <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_crit5, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir, criteria5name())),3) 
+          if(!is.null(rv$criteria5name())){
+            networks_sf[[rv$criteria5name()]] <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir, criteria5name())),3) 
           }
         }, error = function(err) {
           error_occurred <- TRUE
@@ -409,7 +428,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     networks_4326 <- st_transform(networks_sf, 4326)
     labelKBA <- rv$reactive_labelKBA()
-    pas_4326 <- pas_sf %>% st_transform(4326)
+    #pas_4326 <- pas_sf %>% st_transform(4326)
     
     leafletProxy("map") %>%
       clearControls() %>%
@@ -425,7 +444,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       removeControl("legend_LED") %>%
       removeControl("legend_GPP") %>%
       removeControl("legend_CMI") %>%
-      addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
+      #addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
       addRasterImage(lcc_4326, colors=lcc_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
       addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
@@ -440,8 +459,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
       addLegend(colors = lcc_cols, label = lcc_labels,  position=c("bottomleft"), opacity = 1, title = "LCC",
                 group="LCC", layerId = "legend_LCC") %>%
       addLayersControl(position = "topright",
-                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                       overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", rv$legendcrit()),
+                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
+                       overlayGroups = c(rv$overlayGroups(), rv$legendcrit()),
                        options = layersControlOptions(collapsed = TRUE)) %>%
       hideGroup(c("Streams"))
     
@@ -454,8 +473,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
         addLegend(pal = crit_xpal, values = values(crit5_4326), opacity = 1, title = rv$criteria5name(),
                   position = "bottomright", group=criteria5name(), layerId = "legend_custom", labFormat = labeller_function)  %>%
         addLayersControl(position = "topright",
-                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery"),
-                         overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", "Streams", rv$legendcrit()),
+                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
+                         overlayGroups = c(rv$overlatGroups(), rv$legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)) %>%
         hideGroup(c("Streams"))
     }
@@ -556,7 +575,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       addLayersControl(
         position = "topright",
         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery", "Blank Background"),
-        overlayGroups = c("Catchments extent", "Planning region", "Reference area", "Protected areas", "Intact areas", input$network, "Upstream","Streams", rv$legendcrit()),
+        overlayGroups = c(rv$overlayGroups(), input$network, "Upstream", rv$legendcrit()),
         options = layersControlOptions(collapsed = TRUE)
       )
     rv$reactive_labelNET(input$network)
