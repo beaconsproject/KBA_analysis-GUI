@@ -130,6 +130,18 @@ buildKBAServer <- function(input, output, session, project, map, rv){
                              handler_summary = FALSE,
                              summary_intactness_props = "\"\"",
                              summary_area_target_props = "\"\"")
+    }, error = function(err) {
+      # Close the "Please wait" modal if it is open
+      removeModal()
+      
+      # Show an error modal with the error message
+      showModal(modalDialog(
+        title = "Error Running BUILDER",
+        paste("Please check Builder software is found in your beaconsbuilder library and that you have .NET framework 3.5 installed:", conditionMessage(err)),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+    })
       
       # Fix PB to KBA
       builder_tab <- builder_tab %>%
@@ -158,18 +170,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
         easyClose = TRUE,
         footer = modalButton("OK"))
       )
-    }, error = function(err) {
-      # Close the "Please wait" modal if it is open
-      removeModal()
-      
-      # Show an error modal with the error message
-      showModal(modalDialog(
-        title = "Error Running BUILDER",
-        paste("Please check Builder software is found in your beaconsbuilder library and that you have .NET framework 3.5 installed:", conditionMessage(err)),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-    })
+    
     #groups_to_remove <- c(
     #  "Potential KBAs", "Upstream", rv$reactive_labelKBA(), rv$reactive_labelNET(),
     #  "CMI", "LED", "GPP", "LCC", rv$criteria5name()
