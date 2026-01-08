@@ -154,7 +154,12 @@ ui = dashboardPage(skin="black",
     $('input[value=\"Only PAs\"]').prop('disabled', false);
     $('input[value=\"Both KBAs and PAs\"]').prop('disabled', false);
   });
-"))
+")),
+                      tags$style(HTML("
+    .treeview-menu > li > a {
+      margin-left: 20px;
+    }
+  "))
                      ),
                      # Custom JS to delay removing modal
                      tags$script(HTML("
