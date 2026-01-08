@@ -56,7 +56,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     } else{
       # Subfolders exist = existing projects
       tagList(
-        div(style = "margin-top: -20px; margin-left: 15px; font-size:15px; font-weight: bold", "Existing project(s) found in this directory"),
+        div(style = "margin-top: -10px; margin-left: 15px; font-size:15px; font-weight: bold", "Existing project(s) found in this directory"),
 
         radioButtons(
           "project_choice",
@@ -232,25 +232,38 @@ setParamsServer <- function(input, output, session, project, map, rv){
     if (input$project_choice == "new") {
       req(input$new_project)
       
-      rv$project_name(input$new_project)
-      rv$outdir(file.path(rv$dirpath(), rv$project_name()))
-      project_is_new(TRUE)
-      dir.create(file.path(rv$dirpath(), rv$project_name()))
-      treedir <- c("output","Builder_input","Builder_output", "data")
-      for(d in treedir){
-        dir.create(file.path(rv$dirpath(), rv$project_name(), d))
+      project_path <- file.path(rv$dirpath(), input$new_project)
+      
+      if (dir.exists(project_path)) {
         showModal(modalDialog(
-          title = "Output subdirectories created.",
-          "Please select input parameters by either uploading a csv containing input path or by pointing on the source files.",
+          title = "Project name unavailable",
+          paste0( "The project name '", input$new_project,"' already exists.\n\n", "Please choose a different project name to avoid overwriting data."),
           easyClose = TRUE,
-          footer = modalButton("OK"))
-        )
+          footer = modalButton("OK")
+        ))
+        return(NULL)      
       }
-      return()
+      
+      rv$project_name(input$new_project)
+      rv$outdir(project_path)
+      project_is_new(TRUE)
+      
+      dir.create(project_path, recursive = TRUE)
+      treedir <- c("output", "Builder_input", "Builder_output", "data")
+      
+      for (d in treedir) {
+        dir.create(file.path(project_path, d))
+      }
+      
+      showModal(
+          modalDialog(title = "Project created",  "Output subdirectories were successfully created. Please select input parameters.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+      ))
+      return(NULL)
     }
   })
-  
-  
+    
   # reactive UI on new project
   output$newproject_ui <- renderUI({
     req(project_is_new())
