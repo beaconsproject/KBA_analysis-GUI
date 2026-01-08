@@ -181,9 +181,11 @@ setParamsServer <- function(input, output, session, project, map, rv){
       rv$layers_rv$planreg <- st_read(paths[["planning region"]])
       rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
       
-      if (!is.null(paths[["protected areas"]]) && file.exists(paths[["protected areas"]])) {
-        rv$layers_rv$pas_sf <- st_read(paths[["protected areas"]])
-        rv$layers_rv_4326$pas_sf <- rv$layers_rv$pas_sf %>% st_transform(4326)
+      if ("protected areas" %in% names(paths) &&
+          file.exists(paths[["protected areas"]])) {
+        
+        rv$layers_rv$pas_sf <- sf::st_read(paths[["protected areas"]])
+        rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
       }
 
       if ("reference area" %in% names(paths) && !is.null(paths[["reference area"]]) && file.exists(paths[["reference area"]])) {
