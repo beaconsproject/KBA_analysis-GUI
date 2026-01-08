@@ -138,7 +138,9 @@ read_shp_from_csv <- function(csv_file, layer_name) {
   # Check if all required shapefile components are present
   check_shp(path)
   # If everything is okay, read the shapefile
-  return(sf::st_read(path))
+  la <- sf::st_read(path) %>%
+    dplyr::select(-any_of(c("fid", "FID")))
+  return(la)
 }
 
 # read_shp_from_upload: read a shapefile from fileInput
@@ -154,7 +156,8 @@ read_shp_from_upload <- function(upload_input) {
       purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y))
       shp_path <- file.path(dir, paste0(name, ".shp"))
       if (file.exists(shp_path)) {
-        shp <- sf::st_read(shp_path)
+        shp <- sf::st_read(shp_path) %>%
+          dplyr::select(-any_of(c("fid", "FID")))
         attr(shp, "name") <- name
         return(shp)
       } else {

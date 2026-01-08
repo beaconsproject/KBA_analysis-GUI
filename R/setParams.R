@@ -56,7 +56,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     } else{
       # Subfolders exist = existing projects
       tagList(
-        div(style = "margin: 15px; font-size:15px; font-weight: bold", "Existing project(s) found in this directory"),
+        div(style = "margin-top: -20px; margin-left: 15px; font-size:15px; font-weight: bold", "Existing project(s) found in this directory"),
 
         radioButtons(
           "project_choice",
@@ -70,14 +70,14 @@ setParamsServer <- function(input, output, session, project, map, rv){
         # Shown only if "existing" is selected
         conditionalPanel(
           condition = "input.project_choice == 'existing'",
-          selectInput("existing_project", "Choose a project:", choices = folders)
+          div(style = "margin-top: -10px;", selectInput("existing_project", "Choose a project:", choices = folders))
           
         ),
         
         # Shown only if "new" is selected
         conditionalPanel(
           condition = "input.project_choice == 'new'",
-          textInput("new_project", "Enter a name for your new project:")
+          div(style = "margin-top: -10px;", textInput("new_project", "Enter a name for your new project:"))
         )
       )
     }
@@ -85,7 +85,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     tagList(
       main_ui,
       tags$br(),
-      actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
+      div(style = "margin-top: -25px;",actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px"))
     )
   })
   
@@ -96,12 +96,22 @@ setParamsServer <- function(input, output, session, project, map, rv){
     catch_nm <- colnames(rv$layers_rv$catchments)
     tagList(
       br(),
-      div(style = "margin-top: -20px;", selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = c("Please select", catch_nm))),
+      div(style = "margin-top: -40px;", selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = c("Please select", catch_nm))),
       #br(),
       #actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
     )
   
   })
+  
+  # reactive UI on protected areas
+  output$pas_ui <- renderUI({
+    req(input$intactColname != "Please select")
+    
+    if (is.null(rv$layers_rv$pas_sf)) {
+      div(style = "margin-top: -10px;", fileInput(inputId = "upload_pas", label  = "Upload Protected Areas - OPTIONAL", multiple = TRUE, accept = c(".shp", ".dbf", ".shx", ".prj")))
+    } 
+  })
+  
   #---------
   # Confirm project
   observeEvent(input$confirm_project, {
@@ -254,13 +264,14 @@ setParamsServer <- function(input, output, session, project, map, rv){
     ,
     conditionalPanel(
       condition="input.setUpload=='useCSV'",
-      fileInput("csv_file", "Upload CSV file", accept = ".csv")
+      div(style = "margin-top: -20px;",fileInput("csv_file", "Upload CSV file", accept = ".csv"))
     ),
     conditionalPanel(
       condition=" input.setUpload=='indUpload'",
       div(style = "margin-top: -20px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_stream", label = "Streams dataset", multiple = TRUE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_planreg", label = "Planning region", multiple = TRUE)),
+      div(style = "margin-top: -30px;",fileInput(inputId = "upload_pas", label = "Protected areas", multiple = TRUE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_lcc", label = "LCC", multiple = FALSE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_led", label = "LED", multiple = FALSE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
@@ -320,7 +331,17 @@ setParamsServer <- function(input, output, session, project, map, rv){
     
     ## OPTIONAL: protected areas ----
     if ("protected areas" %in% csv_data$Layer) {
-      rv$layers_rv$pas_sf <- read_shp_from_csv(input$csv_file, "protected areas")
+      pas_sf <- read_shp_from_csv(input$csv_file, "protected areas")
+      
+      n <- nrow(pas_sf)
+      if (!"PA_ID" %in% colnames(pas_sf)) {
+        pas_sf$PA_ID <- seq_len(n)
+      }
+      if (!"NAME" %in% colnames(pas_sf)) {
+        pas_sf$NAME <- NA_character_
+      }
+      
+      rv$layers_rv$pas_sf <- pas_sf
       rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
     } else {
       rv$layers_rv$pas_sf <- NULL
@@ -371,8 +392,18 @@ setParamsServer <- function(input, output, session, project, map, rv){
   })
   
   observeEvent(input$upload_pas, {
-    rv$layers_rv$pas_sf <- read_shp_from_upload(input$upload_pas)
-    rv$layers_rv_4326$pas_sf <- rv$layers_rv$pas_sf %>% st_transform(4326)
+    pas_sf <- read_shp_from_upload(input$upload_pas)
+
+    n <- nrow(pas_sf)
+    if (!"PA_ID" %in% colnames(pas_sf)) {
+      pas_sf$PA_ID <- seq_len(n)
+    }
+    if (!"NAME" %in% colnames(pas_sf)) {
+      pas_sf$NAME <- NA_character_
+    }
+    
+    rv$layers_rv$pas_sf <- pas_sf
+    rv$layers_rv_4326$pas_sf <- pas_sf |> sf::st_transform(4326)
     paths <- rv$layer_paths()
     paths[["protected areas"]] <- input$upload_pas$datapath
     rv$layer_paths(paths)
@@ -495,6 +526,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
                        options = layersControlOptions(collapsed = FALSE))
   })
   
+  # STREAMS
   observeEvent(rv$layers_rv$streams, {
     req(rv$layers_rv$planreg)
     req(rv$layers_rv$streams)
@@ -519,16 +551,19 @@ setParamsServer <- function(input, output, session, project, map, rv){
                        options = layersControlOptions(collapsed = FALSE))  %>%
       hideGroup(c("Streams")) 
     
-    #Trigger a JS callback to remove modal after rendering
+    #Remove modal after rendering
     session$sendCustomMessage("remove_modal_js", list())
   
   })
   
+  # PROTECTED AREAS 
+  # -calculate dci + render
   observeEvent(list(rv$layers_rv$pas_sf, input$intactColname), {
     req(rv$layers_rv$pas_sf,
         input$intactColname,
         input$intactColname != "Please select")
     
+    # Faire un test PA_ID et Name 
     legend <- c(rv$overlayGroups(), "Protected areas")
     rv$overlayGroups(legend)
     
@@ -538,73 +573,75 @@ setParamsServer <- function(input, output, session, project, map, rv){
       footer = modalButton("OK"))
     )
     
-   catchments <- rv$layers_rv$catchments
-    pas_sf <- rv$layers_rv$pas_sf %>%
-      mutate(network = sprintf("PA_%02d", row_number()),
-             area_km2 = st_area(.)/1000000,
-      )
+    required_cols <- c("area_km2", "AWI","dci")
+    pas <-rv$layers_rv$pas_sf
+    pas_colnames <- colnames(pas)
     
-    pas_catch <- st_intersection(pas_sf, catchments)
-    area_catch <- pas_catch %>%
-      mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColname]]) %>%
-      st_drop_geometry() %>%
-      group_by(network) %>%
-      summarize(intact_km2 = sum(catch_awi, na.rm = TRUE)/1000000)
-    pas <- merge(pas_sf[,c("network", "NAME", "area_km2")], area_catch[,c("network", "intact_km2")], by = "network", all.x = TRUE)
-    pas$AWI <- round(pas$intact_km2/pas$area_km2, 3)
-    
-    #Upstream
-    results_list <- list()
-    
-    # Compute upstream catchments for all polygons (if possible)
-    upstream_catchments_list <- lapply(1:nrow(pas), function(i) {
-      get_upstream_catchments(pas[i, ], "network", catchments)
-    })
-    
-    # Use mapply to iterate and return the results efficiently
-    results_list <- mapply(function(pa_id, upstream_list) {
-      if (nrow(upstream_list) == 0) return(NULL)
+    if (any(!required_cols %in% pas_colnames)) {
+      catchments <- rv$layers_rv$catchments
+      pas_sf <- pas %>%
+        mutate(network = sprintf("PA_%02d", row_number()),
+               area_km2 = st_area(.)/1000000)
       
-      # Filter catchments for upstream list
-      area_intact <- catchments[catchments$CATCHNUM %in% upstream_list[[pa_id]], ] %>%
+      pas_catch <- st_intersection(pas_sf, catchments)
+      area_catch <- pas_catch %>%
+        mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColname]]) %>%
         st_drop_geometry() %>%
-        mutate(up_cAWI = as.numeric(Area_total * .[[input$intactColname]]), 
-               network = pa_id) %>%
         group_by(network) %>%
-        summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
+        summarize(intact_km2 = sum(catch_awi, na.rm = TRUE)/1000000)
+      pas <- merge(pas_sf[,c("network", "NAME", "area_km2")], area_catch[,c("network", "intact_km2")], by = "network", all.x = TRUE)
+      pas$AWI <- round(pas$intact_km2/pas$area_km2, 3)
       
-      # Dissolve and merge upstream areas
-      upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
+      pas$dci <- calc_dci(conservation_area_sf = pas, stream_sf = rv$layers_rv$streams)
+    }
+    
+    if (any(!c("up_km2", "up_AWI") %in% pas_colnames)){
+      catchments <- rv$layers_rv$catchments
+      results_list <- list()
       
-      upstream_area <- upstream_area %>%
-        st_buffer(dist = 20) %>% 
-        st_buffer(dist = -20)
+      # Compute upstream catchments for all polygons (if possible)
+      upstream_catchments_list <- lapply(1:nrow(pas), function(i) {
+        get_upstream_catchments(pas[i, ], "network", catchments)
+      })
       
-      upstream_area <- upstream_area %>%
-        left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
-        mutate(up_km2 = st_area(.)/1000000,
-               up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
+      # Use mapply to iterate and return the results efficiently
+      results_list <- mapply(function(pa_id, upstream_list) {
+        if (nrow(upstream_list) == 0) return(NULL)
+        
+        # Filter catchments for upstream list
+        area_intact <- catchments[catchments$CATCHNUM %in% upstream_list[[pa_id]], ] %>%
+          st_drop_geometry() %>%
+          mutate(up_cAWI = as.numeric(Area_total * .[[input$intactColname]]), 
+                 network = pa_id) %>%
+          group_by(network) %>%
+          summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
+        
+        # Dissolve and merge upstream areas
+        upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
+        
+        upstream_area <- upstream_area %>%
+          st_buffer(dist = 20) %>% 
+          st_buffer(dist = -20)
+        
+        upstream_area <- upstream_area %>%
+          left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
+          mutate(up_km2 = st_area(.)/1000000,
+                 up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
+        
+        return(upstream_area)
+      }, pa_id = pas$network, upstream_list = upstream_catchments_list, SIMPLIFY = FALSE)
       
-      return(upstream_area)
-    }, pa_id = pas$network, upstream_list = upstream_catchments_list, SIMPLIFY = FALSE)
-    
-    pas_up <- do.call(rbind, results_list)
-    
-    # Export  and update reactive value 
-    st_write(pas_up, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream", driver = "GPKG", append = FALSE)
-    rv$pas_upstream_reactive(pas_up)
-    
-    pas_up <- pas_up %>% st_drop_geometry()
-    pas <- merge(pas, pas_up[,c("network","up_km2", "up_AWI")], by = "network", all.x= TRUE)
-    
-    ####################################################################################################
-    # Calculate DCI
-    ####################################################################################################
-    pas$dci <- calc_dci(conservation_area_sf = pas, 
-                        stream_sf = rv$layers_rv$streams)
-    # Export  and update reactive value 
-    st_write(pas, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas", driver = "GPKG", append = FALSE)
-    rv$pas_ready(TRUE)
+      pas_up <- do.call(rbind, results_list)
+      
+      # Export  and update reactive value 
+      st_write(pas_up, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream", driver = "GPKG", append = FALSE)
+      rv$pas_upstream_reactive(pas_up)
+      
+      pas_up_att <- pas_up %>% st_drop_geometry()
+      pas <- pas %>%
+        left_join(pas_up_att[,c("network","up_km2", "up_AWI")], by = "network")
+    }
+    st_write(pas, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas", driver = "GPKG", append = FALSE) 
     
     pas_4326 <- pas %>% st_transform(4326)
     
@@ -617,6 +654,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       hideGroup(c("Streams"))
     
     removeModal()
+    rv$pas_ready(TRUE)
   }, ignoreInit = TRUE)
 
   observeEvent(rv$refarea_reactive(), {

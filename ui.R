@@ -60,7 +60,8 @@ ui = dashboardPage(skin="black",
                        tags$br(),
                        uiOutput("project_ui"), 
                        uiOutput("newproject_ui"),
-                       uiOutput("intactCol_ui")
+                       uiOutput("intactCol_ui"),
+                       uiOutput("pas_ui")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  
