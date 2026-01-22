@@ -5,7 +5,7 @@ format: md
 ## Workflow
 
 The following workflow demonstrates a conservation area networking analysis using conservation areas built by `beaconsbuilder`. Comments in the code indicate points where users could instead use polygons of other conservation areas such as the existing protected areas network.
-<center><img src="pics/workflow.png" width="800"></center>
+<center><img src="pics/workflow.png" width="200"></center>
 
 ## Overview
 
@@ -62,3 +62,4 @@ The "Step 5 - Run representation analysis" tab consists to calculate dissimilari
 The "Step 6 - Create KBAs network" tab consists to create KBAs network by setting the number of KBAs per network and confirm if network would be only composed of selected KBAs that reached the criteria threshold previously applied. The dissimilarity metrics then run at the network level. To visualize each network, the user can then apply a threshold on each criterion. The selection of a network populates the statistics panel to display results on intactness, upstream area, dendritic connectivity and dissimilarity metrics.
 
 <center><img src="pics/step6.png" width="600"><br>Figure 7. Create KBAs network.</center>
+
