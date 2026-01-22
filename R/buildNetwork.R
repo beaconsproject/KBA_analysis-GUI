@@ -1,5 +1,17 @@
 buildNetServer <- function(input, output, session, project, map, rv){
   
+  #output$netPAs <- renderUI({
+  #  req(rv$layers_rv$pas_sf)
+    
+  #  tagList(
+  #    br(),
+  #    div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F)),
+  #    #br(),
+  #    #actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
+  #  )
+    
+  #})
+  
   observeEvent(input$tabs, {
     req(input$tabs == "tabNET", rv$outdir())
     
@@ -99,7 +111,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     if(input$forcePAs){
       if (is.null(pas_sf)){
         showModal(modalDialog(
-          title = "Hydrology metrics were not calclulated on protected areas layers", "Make sure protected areas are uploaded and run the Evaluate PAs step",
+          title = "Hydrology metrics were not calclulated on protected areas layers", "Make sure protected areas are uploaded in the Set input parameters step",
           easyClose = TRUE,
           footer = modalButton("OK"))
         )

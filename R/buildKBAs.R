@@ -8,7 +8,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     colnames <- names(catchment_data)
     
     # Update the choices of the selectInput elements with column names
-    updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = colnames, selected = "ecoMDAzone")
+    updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = colnames, selected = "ZONE")
     updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="Area_land")
   })
  
@@ -143,33 +143,33 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       ))
     })
       
-      # Fix PB to KBA
-      builder_tab <- builder_tab %>%
-        rename_with(~ str_replace(.x, "PB", "KBA"))
+    # Fix PB to KBA
+    builder_tab <- builder_tab %>%
+      rename_with(~ str_replace(.x, "PB", "KBA"))
       
-      # Convert conservation areas created by builder to polygons.(NOTE: poly_sf is the R object with conservation areas.)
-      poly_sf <- dissolve_catchments_from_table(catchments_sf = rv$layers_rv$catchments, 
+    # Convert conservation areas created by builder to polygons.(NOTE: poly_sf is the R object with conservation areas.)
+    poly_sf <- dissolve_catchments_from_table(catchments_sf = rv$layers_rv$catchments, 
                                                 input_table = builder_tab, 
                                                 out_feature_id = "network")
-      poly_sf <- poly_sf %>%
-        st_buffer(dist = 20) %>% 
-        st_buffer(dist = -20)
+    poly_sf <- poly_sf %>%
+      st_buffer(dist = 20) %>% 
+      st_buffer(dist = -20)
       
-      rv$kba_sf_reactive(poly_sf)  # Store the poly_sf in reactiveVal
+    rv$kba_sf_reactive(poly_sf)  # Store the poly_sf in reactiveVal
       
-      # Append the first layer to the GeoPackage
-      st_write(poly_sf, dsn = file.path(out_dir, "output/KBA_analysis.gpkg"), layer = "KBAs_builder", driver = "GPKG", append = FALSE)
+    # Append the first layer to the GeoPackage
+    #st_write(poly_sf, dsn = file.path(out_dir, "output/KBA_analysis.gpkg"), layer = "KBAs_builder", driver = "GPKG", append = FALSE)
       
-      # Close the modal once processing is done
-      removeModal()
+    # Close the modal once processing is done
+    removeModal()
       
-      # show pop-up ...
-      showModal(modalDialog(
-        title = "Builder output created.",
-        paste0("Number of KBAs created: ", as.character(nrow(poly_sf))),
-        easyClose = TRUE,
-        footer = modalButton("OK"))
-      )
+    # show pop-up ...
+    showModal(modalDialog(
+      title = "Builder output created.",
+      paste0("Number of KBAs created: ", as.character(nrow(poly_sf))),
+      easyClose = TRUE,
+      footer = modalButton("OK"))
+    )
     
     #groups_to_remove <- c(
     #  "Potential KBAs", "Upstream", rv$reactive_labelKBA(), rv$reactive_labelNET(),
@@ -216,6 +216,153 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     output$outkbahydro <- renderTable({
       rv$outfreqhydro()
     })
+    #######
+    
+    #Test if streams  and catchments are uploaded
+    if (is.null(rv$layers_rv$streams) || is.null(rv$layers_rv$catchments)) {
+      if(!is.null(rv$layers_rv$streams)){
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Catchments dataset is missing. Please go back to Set input parameters to upload the catchments dataset",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      } else if(!is.null(rv$layers_rv$catchments)){
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Streams dataset is missing. Please go back to Set input parameters to upload the streams dataset",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      } else{
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Catchments and streams dataset are missing. Please go back to Set input parameters to upload both dataset.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      }
+      return()
+    }
+    
+    req(rv$layers_rv$streams)
+    req(rv$layers_rv$catchments)
+    #layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
+    #layers <- layers_info$name
+    #layer_to_check <- "KBAs_reducedFALSE"
+    
+    #if (!layer_to_check %in% layers) {
+    showModal(modalDialog(
+      title = "Processing",
+      paste0("Calculating hydrology metrics on ", as.character(nrow(rv$kba_sf_reactive())), " features. Please wait..."),
+      footer = NULL
+    ))
+    
+        
+    # Identify the attributes file and read it
+    attributefile <- list.files(file.path(rv$outdir(),"Builder_output"), pattern = "Unique_BAs_attributes")
+    attributeStats <- read.csv(file.path(rv$outdir(), "Builder_output", attributefile))
+        
+    # Rename column in attributeStats in order to join it with poly_sf
+    attributeStats <- attributeStats %>%
+        dplyr::rename(network = PBx)
+        
+    # Join metrics
+    poly_sf <- poly_sf %>%
+        left_join(attributeStats %>%
+                      dplyr::select(network , Area_PB, AWI_PB)) %>%
+          mutate(Area_KBA = as.integer(Area_PB/1000000))
+        
+    poly_sf <- poly_sf %>%
+      as.data.frame() %>%                # Convert to data frame, drops `agr`
+      dplyr::rename(area_km2 = Area_KBA) %>% # Rename column
+      dplyr::rename(AWI = AWI_PB)%>%  
+      st_as_sf()
+        
+    # UPSTREAM AREA (up_km2) AND UPSTREAM INTACTNESS (up_AWI) can be found in the Builder output - see file "*_HYDROLOGY_METRICS.csv"
+    # Identify the Hydro metrics file and read it
+    hydrofile <- list.files(file.path(rv$outdir(), "Builder_output"), pattern = "HYDROLOGY_METRICS")
+    hydroStats <- read.csv(file.path(rv$outdir(), "Builder_output", hydrofile))
+        
+    # Fix PB to KBA
+    hydroStats <- hydroStats %>%
+      mutate(PBx = stringr::str_replace(PBx, "PB", "KBA"))
+        
+    # Rename column in hydroStats in order to join it with poly_sf
+    hydroStats <- hydroStats %>%
+      dplyr::rename(network = PBx)
+        
+    # Join metrics
+    poly_sf <- poly_sf %>%
+      left_join(hydroStats %>%
+                  dplyr::select(network , UpstreamArea, UpstreamAWI)) %>%
+      mutate(UpstreamArea = as.integer(UpstreamArea/1000000))
+        
+    # Rename attributes in poly_sf  
+    poly_sf <- poly_sf %>%
+      dplyr::rename(up_km2 = UpstreamArea)
+    poly_sf <- poly_sf %>% 
+      dplyr::rename(up_AWI = UpstreamAWI) 
+        
+    #Generate upstream area polygons
+    upfile <- list.files(file.path(rv$outdir(), "Builder_output"), pattern = "UPSTREAM_CATCHMENTS_COLUMN")
+    upstream <- read.csv(file.path(rv$outdir(), "Builder_output", upfile))
+    upstream_list <-as_tibble(upstream[,-1])
+        
+    #Fix PB to KBA and generate upstream area
+    upstream_list <- upstream_list %>%
+      rename_with(~ str_replace(.x, "PB", "KBA"))
+    upstream_area <- dissolve_catchments_from_table(rv$layers_rv$catchments, upstream_list, "network")  
+        
+    upstream_area <- upstream_area %>%
+      st_buffer(dist = 20) %>% 
+      st_buffer(dist = -20)
+        
+    #Update reactiveVal
+    rv$upstream_reactive(upstream_area)
+        
+    # Export. Append the first layer to the GeoPackage
+    st_write(upstream_area, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "upstream_KBAs", driver = "GPKG", append = FALSE)
+        
+    # DENDRITIC CONNECTIVITY (DCI) - CALCULATE AND ADD TO TABLE
+    # A measure of longitudinal hydrological connectivity within each conservation area with values ranging from 
+    # 0 (low connectivity) to 1 (fully connected).
+        
+    # Calculate DCI and add the values as a new column (attribute = dci).
+    if(attr(poly_sf, "sf_column") != "geometry"){
+      poly_sf$geometry <- poly_sf$geom
+    }
+        
+    poly_sf$dci <- calc_dci(conservation_area_sf = poly_sf, stream_sf = rv$layers_rv$streams)
+        
+    #Update reactiveVal
+    rv$kba_sf_reactive(poly_sf)
+        
+    # Export. Append the first layer to the GeoPackage
+    st_write(poly_sf, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE", driver = "GPKG", append = FALSE)
+        
+    # Close the modal once processing is done
+    removeModal()
+      
+    showModal(modalDialog(
+      title = "Hydrology metrics added",
+      easyClose = FALSE,
+      footer = modalButton("OK"))
+    )  
+    
+    # Initialize KBA/PAs freq table
+    x <- rv$outfreqhydro()
+    x <- x %>% 
+      mutate(Count = case_when(Variables == "KBAs" ~  nrow(poly_sf),
+                               TRUE ~ Count))
+    
+    # Generate Stat Tables    
+    rv$outfreqhydro(x) 
+    
+    output$outkbahydro <- renderTable({
+      rv$outfreqhydro()
+    })
+    
   })
   
   observeEvent(rv$kba_sf_reactive(), {
@@ -258,173 +405,6 @@ buildKBAServer <- function(input, output, session, project, map, rv){
 #    })
      
 #  })
-  
-  ####################################################################################################
-  # -Calculate hydro metrics on KBAs
-  ####################################################################################################
-  observeEvent(input$calc_dci, {
-    
-    #Test if streams  and catchments are uploaded
-    if (is.null(rv$layers_rv$streams) || is.null(rv$layers_rv$catchments)) {
-      if(!is.null(rv$layers_rv$streams)){
-        showModal(modalDialog(
-          title = "Missing Data",
-          "Catchments dataset is missing. Please go back to Set input parameters to upload the catchments dataset",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        ))
-      } else if(!is.null(rv$layers_rv$catchments)){
-        showModal(modalDialog(
-          title = "Missing Data",
-          "Streams dataset is missing. Please go back to Set input parameters to upload the streams dataset",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        ))
-      } else{
-        showModal(modalDialog(
-          title = "Missing Data",
-          "Catchments and streams dataset are missing. Please go back to Set input parameters to upload both dataset.",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        ))
-      }
-      return()
-    }
-    
-    req(rv$layers_rv$streams)
-    req(rv$layers_rv$catchments)
-    layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
-    layer_to_check <- "KBAs_reducedFALSE"
-    
-    if (!layer_to_check %in% layers) {
-      showModal(modalDialog(
-        title = "Processing",
-        paste0("Calculating hydrology metrics on ", as.character(nrow(rv$kba_sf_reactive())), " features. Please wait..."),
-        footer = NULL
-      ))
-      if (!"KBAs_builder" %in% layers) {
-        showModal(modalDialog(
-          title = "Layer missing",
-          paste0("You need to run Builder prior to run the analysis."),
-          footer = NULL
-        ))
-      }else{
-        poly_sf <- rv$kba_sf_reactive()
-        
-        # Identify the attributes file and read it
-        attributefile <- list.files(file.path(rv$outdir(),"Builder_output"), pattern = "Unique_BAs_attributes")
-        attributeStats <- read.csv(file.path(rv$outdir(), "Builder_output", attributefile))
-        
-        # Rename column in attributeStats in order to join it with poly_sf
-        attributeStats <- attributeStats %>%
-          dplyr::rename(network = PBx)
-        
-        # Join metrics
-        poly_sf <- poly_sf %>%
-          left_join(attributeStats %>%
-                      dplyr::select(network , Area_PB, AWI_PB)) %>%
-          mutate(Area_KBA = as.integer(Area_PB/1000000))
-        
-        poly_sf <- poly_sf %>%
-          as.data.frame() %>%                # Convert to data frame, drops `agr`
-          dplyr::rename(area_km2 = Area_KBA) %>% # Rename column
-          dplyr::rename(AWI = AWI_PB)%>%  
-          st_as_sf()
-        
-        # UPSTREAM AREA (up_km2) AND UPSTREAM INTACTNESS (up_AWI) can be found in the Builder output - see file "*_HYDROLOGY_METRICS.csv"
-        # Identify the Hydro metrics file and read it
-        hydrofile <- list.files(file.path(rv$outdir(), "Builder_output"), pattern = "HYDROLOGY_METRICS")
-        hydroStats <- read.csv(file.path(rv$outdir(), "Builder_output", hydrofile))
-        
-        # Fix PB to KBA
-        hydroStats <- hydroStats %>%
-          mutate(PBx = stringr::str_replace(PBx, "PB", "KBA"))
-        
-        # Rename column in hydroStats in order to join it with poly_sf
-        hydroStats <- hydroStats %>%
-          dplyr::rename(network = PBx)
-        
-        # Join metrics
-        poly_sf <- poly_sf %>%
-          left_join(hydroStats %>%
-                      dplyr::select(network , UpstreamArea, UpstreamAWI)) %>%
-          mutate(UpstreamArea = as.integer(UpstreamArea/1000000))
-        
-        # Rename attributes in poly_sf  
-        poly_sf <- poly_sf %>%
-          dplyr::rename(up_km2 = UpstreamArea)
-        poly_sf <- poly_sf %>% 
-          dplyr::rename(up_AWI = UpstreamAWI) 
-        
-        #Generate upstream area polygons
-        upfile <- list.files(file.path(rv$outdir(), "Builder_output"), pattern = "UPSTREAM_CATCHMENTS_COLUMN")
-        upstream <- read.csv(file.path(rv$outdir(), "Builder_output", upfile))
-        upstream_list <-as_tibble(upstream[,-1])
-        
-        #Fix PB to KBA and generate upstream area
-        upstream_list <- upstream_list %>%
-          rename_with(~ str_replace(.x, "PB", "KBA"))
-        upstream_area <- dissolve_catchments_from_table(rv$layers_rv$catchments, upstream_list, "network")  
-        
-        upstream_area <- upstream_area %>%
-          st_buffer(dist = 20) %>% 
-          st_buffer(dist = -20)
-        
-        #Update reactiveVal
-        rv$upstream_reactive(upstream_area)
-        
-        # Export. Append the first layer to the GeoPackage
-        st_write(upstream_area, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "upstream_KBAs", driver = "GPKG", append = FALSE)
-        
-        # DENDRITIC CONNECTIVITY (DCI) - CALCULATE AND ADD TO TABLE
-        # A measure of longitudinal hydrological connectivity within each conservation area with values ranging from 
-        # 0 (low connectivity) to 1 (fully connected).
-        
-        # Calculate DCI and add the values as a new column (attribute = dci).
-        if(attr(poly_sf, "sf_column") != "geometry"){
-          poly_sf$geometry <- poly_sf$geom
-        }
-        
-        poly_sf$dci <- calc_dci(conservation_area_sf = poly_sf, 
-                                stream_sf = rv$layers_rv$streams)
-        
-        #Update reactiveVal
-        rv$kba_sf_reactive(poly_sf)
-        
-        # Export. Append the first layer to the GeoPackage
-        st_write(poly_sf, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE", driver = "GPKG", append = FALSE)
-        
-        # Close the modal once processing is done
-        removeModal()
-      }
-    } else{
-      upstream_area <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "upstream_KBAs")
-      rv$upstream_reactive(upstream_area)
-      poly_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE")
-      rv$kba_sf_reactive(poly_sf)
-    } 
-    showModal(modalDialog(
-      title = "Hydrology metrics added",
-      easyClose = FALSE,
-      footer = modalButton("OK"))
-    )  
-    
-    # Initialize KBA/PAs freq table
-    x <- rv$outfreqhydro()
-    x <- x %>% 
-      mutate(Count = case_when(Variables == "KBAs" ~  nrow(poly_sf),
-                               TRUE ~ Count))
-    
-    # Generate Stat Tables    
-    rv$outfreqhydro(x) 
-    
-    output$outkbahydro <- renderTable({
-      rv$outfreqhydro()
-    })
-    
-    updateActionButton(session, "calc_dci", label = "Done!", icon = icon("check", lib = "font-awesome"))
-  })  
   
   ####################################################################################################
   # REDUCE KBAs

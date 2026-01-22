@@ -171,7 +171,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
       manifest_file <- file.path(rv$outdir(), "data/layer_paths.rds")
       rv$layer_paths(readRDS(manifest_file))
       paths <- rv$layer_paths()
-      
       rv$layers_rv$catchments <- st_read(paths[["catchments"]])
       rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
       
@@ -286,7 +285,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
       div(style = "margin-top: -20px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_stream", label = "Streams dataset", multiple = TRUE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_planreg", label = "Planning region", multiple = TRUE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_pas", label = "Protected areas", multiple = TRUE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_lcc", label = "LCC", multiple = FALSE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_led", label = "LED", multiple = FALSE)),
       div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
@@ -332,7 +330,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     csv_data <- read.csv(input$csv_file$datapath)
     layer_paths <- setNames(csv_data$Path, csv_data$Layer)
     
-    rv$layer_paths <- layer_paths
+    rv$layer_paths(layer_paths)
     saveRDS(layer_paths, file.path(rv$outdir(), "data/layer_paths.rds"))
     
     rv$layers_rv$catchments  <- read_shp_from_csv(input$csv_file, "catchments")
@@ -386,29 +384,34 @@ setParamsServer <- function(input, output, session, project, map, rv){
     rv$layers_rv$catchments <- read_shp_from_upload(input$upload_catch)
     rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
     paths <- rv$layer_paths()
-    paths[["catchments"]] <- input$upload_catch$datapath
+    shp_path <- input$upload_catch$datapath[grepl("\\.shp$", input$upload_catch$name, ignore.case = TRUE)]
+    paths[["catchments"]] <- shp_path
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_stream, {
     rv$layers_rv$streams <- read_shp_from_upload(input$upload_stream)
     rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
     paths <- rv$layer_paths()
-    paths[["stream"]] <- input$upload_stream$datapath
+    shp_path <- input$upload_stream$datapath[grepl("\\.shp$", input$upload_stream$name, ignore.case = TRUE)]
+    paths[["stream"]] <- shp_path
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_planreg, {
     rv$layers_rv$planreg <- read_shp_from_upload(input$upload_planreg)
     rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
     paths <- rv$layer_paths()
-    paths[["planning region"]] <- input$upload_planreg$datapath
+    shp_path <- input$upload_planreg$datapath[grepl("\\.shp$", input$upload_planreg$name, ignore.case = TRUE)]
+    paths[["planning region"]] <- shp_path
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_pas, {
     pas_sf <- read_shp_from_upload(input$upload_pas)
-
     n <- nrow(pas_sf)
     if (!"PA_ID" %in% colnames(pas_sf)) {
       pas_sf$PA_ID <- seq_len(n)
@@ -418,10 +421,12 @@ setParamsServer <- function(input, output, session, project, map, rv){
     }
     
     rv$layers_rv$pas_sf <- pas_sf
-    rv$layers_rv_4326$pas_sf <- pas_sf |> sf::st_transform(4326)
+    rv$layers_rv_4326$pas_sf <- sf::st_transform(pas_sf, 4326)
     paths <- rv$layer_paths()
-    paths[["protected areas"]] <- input$upload_pas$datapath
+    shp_path <- input$upload_pas$datapath[grepl("\\.shp$", input$upload_pas$name, ignore.case = TRUE)]
+    paths[["protected areas"]] <- shp_path
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   # --- Individual raster uploads
@@ -437,6 +442,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     paths <- rv$layer_paths()
     paths[["LED"]] <- input$upload_led$datapath
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_cmi, {
@@ -444,6 +450,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     paths <- rv$layer_paths()
     paths[["CMI"]] <- input$upload_cmi$datapath
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_gpp, {
@@ -451,6 +458,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     paths <- rv$layer_paths()
     paths[["GPP"]] <- input$upload_gpp$datapath
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_custom, {
@@ -458,6 +466,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     paths <- rv$layer_paths()
     paths[[rv$criteria5name()]] <- input$upload_custom$datapath
     rv$layer_paths(paths)
+    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
 
@@ -505,6 +514,40 @@ setParamsServer <- function(input, output, session, project, map, rv){
 
 
   ####################################################################################################
+  #  Test on required attributes
+  ####################################################################################################
+  observeEvent(rv$layers_rv$catchments, {
+    req(rv$layers_rv$catchments)
+    missing_cols <- check_colnames(rv$layers_rv$catchments, c("Isolated", "length_m", "FDA_M", "Area_land", "Area_water", "Area_total", "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "SKELUID"))
+
+    if (length(missing_cols) > 0) {
+      showModal(modalDialog(
+          title = "Missing required column",
+          paste0("In the catchments layer, the following column(s) are missing: ",  paste(missing_cols, collapse = ", ")),
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        )
+      )
+      rv$layers_rv$catchment <- NULL
+    }
+    
+  }, ignoreNULL = TRUE)
+  
+  observeEvent(rv$layers_rv$streams, {
+    req(rv$layers_rv$streams)
+    missing_cols <- check_colnames(rv$layers_rv$streams, c("SKELUID"))
+    if(length(missing_cols) > 0){
+      showModal(modalDialog(
+        title = "Missing required column",
+        paste0("In the stream layers, column ", missing_cols, " is missing."),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      rv$layers_rv$streams <- NULL
+      return(FALSE)
+    }
+  }, ignoreNULL = TRUE)
+  ####################################################################################################
   # Map viewer
   ####################################################################################################
   #Control legend
@@ -550,7 +593,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     showModal(modalDialog(
       title = "Uploading layers. Please wait...",
       easyClose = TRUE,
-      footer = modalButton("OK"))
+      footer = NULL)
     )
     
     stream_4326 <- rv$layers_rv_4326$streams
