@@ -23,9 +23,9 @@ KBA Explorer uses the following functions in `beaconstools` that rely on a catch
 
 All other functions operate on polygons and do not require a catchments dataset.
 
-The catchment dataset must have the following hardcoded attribute names: "FDA_M", "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "SKELUID", "length_m", "Area_land", "Area_water", "Area_total", and "Isolated".
+The catchment dataset must have the following hardcoded attribute names: "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "Area_land", "Area_water", "Area_total", "SKELUID", "length_m", "FDA_M", and "Isolated".
 
-The catchment dataset much also have a "Zone" attribute that the user will be asked to point to. There are no restrictions on the name of this attribute. Zones specifies subregions within the planning region that KBAs must stay with. In other workds, the App will not build KBAs that cross zones.  A zone may be a watershed such as an Ocean Drainage Area, for example. 
+The catchment dataset much also have a "Zone" attribute that the user will be asked to point to. There are no restrictions on the name of this attribute. Zones specifies subregions within the planning region that a KBA must sit fully within. In other workds, the App will not build KBAs that cross zones. A zone may be a watershed such as an Ocean Drainage Area, for example. 
 
 ### Stream Network
 
