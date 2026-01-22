@@ -104,7 +104,10 @@ catchnums_in_polygon <- function(CAs_sf, CAs_id, catchments_sf){
 #'   TRUE)
 #'   
 dissolve_catchments_from_table <- function(catchments_sf, input_table, out_feature_id=NULL, calc_area = FALSE, intactness_id = NULL, dissolve_list = c(), drop_table = NULL){
-  check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  missing_cols <-  check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'catchments'"))
+  }
   check_for_geometry(catchments_sf)
   #check_catchnum_class(catchments_sf, input_table) # Check catchments match, warning if not
   input_table <- remove_oid(input_table) #drop oid column is it exists
@@ -218,7 +221,10 @@ dissolve_catchments_from_table <- function(catchments_sf, input_table, out_featu
 #'   catchments_sample, builder_table_sample, c("PB_0001", "PB_0002"), "network")
 extract_catchments_from_table <- function(catchments_sf, input_table, extract_feature_id, out_feature_id){
   
-  check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  missing_cols <- check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'catchments'"))
+  }
   check_catchnum_class(catchments_sf, input_table) # Check catchments match, warning if not
   check_for_geometry(catchments_sf)
   
@@ -276,7 +282,10 @@ extract_catchments_from_table <- function(catchments_sf, input_table, extract_fe
 #' append_reserve(conservation_areas, pa_1, "PA_1")
 append_reserve <- function(conservation_areas_sf, conservation_areas_id, add_reserve, reserve_name){
   
-  conservation_areas_sf <- check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  missing_cols <- check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column ", paste(missing_cols, collapse = ", "), " is missing in the table being evaluated"))
+  }
   check_for_geometry(conservation_areas_sf)
   stopifnot(sf::st_crs(conservation_areas_sf) == sf::st_crs(add_reserve))
   
@@ -327,7 +336,10 @@ append_reserve <- function(conservation_areas_sf, conservation_areas_id, add_res
 
 build_network_polygons <- function(conservation_areas_sf, conservation_areas_id, network_list){
   
-  check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  missing_cols <- check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing."))
+  }
   check_for_geometry(conservation_areas_sf)
   
   my_list <- list()
@@ -383,7 +395,10 @@ build_network_polygons <- function(conservation_areas_sf, conservation_areas_id,
 
 list_overlapping_polygons <- function(conservation_areas_sf, conservation_areas_id){
   
-  check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  missing_cols <- check_colnames(conservation_areas_sf, cols = conservation_areas_id)
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing."))
+  }
   
   df <- as.data.frame(sf::st_intersects(conservation_areas_sf, conservation_areas_sf)) # get pairwise intersects
   

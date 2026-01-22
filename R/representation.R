@@ -128,7 +128,10 @@ gen_targets <- function(reference_sf, representation_raster, reserve_size, class
 #'   c("PB_0002__PB_0001"))
 evaluate_targets_using_catchments <- function(catchments_sf, criteria_name, builder_table, target_table, network_list=c()){
   
-  check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  missing_cols <- check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'catchments'"))
+  }
   check_catchnum_class(catchments_sf, builder_table) # Check catchments match, warning if not
   builder_table <- remove_oid(builder_table) # drop OID column if it exists
   
@@ -620,7 +623,6 @@ calc_dissimilarity <- function(
     plot_out_dir=NULL,
     categorical_class_labels=data.frame()
 ){
-  
   stopifnot(st_crs(reserves_sf) == st_crs(reference_sf))
   stopifnot(st_crs(reserves_sf) == st_crs(raster_layer))
   
@@ -1027,7 +1029,10 @@ bc_plot <- function(refVal, netVal, plotTitle="", labels=data.frame()) {
 
 criteria_to_catchments <- function(catchments_sf, criteria_raster, criteria_name, class_vals = c()){
   
-  check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  missing_cols <- check_colnames(catchments_sf, cols = "CATCHNUM") # check for CATCHNUM
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'catchments'"))
+  }
   stopifnot(sf::st_crs(catchments_sf) == sf::st_crs(criteria_raster))
   
   cell_area <- prod(raster::res(criteria_raster)) / 1000000 # convert to area in km2, assumes raster res is in metres
@@ -1160,7 +1165,10 @@ criteria_to_catchments <- function(catchments_sf, criteria_raster, criteria_name
 summarize_representation_results <- function(network_evaluation_table, criteria_name, target_pass_proportion = 1, target_inclusion_proportion = 0, suffix = "", gaps = TRUE){
   
   # run columns checks
-  check_colnames(network_evaluation_table, "evaluation_table", cols = "network")
+  missing_cols <- check_colnames(network_evaluation_table, cols = "network")
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column ", paste(missing_cols, collapse = ", "), " is missing in the table being evaluated"))
+  }
   check_evaluation_table(network_evaluation_table)
   
   # make output table template

@@ -393,7 +393,6 @@ builder <- function(catchments_sf, data_source = "catchment", seeds, reserve_nam
   
   # builder path
   #if(exists("builder_local_path")){
-  
   builder_cmd <- file.path(builder_local_path, "BenchmarkBuilder_cmd.exe") # This is a temporary solution to avoid publishing builder.exe on github during the review process.
   #} else{
   #  builder_cmd <- system.file("exec", "BenchmarkBuilder_cmd.exe", package = "beaconsbuilder")
@@ -424,10 +423,16 @@ builder <- function(catchments_sf, data_source = "catchment", seeds, reserve_nam
   message("checking seeds table")
   
   if(data_source == "catchment"){
-    check_colnames(seeds, "seeds", c("CATCHNUM", "Areatarget"))
+    missing_cols <- check_colnames(seeds, c("CATCHNUM", "Areatarget"))
+    if (length(missing_cols) > 0) {
+      stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'catchment'"))
+    }
     seeds$Areatarget <- as.numeric(seeds$Areatarget)
   }else if(data_source == "Reserve"){
-    check_colnames(seeds, "seeds", c(reserve_name, "Areatarget", "CATCHNUM"))
+    missing_cols <- check_colnames(seeds, c(reserve_name, "Areatarget", "CATCHNUM"))
+    if (length(missing_cols) > 0) {
+      stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'seeds'"))
+    }
   }else{
     stop("data_source must be either catchment or Reserve")
   }
@@ -438,13 +443,20 @@ builder <- function(catchments_sf, data_source = "catchment", seeds, reserve_nam
   
   # save neighbours table to outdir
   message("checking neighbours table")
-  check_colnames(neighbours, "neighbours", c("CATCHNUM", "neighbours", "key"))
+  missing_cols <- check_colnames(neighbours, c("CATCHNUM", "neighbours", "key"))
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'neighbours'"))
+  }
   neighbours <- make_all_integer(neighbours)
   utils::write.csv(neighbours, file.path(outdir, "neighbours.csv"), row.names = FALSE)
   
   # save catchment attributes
   catchments_csv <- sf::st_drop_geometry(catchments_sf)
-  check_colnames(catchments_csv, "catchments_sf", c(area_land, area_water, skeluid, catchnum, subzone, zone, basin, order1, order2, order3, stream_length, intactness, isolated)) # check all provided columns are present
+  missing_cols <- check_colnames(catchments_csv, c(area_land, area_water, skeluid, catchnum, subzone, zone, basin, order1, order2, order3, stream_length, intactness, isolated)) 
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste(missing_cols, collapse = ", "), " are missing in table 'catchments'"))
+  }
+  # check all provided columns are present
   catchments_csv <- make_all_character(catchments_csv, c(order1, order3, zone, subzone, basin)) # check type
   catchments_csv <- make_all_integer(catchments_csv, c(catchnum, skeluid, isolated))
   catchments_csv <- make_all_numeric(catchments_csv, c(order2, area_land, area_water, intactness))
