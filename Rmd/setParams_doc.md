@@ -1,36 +1,37 @@
-## Set input parameters
+# Set input parameters
 
-Two actions are completed here: (1) select an output directory and (2) upload spatial datasets.
+There actions are completed here: 
+(1) select an output directory and identify project subfolder, 
+(2) upload spatial datasets in the App, and 
+(3) specify catchment attribute that describes the propotion of area intact or undisturbed within the catchment.
 
-### Using the app: Scenario 1 - New Analysis
+### Select output Directory
 
-**Select output Directory**
-
-Navigate to and/or create the directory where outputs produced by the App will be written, highlight the directory, and click Select (bottom right). 
+Navigate to the directory where outputs produced by the App will be written, highlight the directory, and click Select (bottom right). 
 
 Next, click the orange "Confirm" button.
 
-Three subfolders will be created in the output Directory: Builder_input, Builder_output, and output. 
+### Identify Project
 
-If the selected directory contains output from a prior analysis, a message will display.
+The user has two options: 
 
-**Upload spatial datasets**
+Option 1 - Select **Use an existing project** to revisit an existing project. The project is a subfolder within the Output directory. Use the dropdown menu to select the project and click the orange "Confirm" button. 
 
-All spatial datasets for building KBAs are uploaded here, as well as the planning region boundary, and environmental criteria for assessing representation (CMI, LCC, LED, and GPP). This includes shapefiles and TIF files. 
+**If this option is selected, the App will automatically recognized data previously uploaded into the App, and the steps below are not required.**
 
-Shapefiles for protected areas and the reference area for the representation analysis can also be uploaded here via a csv file (see OPTION 1 below) or later in the App.
+Option 2 - Select **Create a new project** to create a new project. Enter the name for the project, and click the orange "Confirm" button. A subfolder with this name will be created in the Output directory as well as three project subfolders: Builder_input, Builder_output, and output. 
+
+### Source spatial datasets
+
+All spatial datasets for building KBAs are uploaded here, as well as the planning region boundary, protected areas, reference area for representation analyisis, and environmental criteria for assessing representation (CMI, LCC, LED, and GPP). This includes shapefiles and TIF files. 
 
 A shapefile consists of multiple files with the same name but different extensions. All files associated with the shapefile must be uploaded and must include .shp, .shx, .dbf, .prj. 
 
 A tif is a single file. 
 
-All spatial datasets must be projected to `NAD 1983 Albers` to match the catchment shapefile projection.
+All spatial datasets must have the same projectiong e.g., `NAD 1983 Albers`.
 
-There are two options for uploading the spatial datasets: (1) upload csv file with pathways to the datasets and (2) upload each spatial dataset individually. 
-
-For both upload options, the following spatial datasets are required:   
-NOTE: See Overview-Dataset tab for dataset details, including required attributes for catchments and streams.
-
+The following spatial datasets are required:   
 - **Catchments**: A shapefile representing a set of watershed catchments created by BEACONs Project. 
 - **Streams**: A shapefile of linear features representing the stream network. 
 - **Planning region**: A single polygon outlining the boundary of the planning area where KBAs will be generated
@@ -40,10 +41,11 @@ NOTE: See Overview-Dataset tab for dataset details, including required attribute
 - **GPP**: A TIF representing Gross Primary Productivity (continuous)
 
 Optional spatial dataset: 
-
 - **Custom criteria**: One additional spatial dataset for the representation analysis can be uploaded e.g., climate-projected CMI. The name of file will appear in the map legend, naming of output files, and as an attribute name in shapefile tables. As such, a short name is recommended e.g., projcmi. 
 
-**OPTION 1: Upload spatial datasets using a CSV with file pathways**
+There are two options for uploading the spatial datasets: (1) use csv file with pathways and (2) upload individual layers. 
+
+**OPTION 1: Use CSV with file pathways**
 
 The spatial datasets can be uploaded using a csv file created in a text editor (e.g., Notepad). The csv file must have the following structure:
 
@@ -63,15 +65,13 @@ The column headings (Layer,Path) must not change. Layer names under the "Layer" 
 
 Template can be downloaded [here](./accessPath.csv)
 
-**OPTION 2: Upload each spatial dataset individually.**
+**OPTION 2: Upload individual layers.**
 
-Datasets are uploaded by navigating to the shapefile or tif, select the dataset, and click open. For shapefiles, select all files associated with the shapefile before clicking open.
-
-Once the datasets are uploaded, no further action is required in this step. 
+Datasets are uploaded by navigating to the shapefile or tif, select the dataset, and click open. A shapefile consists of multiple files with the same name but different extensions. All files associated with the shapefile must be selected before clicking "Open".  
 
 ### Using the app: Scenario 2 - Add to Previous Analysis
 
-A previous analysis can be added to by pointing to the Output directory that contains the analysis. The App will recognize the presence of the output files. 
+
 
 Spatial datasets will still need to be uploaded. See **Upload spatial datasets** above. If tif files of spatial datasets for the representation analysis (e.g., kba_cmi.tif) exist in the "output" subfolder, these datasets do not need to be uploaded again.
 
