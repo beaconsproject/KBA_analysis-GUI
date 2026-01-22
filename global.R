@@ -157,7 +157,8 @@ read_shp_from_upload <- function(upload_input) {
       shp_path <- file.path(dir, paste0(name, ".shp"))
       if (file.exists(shp_path)) {
         shp <- sf::st_read(shp_path) %>%
-          dplyr::select(-any_of(c("fid", "FID")))
+          dplyr::select(-any_of(c("fid", "FID"))) %>%
+          sf::st_zm(drop = TRUE, what = "ZM")
         attr(shp, "name") <- name
         return(shp)
       } else {
