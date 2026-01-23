@@ -2,6 +2,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
 
   # RENDER ASSESS REPRESENTATION UI
   output$assessRep <- renderUI({
+    req(input$tabs == "tabKBA")
     tagList(
       div("Select reference area.", style = "font-size: 15px; font-weight: bold; margin-left: 15px; margin-top: 20px;"),
       if (is.null(rv$refarea_reactive())) {
@@ -16,6 +17,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   
   observeEvent(input$upload_refarea, {
     rv$refarea_reactive(read_shp_from_upload(input$upload_refarea))
+    st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = TRUE)
   })
   
   # RENDER KBA FILTERING UI
@@ -69,6 +71,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   observeEvent(input$tabs, {
     req(input$tabs == "tabKBA")
     req(rv$layers_rv$catchments)
+  
     # Initialize KBA/PAs freq table
     x <- tibble(
       Variables = c("KBAs", "PAs", "Filtered KBAs", "Filtered PAs"),
@@ -115,7 +118,6 @@ assessRepServer <- function(input, output, session, project, map, rv){
   # Update LEAFLET
   observeEvent(input$KBAlayer, {
     if (input$tabs == "tabKBA") {
-      
       layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
       layers <- layers_info$name
       # Initialize kba_sf and pas_sf as NULL

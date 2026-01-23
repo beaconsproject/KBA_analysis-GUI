@@ -239,7 +239,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     } 
     
     # Access legend elements
-    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, lcc_4326, kba_criteria5)
+    legend_data <- prep_legend(kba_cmi, kba_led, kba_gpp, kba_lcc, kba_criteria5)
     cmi_xpal <- legend_data$cmi_xpal
     led_xpal <- legend_data$led_xpal
     gpp_xpal <- legend_data$gpp_xpal

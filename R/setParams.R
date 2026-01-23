@@ -152,6 +152,9 @@ setParamsServer <- function(input, output, session, project, map, rv){
       rv$outdir(file.path(rv$dirpath(), rv$project_name()))
       project_is_new(FALSE)
       
+      layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
+      layers <- layers_info$name
+      
       # Load builder input
       if(file.exists(file.path(rv$outdir(), "Builder_input/seeds.csv"))){
         rv$seed_reactive(read.csv(file.path(rv$outdir(), "Builder_input/seeds.csv")))
@@ -186,9 +189,10 @@ setParamsServer <- function(input, output, session, project, map, rv){
         rv$layers_rv$pas_sf <- sf::st_read(paths[["protected areas"]])
         rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
       }
-
-      if ("reference area" %in% names(paths) && !is.null(paths[["reference area"]]) && file.exists(paths[["reference area"]])) {
-        rv$refarea_reactive(st_read(paths[["reference area"]]))
+      
+      #if ("reference area" %in% names(paths) && !is.null(paths[["reference area"]]) && file.exists(paths[["reference area"]])) {
+      if ("reference area" %in% layers){
+        rv$refarea_reactive(st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area"))
       } 
       
       # Load raster
@@ -366,6 +370,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       rv$refarea_reactive(
         read_shp_from_csv(input$csv_file, "reference area")
       )
+      st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = TRUE)
     } else {
       rv$refarea_reactive(NULL)
     }
