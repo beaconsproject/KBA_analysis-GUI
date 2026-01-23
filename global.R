@@ -36,6 +36,22 @@ MB <- 1024^2
 UPLOAD_SIZE_MB <- 5000
 options(shiny.maxRequestSize = UPLOAD_SIZE_MB*MB)
 
+# Define the last update date (deployment date)
+#last_update <- Sys.Date()  # or use Sys.time() for full timestamp
+last_update <- "2026-01-23"  # or use Sys.time() for full timestamp
+
+# Read the Markdown file
+overview_md <- readLines("docs/overview.md")
+
+# Replace placeholder in the Markdown
+overview_md <- c(
+  paste0('<div style="text-align: right; font-size:0.9em; color: gray;">Last update: ', last_update, '</div>'),
+  overview_md
+)
+
+# Convert to a single string for rendering
+overview_md_text <- paste(overview_md, collapse = "\n")
+
 # turn off scientifc notation to avoid 1e10
 options(scipen = 999)
 #########################################################

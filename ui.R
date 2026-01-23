@@ -173,7 +173,8 @@ ui = dashboardPage(skin="black",
                        tabItem(tabName = "overview",
                                fluidRow(
                                  tabBox(id = "one", width = 8,
-                                        tabPanel(HTML("Overview"), includeMarkdown("docs/overview.md")),
+                                        tabPanel(HTML("Overview"), htmlOutput("overviewMD")),
+                                        #tabPanel(HTML("Overview"), includeMarkdown("docs/overview.md")),
                                         tabPanel(HTML("User guide"), includeMarkdown("docs/user_guide.md")),
                                         tabPanel(HTML("Dataset"), includeMarkdown("docs/datasets.md"))
                                  )

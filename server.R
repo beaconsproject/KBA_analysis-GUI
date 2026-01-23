@@ -62,6 +62,10 @@ server = function(input, output, session) {
                             )
   )
   
+  output$overviewMD <- renderUI({
+    HTML(markdown::markdownToHTML(text = overview_md_text, fragment.only = TRUE))
+  })
+  
   ################################################################################################
   # RELOAD
   observeEvent(input$reload_btn, {
