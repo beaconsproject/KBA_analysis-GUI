@@ -17,10 +17,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    #rep_kba <- layers[grepl("^rep", layers)]
     rep_kba <- layers[grepl("^KBAs_reduced", layers)]
     pas_ls <- layers[grepl("^protected_areas", layers) & !grepl("protected_areas_upstream", layers)]
-    #net_list <- c(rep_kba, reduced_kba, pas_ls)
     net_list <- c(rep_kba, pas_ls)
     if (length(rep_kba) > 0) { 
       updatePickerInput(session = getDefaultReactiveDomain(), "KBArep", choices = net_list, selected = net_list[1])
@@ -38,7 +36,6 @@ buildNetServer <- function(input, output, session, project, map, rv){
       x <- rv$outfreqnet()
       x <- x %>% 
         mutate(Count = case_when(Variables == "PAs" ~  nrow(pas_sf),
-                                 Variables == "Filtered PAs" ~ ifelse(!is.null(rv$filtered_pas()), nrow(rv$filtered_pas()), NA_integer_),
                                  TRUE ~ Count))
       rv$outfreqnet(x)
       
@@ -50,7 +47,6 @@ buildNetServer <- function(input, output, session, project, map, rv){
   
   observeEvent(input$KBArep, {
     if (input$tabs == "tabNET") {
-      #req(!(is.null(input$KBArep)))
       layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
       layers <- layers_info$name
       # Initialize kba_sf and pas_sf as NULL
@@ -62,7 +58,6 @@ buildNetServer <- function(input, output, session, project, map, rv){
       x <- rv$outfreqnet()
       x <- x %>% 
         mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
-                                 Variables == "Filtered KBAs" ~ ifelse(!is.null(rv$filtered_kba()), nrow(rv$filtered_kba()), NA_integer_),
                                  TRUE ~ Count))
       rv$outfreqnet(x)
       
@@ -74,7 +69,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
         # Check if criteria5() is NULL
         if (!is.null(rv$layers_rv$criteria5)) {
           # If criteria5 is NULL, render the sliderInput with disabled = TRUE
-          div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = rv$criteria5name(), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
+          div(style = "margin-top: -30px;", sliderInput("slideNETcrit5", label = paste0(rv$criteria5name(), ":"), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
         }
       })
     }
@@ -175,21 +170,21 @@ buildNetServer <- function(input, output, session, project, map, rv){
       return()
     }
     
-    # Check if there is a 5 criteria and store the name
-    if (!is.null(input$upload_custom)) {
-      rastName <- sub("\\..*$", "", input$upload_custom$name)
-      rv$criteria5name(rastName)
-      updated_grp <- c(rv$legendcrit(), rastName)
-      rv$legendcrit(updated_grp) # Update the reactive value
-    }
-    if (!is.null(input$csv_file)) {
-      csv_data <- read.csv(input$csv_file$datapath)
-      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
-      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
-      rv$criteria5name(unexpected_layers)
-      updated_grp <- c(rv$legendcrit(), unexpected_layers)
-      rv$legendcrit(updated_grp) # Update the reactive value
-    }
+#    # Check if there is a 5 criteria and store the name
+#    if (!is.null(input$upload_custom)) {
+#      rastName <- sub("\\..*$", "", input$upload_custom$name)
+#      rv$criteria5name(rastName)
+#      updated_grp <- c(rv$legendcrit(), rastName)
+#      rv$legendcrit(updated_grp) # Update the reactive value
+#    }
+#    if (!is.null(input$csv_file)) {
+#      csv_data <- read.csv(input$csv_file$datapath)
+#      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+#      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
+#      rv$criteria5name(unexpected_layers)
+#      updated_grp <- c(rv$legendcrit(), unexpected_layers)
+#      rv$legendcrit(updated_grp) # Update the reactive value
+#    }
     
     #Prep criteria
     if (!file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))) {
@@ -227,7 +222,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     if(!is.null(rv$layers_rv$criteria5)){
       if (!file.exists(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))) {
-        crit5 <- process_raster(rv$layers_rv$criteria5, rv$refarea_reactive(), rv$outdir(), rv$criteria5name(), fact = 4)
+        crit5 <- process_raster(rv$layers_rv$criteria5, rv$refarea_reactive(), rv$outdir(), rv$criteria5name(), fact = 4, aggregation_fun = "mean")
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
@@ -402,7 +397,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
           networks_sf$cmi <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"cmi")),3)
           networks_sf$gpp <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"gpp")),3)
           if(!is.null(rv$criteria5name())){
-            networks_sf[[rv$criteria5name()]] <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir, criteria5name())),3) 
+            networks_sf[[rv$criteria5name()]] <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir, rv$criteria5name())),3) 
           }
         }, error = function(err) {
           error_occurred <- TRUE
@@ -478,15 +473,16 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     if(!is.null(rv$layers_rv$criteria5)){
       crit5_4326 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
+      
       leafletProxy("map") %>%
         clearGroup(rv$criteria5name()) %>%
         removeControl("legend_custom") %>%
         addRasterImage(crit5_4326, colors=val.color, opacity = 1, group=rv$criteria5name()) %>%
         addLegend(pal = crit_xpal, values = values(crit5_4326), opacity = 1, title = rv$criteria5name(),
-                  position = "bottomright", group=criteria5name(), layerId = "legend_custom", labFormat = labeller_function)  %>%
+                  position = "bottomright", group=rv$criteria5name(), layerId = "legend_custom", labFormat = labeller_function)  %>%
         addLayersControl(position = "topright",
                          baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
-                         overlayGroups = c(rv$overlatGroups(), rv$legendcrit()),
+                         overlayGroups = c(rv$overlayGroups(), rv$legendcrit()),
                          options = layersControlOptions(collapsed = TRUE)) %>%
         hideGroup(c("Streams"))
     }
@@ -507,7 +503,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     })
     
     # Update max upstream slider
-    max_value <- as.integer(max(networks_sf$up_km2, na.rm = TRUE))
+    max_value <- as.integer(max(networks_sf$up_km2, na.rm = TRUE)) + 1
     updateSliderInput(
       session = getDefaultReactiveDomain(), 
       inputId = "slideNETUP", 
@@ -530,9 +526,9 @@ buildNetServer <- function(input, output, session, project, map, rv){
       network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED &  up_km2 <= input$slideNETUP)
     }
     
-    x <- outfreqnet()
+    x <- rv$outfreqnet()
     x$Count[x$Variables=="Filtered networks"] <- nrow(network_sf_rep)
-    outfreqnet(x) 
+    rv$outfreqnet(x) 
     
     if(nrow(network_sf_rep)>0){
       showModal(modalDialog(
@@ -610,7 +606,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       # Prepare the table for display
       x <- tibble(
         Variables = c("Area km2", "AWI (%)", "Upstream area km2", "Upstream AWI (%)", 
-                      "DCI", "CMI", "GPP", "LED", "LCC", criteria5name()),
+                      "DCI", "CMI", "GPP", "LED", "LCC", rv$criteria5name()),
         Values = NA
       )
     }
@@ -673,8 +669,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
                  ),
                  if(!is.null(rv$layers_rv$criteria5)){
                    tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                            tags$h3(criteria5name()),  # Title 
-                            tags$img(src = paste0("imageNET/", criteria5name(), "/", input$network, ".png"), height = "400px", width = "300px")
+                            tags$h3(rv$criteria5name()),  # Title 
+                            tags$img(src = paste0("imageNET/", rv$criteria5name(), "/", input$network, ".png"), height = "400px", width = "300px")
                    )
                  }
         )

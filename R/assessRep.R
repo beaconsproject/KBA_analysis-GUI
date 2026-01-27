@@ -143,7 +143,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
         # Check if criteria5() is NULL
         if (!is.null(rv$layers_rv$criteria5)) {
           # If criteria5 is NULL, render the sliderInput with disabled = TRUE
-          div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = rv$criteria5name(), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
+          div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = paste0(rv$criteria5name(), ":"), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
         }
       })
     
@@ -244,7 +244,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
     ))
     
     if (!is.null(rv$layers_rv$criteria5)) {
-      updated_grp <- c(legendcrit(), rv$criteria5name())
+      updated_grp <- c(rv$legendcrit(), rv$criteria5name())
       rv$legendcrit(updated_grp)
     }
     
@@ -284,7 +284,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
     
     if(!is.null(rv$layers_rv$criteria5)){
       if (!file.exists(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))) {
-        crit5 <- process_raster(rv$layers_rv$criteria5, rv$refarea_reactive(), rv$outdir(), rv$criteria5name(), fact = 4)
+        crit5 <- process_raster(rv$layers_rv$criteria5, rv$refarea_reactive(), rv$outdir(), rv$criteria5name(), fact = 4, aggregation_fun = "mean")
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{

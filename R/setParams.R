@@ -169,7 +169,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       if(file.exists(file.path(rv$outdir(), "Builder_input/nghbrs.csv"))){
         rv$seed_reactive(read.csv(file.path(rv$outdir(), "Builder_input/nghbrs.csv")))
       }
-
+      
       # Load spatial object
       manifest_file <- file.path(rv$outdir(), "data/layer_paths.rds")
       rv$layer_paths(readRDS(manifest_file))
@@ -221,16 +221,20 @@ setParamsServer <- function(input, output, session, project, map, rv){
         rv$layers_rv$cmi <- terra::rast(paths[["CMI"]])
       }
       
-      #if(!is.null(rv$criteria5name())){
-       # if(file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))){
-      #    rv$layers_rv$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi.tif"))
-      #    rv$layers_rv_4326$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
-      #  } else{
-      #    rv$layers_rv$cmi <- terra::rast(paths[["CMI"]])
-       # }
-      #} rv$layers_rv$criteria5 <- terra::rast(paths[[paste0(rv$criteria5name(), ".tif")]])
-      
-      
+      #criteria 5
+      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+      unexpected_layers <- names(paths)[!names(paths) %in% req_layers]
+      if (length(unexpected_layers)>0) {
+        if(length(unexpected_layers)==1){
+          rv$criteria5name(unexpected_layers)
+          if (file.exists(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))) {
+            rv$layers_rv$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))
+            rv$layers_rv_4326$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, "_4326.tif")))
+          } else{
+            rv$layers_rv$criteria5 <- terra::rast(paths[[unexpected_layers]])
+          }
+        }
+      }
     }
     
     # Case 3: existing subfolders: user chooses new
@@ -325,7 +329,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       return(TRUE)
     }
   })
-  
+
   ################################################################################################
   # Read CSV
   observeEvent(input$csv_file, {
@@ -380,6 +384,18 @@ setParamsServer <- function(input, output, session, project, map, rv){
     rv$layers_rv$gpp         <- read_tif_from_csv(input$csv_file, "GPP")
     rv$layers_rv$cmi         <- read_tif_from_csv(input$csv_file, "CMI")
 
+    #criteria 5
+    req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+    unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
+    if (length(unexpected_layers)>0) {
+      if(length(unexpected_layers)==1){
+        path <- csv_data$Path[csv_data$Layer == unexpected_layers]
+        if (file.exists(path)) {
+          rv$criteria5name(unexpected_layers)
+          rv$layers_rv$criteria5 <- read_tif_from_csv(input$csv_file, unexpected_layers)
+        }
+      }
+    }
   })
   
   ################################################################################################
@@ -469,6 +485,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
   observeEvent(input$upload_custom, {
     rv$layers_rv$criteria5 <- read_tif_from_upload(input$upload_custom)
     paths <- rv$layer_paths()
+    req(rv$criteria5name())
     paths[[rv$criteria5name()]] <- input$upload_custom$datapath
     rv$layer_paths(paths)
     saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))

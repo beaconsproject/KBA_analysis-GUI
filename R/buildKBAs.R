@@ -440,23 +440,10 @@ buildKBAServer <- function(input, output, session, project, map, rv){
   ####################################################################################################
   # REDUCE KBAs
   ####################################################################################################
-  observeEvent(input$reduce_KBAs, {
-    
-    #Test on required layers
-    if (is.null(rv$layers_rv$streams) || is.null(rv$layers_rv$planreg)) {
-      # Create the modal dialog
-      showModal(modalDialog(
-        title = "Missing Data",
-        "One or more required layers are missing. Make sure stream and planning region dataset are uploaded and Builder output  
-         on which hydrology metrics have been calculated exist.",
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return()
-    }
-    req(rv$layers_rv$streams)
-    req(rv$layers_rv$planreg)
-    
+  observeEvent(input$tabs, {
+    req(input$tabs == "tabKBAs")
+    req(rv$layers_rv$catchments)
+  
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     if ("KBAs_reducedFALSE" %in% layers) {
@@ -472,10 +459,42 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       ))
       return()
     }
+
+    x <- tibble(
+      Variables = c("KBAs", "Reduced KBAs"),
+      Count = c(NA, NA))  
     
+    if (!is.null(rv$kba_sf_reactive())) {
+      x <- x %>% 
+        mutate(Count = case_when(Variables == "KBAs" ~  nrow(rv$kba_sf_reactive()),
+                                 TRUE ~ Count))
+    }
+    
+    rv$outfreqhydro(x) 
+    
+    output$outkbahydro <- renderTable({
+      rv$outfreqhydro()
+    })
+  })
+  
+  observeEvent(input$reduce_KBAs, {
+    #Test on required layers
+    
+    if (is.null(rv$layers_rv$streams) || is.null(rv$layers_rv$planreg)) {
+      # Create the modal dialog
+      showModal(modalDialog(
+        title = "Missing Data",
+        "One or more required layers are missing. Make sure stream and planning region dataset are uploaded and Builder output  
+         on which hydrology metrics have been calculated exist.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+    req(rv$layers_rv$streams)
+    req(rv$layers_rv$planreg)
     req(!is.null(rv$kba_sf_reactive()))
-    req(!is.null(rv$upstream_reactive()))
-    
+
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
     layer_to_check <- paste0("KBAs_reduced", input$set_grid)
@@ -507,7 +526,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     
     showModal(modalDialog(
       title = paste0("KBAs number reduced to ", as.character(nrow(kba_sf)), "."),
-      "To save the reduced set, click **Save reduced KBAs in the GPKG**",
+      "To save the reduced set, click **Save reduced KBAs in GPKG**",
       easyClose = TRUE,
       footer = modalButton("OK")
     ))

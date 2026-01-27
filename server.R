@@ -58,7 +58,7 @@ server = function(input, output, session) {
                               tibble(Variables = c("KBAs", "Filtered KBAs", "PAs", "Filtered PAs"), Count = NA_integer_)
                             ),
                             outfreqnet = reactiveVal(
-                              tibble(Variables = c("KBAs", "Filtered KBAs", "PAs", "Filtered PAs", "Networks", "Filtered networks"), Count = NA_integer_)
+                              tibble(Variables = c("KBAs", "PAs", "Networks", "Filtered networks"), Count = NA_integer_)
                             )
   )
   
@@ -106,9 +106,6 @@ server = function(input, output, session) {
   
   #Run BUILDER
   buildKBAServer(input, output, session, project, myMap, reactiveValsList)
-  
-  #Evaluate PAs (hydro metrics)
-  #evalPAsServer(input, output, session, project, myMap, reactiveValsList)
   
   #Assess representation
   assessRepServer(input, output, session, project, myMap, reactiveValsList)
