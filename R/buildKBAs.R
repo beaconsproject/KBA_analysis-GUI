@@ -84,16 +84,34 @@ buildKBAServer <- function(input, output, session, project, map, rv){
   observeEvent(input$runBuilder>0, { 
     req(rv$layers_rv$catchments)
     req(rv$outdir())
-
+  
     out_dir <- rv$outdir()
-    
+    seed <- rv$seed_reactive()
+    if(is.null(seed)){
+      showModal(modalDialog(
+        title = "Missing seed",
+        "Builder input is missing. Please go back to Create Builder input to create seed table.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+    nghbrs <- rv$nghbrs_reactive()
+    if(is.null(nghbrs)){
+      showModal(modalDialog(
+        title = "Missing neighbour table",
+        "Builder input is missing. Please go back to Create Builder input to create neighbour table.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+        
     showModal(modalDialog(
       title = "Running BUILDER",
       "Please wait...",
       footer = NULL
     ))
-    seed <- rv$seed_reactive()
-    nghbrs <- rv$nghbrs_reactive()
     
     tryCatch({
       builder_tab <- builder(catchments_sf = rv$layers_rv$catchments,
@@ -332,7 +350,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     if(attr(poly_sf, "sf_column") != "geometry"){
       poly_sf$geometry <- poly_sf$geom
     }
-        
+    
     poly_sf$dci <- calc_dci(conservation_area_sf = poly_sf, stream_sf = rv$layers_rv$streams)
         
     #Update reactiveVal
