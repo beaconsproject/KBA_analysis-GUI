@@ -292,7 +292,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
         
     # Identify the attributes file and read it
     attributefile <- list.files(file.path(rv$outdir(),"Builder_output"), pattern = "Unique_BAs_attributes")
-    attributeStats <- read.csv(file.path(rv$outdir(), "Builder_output", attributefile))
+    attributeStats <- read.csv(file.path(rv$outdir(), "Builder_output", tail(attributefile, 1)))
         
     # Rename column in attributeStats in order to join it with poly_sf
     attributeStats <- attributeStats %>%
@@ -313,7 +313,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     # UPSTREAM AREA (up_km2) AND UPSTREAM INTACTNESS (up_AWI) can be found in the Builder output - see file "*_HYDROLOGY_METRICS.csv"
     # Identify the Hydro metrics file and read it
     hydrofile <- list.files(file.path(rv$outdir(), "Builder_output"), pattern = "HYDROLOGY_METRICS")
-    hydroStats <- read.csv(file.path(rv$outdir(), "Builder_output", hydrofile))
+    hydroStats <- read.csv(file.path(rv$outdir(), "Builder_output", tail(hydrofile, 1)))
         
     # Fix PB to KBA
     hydroStats <- hydroStats %>%
@@ -337,7 +337,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
         
     #Generate upstream area polygons
     upfile <- list.files(file.path(rv$outdir(), "Builder_output"), pattern = "UPSTREAM_CATCHMENTS_COLUMN")
-    upstream <- read.csv(file.path(rv$outdir(), "Builder_output", upfile))
+    upstream <- read.csv(file.path(rv$outdir(), "Builder_output", tail(upfile,1)))
     upstream_list <-as_tibble(upstream[,-1])
         
     #Fix PB to KBA and generate upstream area
@@ -507,6 +507,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     
     showModal(modalDialog(
       title = paste0("KBAs number reduced to ", as.character(nrow(kba_sf)), "."),
+      "To save the reduced set, click **Save reduced KBAs in the GPKG**",
       easyClose = TRUE,
       footer = modalButton("OK")
     ))

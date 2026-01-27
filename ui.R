@@ -99,7 +99,7 @@ ui = dashboardPage(skin="black",
                        actionButton(inputId = "reduce_KBAs", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Run")), class = "btn-warning", style="width:250px"),
                        tags$br(),
                        tags$br(),
-                       actionButton(inputId = "save_reduce", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Save reduced KBAs in gpkg")), class = "btn-warning", style="width:250px")
+                       actionButton(inputId = "save_reduce", label = div(style = "font-size:13px;background-color:gey;color: black",HTML("Save reduced KBAs in GPKG")), class = "btn-warning", style="width:250px")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabPAs'",
