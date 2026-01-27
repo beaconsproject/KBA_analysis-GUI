@@ -22,27 +22,43 @@ buildNetServer <- function(input, output, session, project, map, rv){
     net_list <- c(rep_kba, pas_ls)
     if (length(rep_kba) > 0) { 
       updatePickerInput(session = getDefaultReactiveDomain(), "KBArep", choices = net_list, selected = net_list[1])
+      kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = net_list[1])
     } else{
       showModal(modalDialog(
-        title = "Layer missing", "You need to assess representation on either KBAs or PAs prior to build a network.",
+        title = "Layers missing", "You need to create KBAs using Builder or upload Protected areas prior to build a network.",
         easyClose = TRUE,
         footer = modalButton("OK"))
       )
       return()
     }
     
+    kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
+    leafletProxy("map") %>%
+      clearControls() %>%
+      clearGroup("Potential KBAs (reduced)") %>%
+      clearGroup("Potential KBAs (all)") %>%
+      clearGroup("Potential KBAs") %>%
+      addPolygons(data=kba_sf_4326, fillColor='purple', color= "#000000", weight = 1,  group="Potential KBAs", options = leafletOptions(pane = "over")) %>%
+      addLayersControl(position = "topright",
+                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
+                       overlayGroups = c(rv$overlayGroups(), "Potential KBAs"),
+                       options = layersControlOptions(collapsed = FALSE)) %>%
+      hideGroup(c("Streams"))
+    
+    x <- rv$outfreqnet()
+    
+    x <- x %>% 
+      mutate(Count = case_when(Variables == "KBAs" ~  ifelse(!is.null(kba_sf), nrow(kba_sf), NA_integer_),
+                               TRUE ~ Count))
+
     if ("protected_areas" %in% layers) {
       pas_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas")
-      x <- rv$outfreqnet()
       x <- x %>% 
         mutate(Count = case_when(Variables == "PAs" ~  nrow(pas_sf),
                                  TRUE ~ Count))
-      rv$outfreqnet(x)
-      
-      output$outnetfreq <- renderTable({
-        rv$outfreqnet()
-      })
     } 
+    
+    rv$outfreqnet(x)
   })
   
   observeEvent(input$KBArep, {
