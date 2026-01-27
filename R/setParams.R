@@ -537,21 +537,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
     }
     
   }, ignoreNULL = TRUE)
-  
-  observeEvent(rv$layers_rv$streams, {
-    req(rv$layers_rv$streams)
-    missing_cols <- check_colnames(rv$layers_rv$streams, c("SKELUID"))
-    if(length(missing_cols) > 0){
-      showModal(modalDialog(
-        title = "Missing required column",
-        paste0("In the stream layers, column ", missing_cols, " is missing."),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      rv$layers_rv$streams <- NULL
-      return(FALSE)
-    }
-  }, ignoreNULL = TRUE)
   ####################################################################################################
   # Map viewer
   ####################################################################################################
@@ -633,7 +618,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     showModal(modalDialog(
       title = "Calculating hydrology metrics on protected areas. Please wait...",
       easyClose = TRUE,
-      footer = modalButton("OK"))
+      footer = NULL)
     )
     
     required_cols <- c("area_km2", "AWI","dci")
