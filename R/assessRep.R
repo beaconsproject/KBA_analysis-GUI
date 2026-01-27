@@ -791,7 +791,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   # Download KBAs
   ################################################################################################  
   observeEvent(input$downloadKBA, {
-    
+  
     if(input$assessKBAs == "Only KBAs"){
       prefix <- paste0("repKBAs_", sub(".*(reduced\\d+).*", "\\1", input$KBAlayer))
     }else if(input$assessKBAs == "Only PAs"){
@@ -802,6 +802,16 @@ assessRepServer <- function(input, output, session, project, map, rv){
     
     filtered_sf_rep <- rv$filtered_rep()
     
+    if(is.null(filtered_sf_rep)){
+      showModal(modalDialog(
+        title = "No filtering has been applied",
+        "Please apply filtering prior to save filtered KBAs.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+    req(filtered_sf_rep)
     outName <- paste0(prefix, "_up", as.character(input$slideUP), "_cmi", as.character(input$slideCMI),"_gpp", as.character(input$slideGPP),"_led", as.character(input$slideLED),
                       "_lcc", as.character(input$slideLCC))
     
