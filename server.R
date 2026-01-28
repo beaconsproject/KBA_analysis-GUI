@@ -76,8 +76,7 @@ server = function(input, output, session) {
   output$map <- renderLeaflet({
     
     intact_4326 <- intact %>% st_transform(4326)
-    reactiveValsList$intact_4326 <- intact_4326
-    
+
     # Render initial map
     isolate({
       map <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%

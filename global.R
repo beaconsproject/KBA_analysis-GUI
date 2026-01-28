@@ -113,7 +113,7 @@ process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4
   }
   
   terra::writeRaster(masked, output_path, filetype = "GTiff")
-  aggregated <- terra::aggregate(masked, fact = fact, fun = aggregation_fun)
+  aggregated <- terra::aggregate(input_raster, fact = fact, fun = aggregation_fun)
   projected <- project(aggregated, "EPSG:4326")
   terra::writeRaster(projected, projected_path, filetype = "GTiff")
   

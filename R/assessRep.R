@@ -248,9 +248,16 @@ assessRepServer <- function(input, output, session, project, map, rv){
       rv$legendcrit(updated_grp)
     }
     
+    extent <- st_union(rv$refarea_reactive(), rv$layers_rv$planreg) %>%     
+      st_as_sf() %>%
+      st_make_valid()                
+      
+    
     #Prep criteria
     if (!file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))) {
-      cmi <- process_raster(rv$layers_rv$cmi, rv$refarea_reactive(), rv$outdir(), "kba_cmi", fact = 2, aggregation_fun = "mean")
+      r_crop <- crop(rv$layers_rv$cmi, vect(extent))
+      r_mask <- mask(r_crop, vect(extent))
+      cmi <- process_raster(r_mask, rv$refarea_reactive(), rv$outdir(), "kba_cmi", fact = 2, aggregation_fun = "mean")
       kba_cmi <- cmi$original
       cmi_4326 <- cmi$projected
     }else{
@@ -258,7 +265,9 @@ assessRepServer <- function(input, output, session, project, map, rv){
       cmi_4326 <- raster(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_led.tif"))) {
-      led <- process_raster(rv$layers_rv$led, rv$refarea_reactive(), rv$outdir(), "kba_led", fact = 4, aggregation_fun = "mean")
+      r_crop <- crop(rv$layers_rv$led, vect(extent))
+      r_mask <- mask(r_crop, vect(extent))
+      led <- process_raster(r_mask, rv$refarea_reactive(), rv$outdir(), "kba_led", fact = 4, aggregation_fun = "mean")
       kba_led <- led$original
       led_4326 <- led$projected
     } else{
@@ -266,7 +275,9 @@ assessRepServer <- function(input, output, session, project, map, rv){
       led_4326 <- raster(file.path(rv$outdir(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))) {
-      gpp <- process_raster(rv$layers_rv$gpp, rv$refarea_reactive(), rv$outdir(), "kba_gpp", fact = 4, aggregation_fun = "mean")
+      r_crop <- crop(rv$layers_rv$gpp, vect(extent))
+      r_mask <- mask(r_crop, vect(extent))
+      gpp <- process_raster(r_mask, rv$refarea_reactive(), rv$outdir(), "kba_gpp", fact = 4, aggregation_fun = "mean")
       kba_gpp <- gpp$original
       gpp_4326 <- gpp$projected
     } else{
@@ -274,7 +285,10 @@ assessRepServer <- function(input, output, session, project, map, rv){
       gpp_4326 <- raster(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))) {
-      lcc <- process_raster(rv$layers_rv$lcc, rv$refarea_reactive(), rv$outdir(), "kba_lcc", fact = 40, aggregation_fun = "modal", ignored = c(15, 17))
+      r_crop <- crop(rv$layers_rv$lcc, vect(extent))
+      r_mask <- mask(r_crop, vect(extent))
+      
+      lcc <- process_raster(r_mask, rv$refarea_reactive(), rv$outdir(), "kba_lcc", fact = 40, aggregation_fun = "modal", ignored = c(15, 17))
       kba_lcc <- lcc$original
       lcc_4326 <- lcc$projected
     }else{
@@ -284,7 +298,10 @@ assessRepServer <- function(input, output, session, project, map, rv){
     
     if(!is.null(rv$layers_rv$criteria5)){
       if (!file.exists(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))) {
-        crit5 <- process_raster(rv$layers_rv$criteria5, rv$refarea_reactive(), rv$outdir(), rv$criteria5name(), fact = 4, aggregation_fun = "mean")
+        r_crop <- crop(rv$layers_rv$criteria5, vect(extent))
+        r_mask <- mask(r_crop, vect(extent))
+        
+        crit5 <- process_raster(r_mask, rv$refarea_reactive(), rv$outdir(), rv$criteria5name(), fact = 4, aggregation_fun = "mean")
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
