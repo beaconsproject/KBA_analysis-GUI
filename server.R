@@ -112,4 +112,7 @@ server = function(input, output, session) {
   #Build network
   buildNetServer(input, output, session, project, myMap, reactiveValsList)
   
+  #Convert to shp
+  convertServer(input, output, session, project, myMap, reactiveValsList)
+  
 }

@@ -49,6 +49,7 @@ ui = dashboardPage(skin="black",
                                           menuSubItem("Create and assess KBA networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
                                           #menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
                                           ),
+                                 shinydashboard::menuItem("Convert as Shapefiles (OPTIONAL)", tabName = "convert", icon = icon(name = "fas fa-download", lib = "font-awesome")),
                                  hr()
                      ),
                      conditionalPanel(
@@ -132,7 +133,10 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideNETUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterNet", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
                        div(style = "margin-top: 20px;",actionButton("downloadNET", "Download Filtered Networks", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
-                       
+                     ),
+                     conditionalPanel(
+                       condition="input.tabs=='convert'",
+                       actionButton("dwdSHP", "Convert GPKG layers as Shapefiles", class = "btn-warning", style="width:250px")
                      )
                    ),     
                    dashboardBody(
@@ -225,7 +229,7 @@ ui = dashboardPage(skin="black",
                                                    includeMarkdown("./Rmd/createNet_doc.md")
                                                  ),
                                                  conditionalPanel(
-                                                   condition = "input.tabs == 'download'",
+                                                   condition = "input.tabs == 'convert'",
                                                    includeMarkdown("./Rmd/dwd_doc.md")
                                                  )
                                         )
