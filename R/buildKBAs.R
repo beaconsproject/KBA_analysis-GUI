@@ -444,16 +444,27 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     req(input$tabs == "tabKBAs")
     req(rv$layers_rv$catchments)
   
-    layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
-    if ("KBAs_reducedFALSE" %in% layers) {
-      kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE")
-      rv$kba_sf_reactive(kba_sf)
+    if(file.exists(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))){
+      layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
+      layers <- layers_info$name
+      if ("KBAs_reducedFALSE" %in% layers) {
+        kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE")
+        rv$kba_sf_reactive(kba_sf)
+      } else {
+        #Test on required layers
+        showModal(modalDialog(
+          title = "Missing Data",
+          "Calculate DCI and add upstream attributes to KBAs prior to reduce the number.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
     } else {
       #Test on required layers
       showModal(modalDialog(
         title = "Missing Data",
-        "Calculate DCI and add upstream attributes to KBAs prior to reduce the number.",
+        "KBAs have not been created. Please run Builder and calculate DCI",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
