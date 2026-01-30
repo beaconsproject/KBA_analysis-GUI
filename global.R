@@ -22,7 +22,7 @@ library(leafgl)
 library(raster)
 library(shinyWidgets)
 library(usethis)
-library(qs)
+#library(qs)
 
 terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
 

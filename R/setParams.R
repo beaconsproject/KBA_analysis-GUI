@@ -334,7 +334,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
   # Read CSV
   observeEvent(input$csv_file, {
     req(validate_csv())  # ensure CSV is valid
-    
     csv_data <- read.csv(input$csv_file$datapath)
     layer_paths <- setNames(csv_data$Path, csv_data$Layer)
     

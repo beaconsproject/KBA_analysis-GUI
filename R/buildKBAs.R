@@ -1,5 +1,21 @@
 buildKBAServer <- function(input, output, session, project, map, rv){
 
+  
+  # RENDER ASSESS REPRESENTATION UI
+  output$forceseed <- renderUI({
+    req(input$tabs == "tabinput")
+    req(input$seedRefARea)
+    tagList(
+      div("Select reference area.", style = "font-size: 15px; font-weight: bold; margin-left: 15px; margin-top: 20px;"),
+      if (is.null(rv$refarea_reactive())) {
+        fileInput("upload_refarea", "Upload reference area shapefile", multiple = TRUE)
+      } else {
+        div(HTML('<i class="fa fa-thumb-tack" style="color:#d9534f; "></i>'), "Reference area already uploaded.", style = "font-size: 12px; margin-top: 20px; margin-left: 30px;")
+      }
+    )
+  })
+  
+  
   # Observe when the dataset is loaded and update the selectInput choices
   observe({
     req(rv$layers_rv$catchments)  # Ensure the catchments data is available
@@ -62,13 +78,22 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       rv$seed_reactive(seed)
       write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
     }else{
-      seed <- rv$layers_rv$catchments %>%
-        filter(input$intactColname >= input$seedintact, STRAHLER == as.numeric(input$set_strahler), refarea ==1) %>%
-        seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
-      rv$seed_reactive(seed)
-      write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
+      if(input$seedRefARea){
+        req(rv$refarea_reactive())
+        catchments <- rv$layers_rv$catchments[st_within(rv$layers_rv$catchments, rv$refarea_reactive(), sparse = FALSE),]
+        seed <- catchments %>%
+          filter(input$intactColname >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
+          seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
+        rv$seed_reactive(seed)
+        write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
+      }else{
+        seed <- rv$layers_rv$catchments %>%
+          filter(input$intactColname >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
+          seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
+        rv$seed_reactive(seed)
+        write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
+      }
     }
-    
   })
   
   observeEvent(rv$nghbrs_reactive(), {
@@ -197,9 +222,9 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     # show pop-up ...
     showModal(modalDialog(
       title = "Builder output created.",
-      paste0("Number of KBAs created: ", as.character(nrow(poly_sf))),
+      paste0("Number of KBAs created: ", as.character(nrow(poly_sf)), ". Calculating hydrology metrics. Please wait..."),
       easyClose = TRUE,
-      footer = modalButton("OK"))
+      footer = NULL)
     )
     
     #groups_to_remove <- c(
@@ -283,11 +308,11 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     #layer_to_check <- "KBAs_reducedFALSE"
     
     #if (!layer_to_check %in% layers) {
-    showModal(modalDialog(
-      title = "Processing",
-      paste0("Calculating hydrology metrics on ", as.character(nrow(rv$kba_sf_reactive())), " features. Please wait..."),
-      footer = NULL
-    ))
+    #showModal(modalDialog(
+    #  title = "Processing",
+    #  paste0("Calculating hydrology metrics on ", as.character(nrow(rv$kba_sf_reactive())), " features. Please wait..."),
+    #  footer = NULL
+    #))
     
         
     # Identify the attributes file and read it
