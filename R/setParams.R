@@ -171,22 +171,22 @@ setParamsServer <- function(input, output, session, project, map, rv){
       }
       
       # Load spatial object
-      manifest_file <- file.path(rv$outdir(), "data/layer_paths.rds")
-      rv$layer_paths(readRDS(manifest_file))
+      manifest_file <- file.path(rv$outdir(), "data/layer_paths.csv")
+      rv$layer_paths(read.csv(manifest_file))
       paths <- rv$layer_paths()
-      rv$layers_rv$catchments <- st_read(paths[["catchments"]])
+      rv$layers_rv$catchments <- st_read(paths$Path[paths$Layer == "catchments"])
       rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
       
-      rv$layers_rv$streams <- st_read(paths[["stream"]])
+      rv$layers_rv$streams <- st_read(paths$Path[paths$Layer == "stream"]) 
       rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
       
-      rv$layers_rv$planreg <- st_read(paths[["planning region"]])
+      rv$layers_rv$planreg <- st_read(paths$Path[paths$Layer == "planning region"])
       rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
       
       if ("protected areas" %in% names(paths) &&
           file.exists(paths[["protected areas"]])) {
         
-        rv$layers_rv$pas_sf <- sf::st_read(paths[["protected areas"]])
+        rv$layers_rv$pas_sf <-st_read(paths$Path[paths$Layer == "protected areas"])
         rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
       }
       
@@ -200,30 +200,30 @@ setParamsServer <- function(input, output, session, project, map, rv){
         rv$layers_rv$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc.tif"))
         rv$layers_rv_4326$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
       } else{
-        rv$layers_rv$lcc <- terra::rast(paths[["LCC"]])
+        rv$layers_rv$lcc <- terra::rast(paths$Path[paths$Layer == "LCC"])
       }
       if(file.exists(file.path(rv$outdir(), "output/kba_led.tif"))){
         rv$layers_rv$led <- terra::rast(file.path(rv$outdir(), "output/kba_led.tif"))
         rv$layers_rv_4326$led <- terra::rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
       } else{
-        rv$layers_rv$led <- terra::rast(paths[["LED"]])
+        rv$layers_rv$led <- terra::rast(paths$Path[paths$Layer == "LED"])
       } 
       if(file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))){
         rv$layers_rv$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp.tif"))
         rv$layers_rv_4326$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
       } else{
-        rv$layers_rv$gpp <- terra::rast(paths[["GPP"]])
+        rv$layers_rv$gpp <- terra::rast(paths$Path[paths$Layer == "GPP"])
       } 
       if(file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))){
         rv$layers_rv$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi.tif"))
         rv$layers_rv_4326$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
       } else{
-        rv$layers_rv$cmi <- terra::rast(paths[["CMI"]])
+        rv$layers_rv$cmi <- terra::rast(paths$Path[paths$Layer == "CMI"])
       }
       
       #criteria 5
       req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
-      unexpected_layers <- names(paths)[!names(paths) %in% req_layers]
+      unexpected_layers <- paths$Layer[!paths$Layer %in% req_layers]
       if (length(unexpected_layers)>0) {
         if(length(unexpected_layers)==1){
           rv$criteria5name(unexpected_layers)
@@ -231,7 +231,8 @@ setParamsServer <- function(input, output, session, project, map, rv){
             rv$layers_rv$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))
             rv$layers_rv_4326$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, "_4326.tif")))
           } else{
-            rv$layers_rv$criteria5 <- terra::rast(paths[[unexpected_layers]])
+            orig_path <- paths$Path[paths$Layer == unexpected_layers]
+            rv$layers_rv$criteria5 <- terra::rast(orig_path)
           }
         }
       }
@@ -338,7 +339,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     layer_paths <- setNames(csv_data$Path, csv_data$Layer)
     
     rv$layer_paths(layer_paths)
-    saveRDS(layer_paths, file.path(rv$outdir(), "data/layer_paths.rds"))
+    write.csv(csv_data, file.path(rv$outdir(), "data/layer_paths.csv"))
     
     rv$layers_rv$catchments  <- read_shp_from_csv(input$csv_file, "catchments")
     rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
@@ -404,30 +405,18 @@ setParamsServer <- function(input, output, session, project, map, rv){
     rv$layers_rv$catchments <- read_shp_from_upload(input$upload_catch)
     rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
     paths <- rv$layer_paths()
-    shp_path <- input$upload_catch$datapath[grepl("\\.shp$", input$upload_catch$name, ignore.case = TRUE)]
-    paths[["catchments"]] <- shp_path
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_stream, {
     rv$layers_rv$streams <- read_shp_from_upload(input$upload_stream)
     rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
     paths <- rv$layer_paths()
-    shp_path <- input$upload_stream$datapath[grepl("\\.shp$", input$upload_stream$name, ignore.case = TRUE)]
-    paths[["stream"]] <- shp_path
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_planreg, {
     rv$layers_rv$planreg <- read_shp_from_upload(input$upload_planreg)
     rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
     paths <- rv$layer_paths()
-    shp_path <- input$upload_planreg$datapath[grepl("\\.shp$", input$upload_planreg$name, ignore.case = TRUE)]
-    paths[["planning region"]] <- shp_path
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_pas, {
@@ -443,51 +432,27 @@ setParamsServer <- function(input, output, session, project, map, rv){
     rv$layers_rv$pas_sf <- pas_sf
     rv$layers_rv_4326$pas_sf <- sf::st_transform(pas_sf, 4326)
     paths <- rv$layer_paths()
-    shp_path <- input$upload_pas$datapath[grepl("\\.shp$", input$upload_pas$name, ignore.case = TRUE)]
-    paths[["protected areas"]] <- shp_path
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   # --- Individual raster uploads
   observeEvent(input$upload_lcc, {
     rv$layers_rv$lcc <- read_tif_from_upload(input$upload_lcc)
-    paths <- rv$layer_paths()
-    paths[["LCC"]] <- input$upload_lcc$datapath
-    rv$layer_paths(paths)
   })
   
   observeEvent(input$upload_led, {
     rv$layers_rv$led <- read_tif_from_upload(input$upload_led)
-    paths <- rv$layer_paths()
-    paths[["LED"]] <- input$upload_led$datapath
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_cmi, {
     rv$layers_rv$cmi <- read_tif_from_upload(input$upload_cmi)
-    paths <- rv$layer_paths()
-    paths[["CMI"]] <- input$upload_cmi$datapath
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_gpp, {
     rv$layers_rv$gpp <- read_tif_from_upload(input$upload_gpp)
-    paths <- rv$layer_paths()
-    paths[["GPP"]] <- input$upload_gpp$datapath
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   observeEvent(input$upload_custom, {
     rv$layers_rv$criteria5 <- read_tif_from_upload(input$upload_custom)
-    paths <- rv$layer_paths()
-    req(rv$criteria5name())
-    paths[[rv$criteria5name()]] <- input$upload_custom$datapath
-    rv$layer_paths(paths)
-    saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
   
