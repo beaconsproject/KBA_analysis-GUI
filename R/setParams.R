@@ -600,6 +600,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       easyClose = TRUE,
       footer = NULL)
     )
+    switch_dci <- TRUE
     
     if(file.exists(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))){
       gpkg_path <- file.path(rv$outdir(), "output/KBA_analysis.gpkg")
@@ -609,8 +610,11 @@ setParamsServer <- function(input, output, session, project, map, rv){
         rv$layers_rv$pas_sf <- pas
         pas_up <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream")
         rv$pas_upstream_reactive(pas_up)
+        switch_dci <- FALSE
       }
-    }else{
+    }
+    
+    if(switch_dci){
       required_cols <- c("area_km2", "AWI","dci")
       pas <-rv$layers_rv$pas_sf
       pas_colnames <- colnames(pas)
