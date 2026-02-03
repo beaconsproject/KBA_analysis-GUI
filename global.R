@@ -1,28 +1,22 @@
 # Load the packages
-library(leaflet)
 library(shiny)
+library(leaflet)
+library(sf)
+library(shinydashboard)
+library(shinyFiles) #shinyDirButton
+library(shinyWidgets) #pickerInput
+library(shinyjs) #useShinyjs
 library(purrr)
 library(markdown)
-library(shinydashboard)
-library(shinyjs)
-library(exactextractr)
-library(dplyr)
-library(tidyr)
-library(sf)
-library(leaflet.extras2)
-library(ggplot2)
-library(zip)
-library(readr)
-library(terra)
-library(stringr)
-library(shinyFiles)
+library(tibble)
 library(DT)
-library(rlang)
-library(leafgl)
-library(raster)
-library(shinyWidgets)
-library(usethis)
-#library(qs)
+library(dplyr)
+library(terra)
+library(exactextractr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+#library(leaflet.extras2)
 
 terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
 
@@ -59,12 +53,24 @@ options(scipen = 999)
 #         ADDON FUNCTIONS
 #########################################################
 #########################################################
+# Check if Microsoft .Net Framework is installed
+dotnet_installed <- function() {
+  key <- "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full"
+  
+  out <- try(shell(paste0('reg query "', key, '" /v Release'), intern = TRUE), silent = TRUE)
+  
+  if (inherits(out, "try-error")) return(FALSE)
+  
+  # Check if there is a "Release" line
+  any(grepl("Release", out))
+}
+
 # sep_network_names :Fix sep_network_names
 sep_network_names <- function (network_names){
-    out_val <- lapply(network_names, function(x) {
-      strsplit(x, "__")[[1]]
-    })
-    names(out_val) <- network_names
+  out_val <- lapply(network_names, function(x) {
+    strsplit(x, "__")[[1]]
+  })
+  names(out_val) <- network_names
   return(out_val)
 }
 
@@ -107,7 +113,7 @@ process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4
   cropped <- crop(input_raster, ref_area, snap = "near", extend = TRUE)
   masked <- mask(cropped, ref_area)
   masked <- terra::trim(masked, value = NA)
-
+  
   if (!is.null(ignored)) {
     masked[masked %in% ignored] <- NA # cropland = 15, urban = 17 are NA 
   }
@@ -161,39 +167,39 @@ read_shp_from_csv <- function(csv_file, layer_name) {
 
 # read_shp_from_upload: read a shapefile from fileInput
 read_shp_from_upload <- function(upload_input) {
-    req(upload_input)
-    required_extensions <- c("shp", "shx", "dbf", "prj")
-    infile <- upload_input
-    file_extensions <- tools::file_ext(infile$name)
-    if (all(required_extensions %in% file_extensions)) {
-      dir <- unique(dirname(infile$datapath))
-      outfiles <- file.path(dir, infile$name)
-      name <- tools::file_path_sans_ext(infile$name[1])
-      purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y))
-      shp_path <- file.path(dir, paste0(name, ".shp"))
-      if (file.exists(shp_path)) {
-        shp <- sf::st_read(shp_path) %>%
-          dplyr::select(-any_of(c("fid", "FID"))) %>%
-          sf::st_zm(drop = TRUE, what = "ZM")
-        attr(shp, "name") <- name
-        return(shp)
-      } else {
-        showModal(modalDialog(
-          title = "Shapefile (.shp) is missing.",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        ))
-        return()
-      }
+  req(upload_input)
+  required_extensions <- c("shp", "shx", "dbf", "prj")
+  infile <- upload_input
+  file_extensions <- tools::file_ext(infile$name)
+  if (all(required_extensions %in% file_extensions)) {
+    dir <- unique(dirname(infile$datapath))
+    outfiles <- file.path(dir, infile$name)
+    name <- tools::file_path_sans_ext(infile$name[1])
+    purrr::walk2(infile$datapath, outfiles, ~file.rename(.x, .y))
+    shp_path <- file.path(dir, paste0(name, ".shp"))
+    if (file.exists(shp_path)) {
+      shp <- sf::st_read(shp_path) %>%
+        dplyr::select(-any_of(c("fid", "FID"))) %>%
+        sf::st_zm(drop = TRUE, what = "ZM")
+      attr(shp, "name") <- name
+      return(shp)
     } else {
       showModal(modalDialog(
-        title = "Extension file is missing",
-        "Please upload all necessary files for the shapefile (.shp, .shx, .dbf and .prj).",
+        title = "Shapefile (.shp) is missing.",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
       return()
     }
+  } else {
+    showModal(modalDialog(
+      title = "Extension file is missing",
+      "Please upload all necessary files for the shapefile (.shp, .shx, .dbf and .prj).",
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    return()
+  }
 }
 
 # read_tif_from_csv: Read raster file from CSV
@@ -320,4 +326,3 @@ prep_legend <- function(kba_cmi, kba_led, kba_gpp, lcc_4326, criteria5 = NULL) {
               df_label = df_label, lcc_labels = cls, lcc_cols = selected_cols, crit_xpal = crit_xpal, val.color = val.color, 
               led_val.color = led_val.color, labeller_function = labeller_function))
 }
-
