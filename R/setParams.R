@@ -183,14 +183,13 @@ setParamsServer <- function(input, output, session, project, map, rv){
       rv$layers_rv$planreg <- st_read(paths$Path[paths$Layer == "planning region"])
       rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
       
-      if ("protected areas" %in% names(paths) &&
-          file.exists(paths[["protected areas"]])) {
+      if ("protected areas" %in% paths$Layer &&
+          file.exists(paths$Path[paths$Layer == "protected areas"])) {
         
         rv$layers_rv$pas_sf <-st_read(paths$Path[paths$Layer == "protected areas"])
         rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
       }
       
-      #if ("reference area" %in% names(paths) && !is.null(paths[["reference area"]]) && file.exists(paths[["reference area"]])) {
       if ("reference area" %in% layers){
         rv$refarea_reactive(st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area"))
       } 
@@ -602,76 +601,87 @@ setParamsServer <- function(input, output, session, project, map, rv){
       footer = NULL)
     )
     
-    required_cols <- c("area_km2", "AWI","dci")
-    pas <-rv$layers_rv$pas_sf
-    pas_colnames <- colnames(pas)
-    
-    if (any(!required_cols %in% pas_colnames)) {
-      catchments <- rv$layers_rv$catchments
-      pas_sf <- pas %>%
-        mutate(network = sprintf("PA_%02d", row_number()),
-               area_km2 = st_area(.)/1000000)
+    if(file.exists(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))){
+      gpkg_path <- file.path(rv$outdir(), "output/KBA_analysis.gpkg")
+      layers <- sf::st_layers(gpkg_path)$name
+      if("protected_areas" %in% layers){
+        pas <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas")
+        rv$layers_rv$pas_sf <- pas
+        pas_up <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream")
+        rv$pas_upstream_reactive(pas_up)
+      }
+    }else{
+      required_cols <- c("area_km2", "AWI","dci")
+      pas <-rv$layers_rv$pas_sf
+      pas_colnames <- colnames(pas)
       
-      pas_catch <- st_intersection(pas_sf, catchments)
-      area_catch <- pas_catch %>%
-        mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColname]]) %>%
-        st_drop_geometry() %>%
-        group_by(network) %>%
-        summarize(intact_km2 = sum(catch_awi, na.rm = TRUE)/1000000)
-      pas <- merge(pas_sf[,c("network", "NAME", "area_km2")], area_catch[,c("network", "intact_km2")], by = "network", all.x = TRUE)
-      pas$AWI <- round(pas$intact_km2/pas$area_km2, 3)
-      
-      pas$dci <- calc_dci(conservation_area_sf = pas, stream_sf = rv$layers_rv$streams)
-    }
-    
-    if (any(!c("up_km2", "up_AWI") %in% pas_colnames)){
-      catchments <- rv$layers_rv$catchments
-      results_list <- list()
-      
-      # Compute upstream catchments for all polygons (if possible)
-      upstream_catchments_list <- lapply(1:nrow(pas), function(i) {
-        get_upstream_catchments(pas[i, ], "network", catchments)
-      })
-      
-      # Use mapply to iterate and return the results efficiently
-      results_list <- mapply(function(pa_id, upstream_list) {
-        if (nrow(upstream_list) == 0) return(NULL)
+      if (any(!required_cols %in% pas_colnames)) {
+        catchments <- rv$layers_rv$catchments
+        pas_sf <- pas %>%
+          mutate(network = sprintf("PA_%02d", row_number()),
+                 area_km2 = st_area(.)/1000000)
         
-        # Filter catchments for upstream list
-        area_intact <- catchments[catchments$CATCHNUM %in% upstream_list[[pa_id]], ] %>%
+        pas_catch <- st_intersection(pas_sf, catchments)
+        area_catch <- pas_catch %>%
+          mutate(catch_awi = as.numeric(st_area(.)) * .[[input$intactColname]]) %>%
           st_drop_geometry() %>%
-          mutate(up_cAWI = as.numeric(Area_total * .[[input$intactColname]]), 
-                 network = pa_id) %>%
           group_by(network) %>%
-          summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
+          summarize(intact_km2 = sum(catch_awi, na.rm = TRUE)/1000000)
+        pas <- merge(pas_sf[,c("network", "NAME", "area_km2")], area_catch[,c("network", "intact_km2")], by = "network", all.x = TRUE)
+        pas$AWI <- round(pas$intact_km2/pas$area_km2, 3)
         
-        # Dissolve and merge upstream areas
-        upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
-        
-        upstream_area <- upstream_area %>%
-          st_buffer(dist = 20) %>% 
-          st_buffer(dist = -20)
-        
-        upstream_area <- upstream_area %>%
-          left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
-          mutate(up_km2 = st_area(.)/1000000,
-                 up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
-        
-        return(upstream_area)
-      }, pa_id = pas$network, upstream_list = upstream_catchments_list, SIMPLIFY = FALSE)
+        pas$dci <- calc_dci(conservation_area_sf = pas, stream_sf = rv$layers_rv$streams)
+      }
       
-      pas_up <- do.call(rbind, results_list)
-      
-      # Export  and update reactive value 
-      st_write(pas_up, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream", driver = "GPKG", append = FALSE)
-      rv$pas_upstream_reactive(pas_up)
-      
-      pas_up_att <- pas_up %>% st_drop_geometry()
-      pas <- pas %>%
-        left_join(pas_up_att[,c("network","up_km2", "up_AWI")], by = "network")
+      if (any(!c("up_km2", "up_AWI") %in% pas_colnames)){
+        catchments <- rv$layers_rv$catchments
+        results_list <- list()
+        
+        # Compute upstream catchments for all polygons (if possible)
+        upstream_catchments_list <- lapply(1:nrow(pas), function(i) {
+          get_upstream_catchments(pas[i, ], "network", catchments)
+        })
+        
+        # Use mapply to iterate and return the results efficiently
+        results_list <- mapply(function(pa_id, upstream_list) {
+          if (nrow(upstream_list) == 0) return(NULL)
+          
+          # Filter catchments for upstream list
+          area_intact <- catchments[catchments$CATCHNUM %in% upstream_list[[pa_id]], ] %>%
+            st_drop_geometry() %>%
+            mutate(up_cAWI = as.numeric(Area_total * .[[input$intactColname]]), 
+                   network = pa_id) %>%
+            group_by(network) %>%
+            summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
+          
+          # Dissolve and merge upstream areas
+          upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
+          
+          upstream_area <- upstream_area %>%
+            st_buffer(dist = 20) %>% 
+            st_buffer(dist = -20)
+          
+          upstream_area <- upstream_area %>%
+            left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
+            mutate(up_km2 = st_area(.)/1000000,
+                   up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
+          
+          return(upstream_area)
+        }, pa_id = pas$network, upstream_list = upstream_catchments_list, SIMPLIFY = FALSE)
+        
+        pas_up <- do.call(rbind, results_list)
+        
+        # Export  and update reactive value 
+        st_write(pas_up, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream", driver = "GPKG", append = FALSE)
+        rv$pas_upstream_reactive(pas_up)
+        
+        pas_up_att <- pas_up %>% st_drop_geometry()
+        pas <- pas %>%
+          left_join(pas_up_att[,c("network","up_km2", "up_AWI")], by = "network")
+      }
+      st_write(pas, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas", driver = "GPKG", append = FALSE) 
     }
-    st_write(pas, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas", driver = "GPKG", append = FALSE) 
-    
+
     pas_4326 <- pas %>% st_transform(4326)
     
     leafletProxy("map") %>%
