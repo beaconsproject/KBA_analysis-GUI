@@ -1,7 +1,7 @@
 setParamsServer <- function(input, output, session, project, map, rv){
   
   project_is_new <- reactiveVal(FALSE)
-
+  
   ## Observe on actionButton
   observeEvent(input$set_wd, {
     updateActionButton(session, "set_wd", label = "Confirmed", icon = icon("check", lib = "font-awesome"))
@@ -50,14 +50,14 @@ setParamsServer <- function(input, output, session, project, map, rv){
     # -------------------------------------------
     # No existing subfolders
     main_ui <- if (length(folders) == 0) {
-        tagList(
-          textInput("new_project", "Enter a name for your new project:"),
-        )
+      tagList(
+        textInput("new_project", "Enter a name for your new project:"),
+      )
     } else{
       # Subfolders exist = existing projects
       tagList(
         div(style = "margin-top: -10px; margin-left: 15px; font-size:15px; font-weight: bold", "Existing project(s) found in this directory"),
-
+        
         radioButtons(
           "project_choice",
           "Select an option:",
@@ -100,7 +100,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       #br(),
       #actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
     )
-  
+    
   })
   
   # reactive UI on protected areas
@@ -136,12 +136,12 @@ setParamsServer <- function(input, output, session, project, map, rv){
       for(d in treedir){
         dir.create(file.path(rv$dirpath(), rv$project_name(), d))
         showModal(modalDialog(
-           title = "Output subdirectories created.",
+          title = "Output subdirectories created.",
           "Please select input parameters by either uploading a csv containing input path or by pointing on the source files.",
           easyClose = TRUE,
           footer = modalButton("OK"))
         )
-      return() 
+        return() 
       }
     }
     
@@ -265,40 +265,40 @@ setParamsServer <- function(input, output, session, project, map, rv){
       }
       
       showModal(
-          modalDialog(title = "Project created",  "Output subdirectories were successfully created. Please select input parameters.",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-      ))
+        modalDialog(title = "Project created",  "Output subdirectories were successfully created. Please select input parameters.",
+                    easyClose = TRUE,
+                    footer = modalButton("OK")
+        ))
       return(NULL)
     }
   })
-    
+  
   # reactive UI on new project
   output$newproject_ui <- renderUI({
     req(project_is_new())
-
+    
     tagList(
       radioButtons("setUpload", "Set the source for spatial dataset:",
                    choices = list("Use csv with file pathways" = "useCSV", 
                                   "Upload individual layer" = "indUpload"),
                    selected = character(0), 
                    inline = FALSE)
-    ,
-    conditionalPanel(
-      condition="input.setUpload=='useCSV'",
-      div(style = "margin-top: -20px;",fileInput("csv_file", "Upload CSV file", accept = ".csv"))
-    ),
-    conditionalPanel(
-      condition=" input.setUpload=='indUpload'",
-      div(style = "margin-top: -20px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_stream", label = "Streams dataset", multiple = TRUE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_planreg", label = "Planning region", multiple = TRUE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_lcc", label = "LCC", multiple = FALSE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_led", label = "LED", multiple = FALSE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_gpp", label = "GPP", multiple = FALSE)),
-      div(style = "margin-top: -30px;",fileInput(inputId = "upload_custom", label = "Custom criteria", multiple = FALSE))
-    )
+      ,
+      conditionalPanel(
+        condition="input.setUpload=='useCSV'",
+        div(style = "margin-top: -20px;",fileInput("csv_file", "Upload CSV file", accept = ".csv"))
+      ),
+      conditionalPanel(
+        condition=" input.setUpload=='indUpload'",
+        div(style = "margin-top: -20px;",fileInput(inputId = "upload_catch", label = "Catchments dataset", multiple = TRUE)),
+        div(style = "margin-top: -30px;",fileInput(inputId = "upload_stream", label = "Streams dataset", multiple = TRUE)),
+        div(style = "margin-top: -30px;",fileInput(inputId = "upload_planreg", label = "Planning region", multiple = TRUE)),
+        div(style = "margin-top: -30px;",fileInput(inputId = "upload_lcc", label = "LCC", multiple = FALSE)),
+        div(style = "margin-top: -30px;",fileInput(inputId = "upload_led", label = "LED", multiple = FALSE)),
+        div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
+        div(style = "margin-top: -30px;",fileInput(inputId = "upload_gpp", label = "GPP", multiple = FALSE)),
+        div(style = "margin-top: -30px;",fileInput(inputId = "upload_custom", label = "Custom criteria", multiple = FALSE))
+      )
     )
   }) 
   
@@ -309,7 +309,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
   # Reactive function to validate the input file
   validate_csv <- reactive({
     req(input$csv_file)  # Ensure the file input is not NULL
-
+    
     csv_data <- read.csv(input$csv_file$datapath)
     
     # Find missing layers
@@ -329,7 +329,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       return(TRUE)
     }
   })
-
+  
   ################################################################################################
   # Read CSV
   observeEvent(input$csv_file, {
@@ -377,12 +377,12 @@ setParamsServer <- function(input, output, session, project, map, rv){
     } else {
       rv$refarea_reactive(NULL)
     }
-
+    
     rv$layers_rv$lcc         <- read_tif_from_csv(input$csv_file, "LCC")
     rv$layers_rv$led         <- read_tif_from_csv(input$csv_file, "LED")
     rv$layers_rv$gpp         <- read_tif_from_csv(input$csv_file, "GPP")
     rv$layers_rv$cmi         <- read_tif_from_csv(input$csv_file, "CMI")
-
+    
     #criteria 5
     req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
     unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
@@ -490,7 +490,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     saveRDS(paths, file.path(rv$outdir(), "data/layer_paths.rds"))
   })
   
-
+  
   # Set criteria5
   criteria5 <- reactive({
     if (!is.null(input$upload_custom)) {
@@ -532,22 +532,22 @@ setParamsServer <- function(input, output, session, project, map, rv){
     # Return NULL if neither source is available
     return(NULL)
   })
-
-
+  
+  
   ####################################################################################################
   #  Test on required attributes
   ####################################################################################################
   observeEvent(rv$layers_rv$catchments, {
     req(rv$layers_rv$catchments)
     missing_cols <- check_colnames(rv$layers_rv$catchments, c("Isolated", "length_m", "FDA_M", "Area_land", "Area_water", "Area_total", "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "SKELUID"))
-
+    
     if (length(missing_cols) > 0) {
       showModal(modalDialog(
-          title = "Missing required column",
-          paste0("In the catchments layer, the following column(s) are missing: ",  paste(missing_cols, collapse = ", ")),
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        )
+        title = "Missing required column",
+        paste0("In the catchments layer, the following column(s) are missing: ",  paste(missing_cols, collapse = ", ")),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      )
       )
       rv$layers_rv$catchment <- NULL
     }
@@ -617,7 +617,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     
     #Remove modal after rendering
     session$sendCustomMessage("remove_modal_js", list())
-  
+    
   })
   
   # PROTECTED AREAS 
@@ -712,15 +712,15 @@ setParamsServer <- function(input, output, session, project, map, rv){
     leafletProxy("map") %>%
       addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "over")) %>% 
       addLayersControl(position = "topright",
-                     baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery", "Blank Background"),
-                     overlayGroups = rv$overlayGroups(),
-                     options = layersControlOptions(collapsed = FALSE))  %>%
+                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery", "Blank Background"),
+                       overlayGroups = rv$overlayGroups(),
+                       options = layersControlOptions(collapsed = FALSE))  %>%
       hideGroup(c("Streams"))
     
     removeModal()
     rv$pas_ready(TRUE)
   }, ignoreInit = TRUE)
-
+  
   observeEvent(rv$refarea_reactive(), {
     req(rv$refarea_reactive())
     
@@ -766,7 +766,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     return(final)
   })
   
-  output$pastbl <- renderDataTable({
+  output$pastbl <- DT::renderDT({
     req(input$tabs == 'tabUpload')
     req(rv$pas_ready())
     # Get the reactive data and the selected polygon ID

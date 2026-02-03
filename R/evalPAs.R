@@ -1,5 +1,5 @@
 evalPAsServer <- function(input, output, session, project, map, rv){
-
+  
   # Observe map click events to update the selected polygon
   observeEvent(input$map_shape_click, {
     rv$selected_polygon(input$map_shape_click$id)  # Store the layerId of the clicked polygon
@@ -62,7 +62,7 @@ evalPAsServer <- function(input, output, session, project, map, rv){
     catchments <- rv$layers_rv$catchments
     pas_sf <- rv$layers_rv$pas_sf %>%
       mutate(network = sprintf("PA_%02d", row_number()),
-              area_km2 = st_area(.)/1000000,
+             area_km2 = st_area(.)/1000000,
       )
     
     pas_catch <- st_intersection(pas_sf, catchments)
@@ -73,19 +73,19 @@ evalPAsServer <- function(input, output, session, project, map, rv){
       summarize(intact_km2 = sum(catch_awi, na.rm = TRUE)/1000000)
     pas <- merge(pas_sf[,c("network", "NAME", "area_km2")], area_catch[,c("network", "intact_km2")], by = "network", all.x = TRUE)
     pas$AWI <- round(pas$intact_km2/pas$area_km2, 3)
-      
+    
     #Upstream
     results_list <- list()
-      
+    
     # Compute upstream catchments for all polygons (if possible)
     upstream_catchments_list <- lapply(1:nrow(pas), function(i) {
       get_upstream_catchments(pas[i, ], "network", catchments)
     })
-      
+    
     # Use mapply to iterate and return the results efficiently
     results_list <- mapply(function(pa_id, upstream_list) {
       if (nrow(upstream_list) == 0) return(NULL)
-        
+      
       # Filter catchments for upstream list
       area_intact <- catchments[catchments$CATCHNUM %in% upstream_list[[pa_id]], ] %>%
         st_drop_geometry() %>%
@@ -93,31 +93,31 @@ evalPAsServer <- function(input, output, session, project, map, rv){
                network = pa_id) %>%
         group_by(network) %>%
         summarize(up_intactkm2 = sum(up_cAWI, na.rm = TRUE)/1000000, .groups = "drop")
-        
+      
       # Dissolve and merge upstream areas
       upstream_area <- dissolve_catchments_from_table(catchments, upstream_list, "network")
-        
-       upstream_area <- upstream_area %>%
+      
+      upstream_area <- upstream_area %>%
         st_buffer(dist = 20) %>% 
         st_buffer(dist = -20)
-        
+      
       upstream_area <- upstream_area %>%
-          left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
-          mutate(up_km2 = st_area(.)/1000000,
-                 up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
-        
+        left_join(area_intact[, c("network", "up_intactkm2")], by = "network") %>%
+        mutate(up_km2 = st_area(.)/1000000,
+               up_AWI = round(up_intactkm2 / as.numeric(up_km2), 3))
+      
       return(upstream_area)
     }, pa_id = pas$network, upstream_list = upstream_catchments_list, SIMPLIFY = FALSE)
-      
+    
     pas_up <- do.call(rbind, results_list)
-      
+    
     # Export  and update reactive value 
     st_write(pas_up, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream", driver = "GPKG", append = FALSE)
     rv$pas_upstream_reactive(pas_up)
-      
+    
     pas_up <- pas_up %>% st_drop_geometry()
     pas <- merge(pas, pas_up[,c("network","up_km2", "up_AWI")], by = "network", all.x= TRUE)
-      
+    
     ####################################################################################################
     # Calculate DCI
     ####################################################################################################
@@ -126,7 +126,7 @@ evalPAsServer <- function(input, output, session, project, map, rv){
     # Export  and update reactive value 
     st_write(pas, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas", driver = "GPKG", append = FALSE)
     rv$layers_rv$pas_sf <- pas
-      
+    
     # Close the modal once processing is done
     removeModal()
     
@@ -166,7 +166,7 @@ evalPAsServer <- function(input, output, session, project, map, rv){
       return(final)
     })
     
-    output$pastbl <- renderDataTable({
+    output$pastbl <- DT::renderDT({
       req(input$tabs == 'tabPAs')
       # Get the reactive data and the selected polygon ID
       table_data <- outtabPA()

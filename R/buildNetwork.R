@@ -2,14 +2,14 @@ buildNetServer <- function(input, output, session, project, map, rv){
   
   #output$netPAs <- renderUI({
   #  req(rv$layers_rv$pas_sf)
-    
+  
   #  tagList(
   #    br(),
   #    div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F)),
   #    #br(),
   #    #actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
   #  )
-    
+  
   #})
   
   observeEvent(input$tabs, {
@@ -50,7 +50,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     x <- x %>% 
       mutate(Count = case_when(Variables == "KBAs" ~  ifelse(!is.null(kba_sf), nrow(kba_sf), NA_integer_),
                                TRUE ~ Count))
-
+    
     if ("protected_areas" %in% layers) {
       pas_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas")
       x <- x %>% 
@@ -164,7 +164,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     }
     network_dir <- paste0("output/plot", outName)
     rv$netDir(network_dir)
-  
+    
     # Raise warning on `input$set_net`
     if (is.null(input$set_net) || as.integer(input$set_net) < 2) {
       if(isFALSE(input$forcePAs)){
@@ -186,21 +186,21 @@ buildNetServer <- function(input, output, session, project, map, rv){
       return()
     }
     
-#    # Check if there is a 5 criteria and store the name
-#    if (!is.null(input$upload_custom)) {
-#      rastName <- sub("\\..*$", "", input$upload_custom$name)
-#      rv$criteria5name(rastName)
-#      updated_grp <- c(rv$legendcrit(), rastName)
-#      rv$legendcrit(updated_grp) # Update the reactive value
-#    }
-#    if (!is.null(input$csv_file)) {
-#      csv_data <- read.csv(input$csv_file$datapath)
-#      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
-#      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
-#      rv$criteria5name(unexpected_layers)
-#      updated_grp <- c(rv$legendcrit(), unexpected_layers)
-#      rv$legendcrit(updated_grp) # Update the reactive value
-#    }
+    #    # Check if there is a 5 criteria and store the name
+    #    if (!is.null(input$upload_custom)) {
+    #      rastName <- sub("\\..*$", "", input$upload_custom$name)
+    #      rv$criteria5name(rastName)
+    #      updated_grp <- c(rv$legendcrit(), rastName)
+    #      rv$legendcrit(updated_grp) # Update the reactive value
+    #    }
+    #    if (!is.null(input$csv_file)) {
+    #      csv_data <- read.csv(input$csv_file$datapath)
+    #      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+    #      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
+    #      rv$criteria5name(unexpected_layers)
+    #      updated_grp <- c(rv$legendcrit(), unexpected_layers)
+    #      rv$legendcrit(updated_grp) # Update the reactive value
+    #    }
     
     #Prep criteria
     if (!file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))) {
@@ -209,7 +209,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       cmi_4326 <- cmi$projected
     }else{
       kba_cmi <- rv$layers_rv$cmi
-      cmi_4326 <- raster(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
+      cmi_4326 <- rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_led.tif"))) {
       led <- process_raster(rv$layers_rv$led, rv$refarea_reactive(), rv$outdir(), "kba_led", fact = 4, aggregation_fun = "mean")
@@ -217,7 +217,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       led_4326 <- led$projected
     } else{
       kba_led <- rv$layers_rv$led
-      led_4326 <- raster(file.path(rv$outdir(), "output/kba_led_4326.tif"))
+      led_4326 <- rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))) {
       gpp <- process_raster(rv$layers_rv$gpp, rv$refarea_reactive(), rv$outdir(), "kba_gpp", fact = 4, aggregation_fun = "mean")
@@ -225,7 +225,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       gpp_4326 <- gpp$projected
     } else{
       kba_gpp <- rv$layers_rv$gpp
-      gpp_4326 <- raster(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
+      gpp_4326 <- rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))) {
       lcc <- process_raster(rv$layers_rv$lcc, rv$refarea_reactive(), rv$outdir(), "kba_lcc", fact = 40, aggregation_fun = "modal", ignored = c(15, 17))
@@ -233,7 +233,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       lcc_4326 <- lcc$projected
     }else{
       kba_lcc <- rv$layers_rv$lcc
-      lcc_4326 <- raster(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+      lcc_4326 <- rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
     }
     
     if(!is.null(rv$layers_rv$criteria5)){
@@ -242,8 +242,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
-        kba_criteria5 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))
-        crit5_4326 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
+        kba_criteria5 <- rast(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))
+        crit5_4326 <- rast(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
       }
     }else{
       kba_criteria5 <- NULL
@@ -488,7 +488,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       hideGroup(c("Streams"))
     
     if(!is.null(rv$layers_rv$criteria5)){
-      crit5_4326 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
+      crit5_4326 <- rast(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
       
       leafletProxy("map") %>%
         clearGroup(rv$criteria5name()) %>%

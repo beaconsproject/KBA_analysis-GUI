@@ -40,15 +40,15 @@ ui = dashboardPage(skin="black",
                                  shinydashboard::menuItem("Overview", tabName = "overview", icon = icon("th")),
                                  shinydashboard::menuItem("Set input parameters", tabName = "tabUpload", icon = icon("th"), startExpanded = FALSE),
                                  shinydashboard::menuItem("Build KBAs (optional)", tabName = "build_kbas", icon = icon(name = "fas fa-tools", lib = "font-awesome"), startExpanded = FALSE,
-                                          menuSubItem("Create Builder input", tabName = "tabinput", icon = icon("th")),                
-                                          menuSubItem("Run Builder and calculate DCI", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
-                                          menuSubItem("Reduce KBAs (OPTIONAL)", tabName = "tabKBAs", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
-                                          ),
+                                                          menuSubItem("Create Builder input", tabName = "tabinput", icon = icon("th")),                
+                                                          menuSubItem("Run Builder and calculate DCI", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
+                                                          menuSubItem("Reduce KBAs (OPTIONAL)", tabName = "tabKBAs", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))
+                                 ),
                                  shinydashboard::menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
-                                          menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Assess single KBAs (optional)</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
-                                          menuSubItem("Create and assess KBA networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
-                                          #menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
-                                          ),
+                                                          menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Assess single KBAs (optional)</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
+                                                          menuSubItem("Create and assess KBA networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
+                                                          #menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
+                                 ),
                                  shinydashboard::menuItem("Convert as Shapefiles (OPTIONAL)", tabName = "convert", icon = icon(name = "fas fa-download", lib = "font-awesome")),
                                  hr()
                      ),
@@ -93,7 +93,7 @@ ui = dashboardPage(skin="black",
                        tags$br(),
                        tags$hr(),
                        actionButton("runBuilder", "Run Builder", icon = icon(name = "play", lib = "font-awesome"), class = "btn-warning", style="width:200px")                     
-                       ),
+                     ),
                      conditionalPanel(
                        condition="input.tabs=='tabKBAs'",
                        div(style = "margin: 14px; font-size:15px; font-weight: bold", "Reduce number of KBAs"),
@@ -159,7 +159,7 @@ ui = dashboardPage(skin="black",
     $('input[value=\"Both KBAs and PAs\"]').prop('disabled', false);
   });
 ")),
-                      tags$style(HTML("
+                       tags$style(HTML("
     .treeview-menu > li > a {
       margin-left: 20px;
     }
@@ -190,17 +190,17 @@ ui = dashboardPage(skin="black",
                        # Explorer tab: two tabBoxes
                        tabItem(tabName = "tabUpload",
                                fluidRow(
-                                  # Mapview for multiple tabs
-                                  tabBox(id = "mapBox", width = 10,
-                                          tabPanel("Mapview",
-                                                   leafletOutput("map", height = 750),
-                                                   conditionalPanel(
-                                                     condition = "input.tabs == 'tabUpload'",
-                                                     dataTableOutput("pastbl")  # Use tableOutput for basic table
-                                                   ),
-                                                   fluidRow(uiOutput("images"))  # Placeholder for images below the map
-                                          ),
-                                          tabPanel("Guidance",
+                                 # Mapview for multiple tabs
+                                 tabBox(id = "mapBox", width = 10,
+                                        tabPanel("Mapview",
+                                                 leafletOutput("map", height = 750),
+                                                 conditionalPanel(
+                                                   condition = "input.tabs == 'tabUpload'",
+                                                   DT::DTOutput("pastbl")  # Use tableOutput for basic table
+                                                 ),
+                                                 fluidRow(uiOutput("images"))  # Placeholder for images below the map
+                                        ),
+                                        tabPanel("Guidance",
                                                  # Dynamically update the content of Guidance based on selected tab
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabUpload'",
@@ -238,7 +238,7 @@ ui = dashboardPage(skin="black",
                                  ),
                                  conditionalPanel(
                                    condition = "(input.tabs == 'tabBuilder' ||input.tabs == 'tabKBAs') && input.mapBox === 'Mapview'",
-                                     tabBox(id = "metricsBox", width = 2,
+                                   tabBox(id = "metricsBox", width = 2,
                                           tabsetPanel(id = "tabsethydro",
                                                       tabPanel(HTML("<h4>Number of KBAs</h4>"), 
                                                                tableOutput("outkbahydro")
@@ -259,18 +259,18 @@ ui = dashboardPage(skin="black",
                                           )
                                    )
                                  ),
-                                conditionalPanel(
-                                  condition = "input.tabs == 'tabNET' && input.mapBox === 'Mapview'",  # Updated condition
-                                  tabBox(id = "metricsNET", width = 2,
-                                         tabsetPanel(id = "tabsetNET",
-                                                     tabPanel(HTML("<h4>Number of potential KBA networks</h4>"), 
-                                                              tableOutput("outnetfreq"),
-                                                              selectInput("network", label = "Select network:", choices = NULL),  # Initially empty, updated dynamically
-                                                              tableOutput("outnet")
-                                                     )
-                                         )
-                                  )
-                                )
+                                 conditionalPanel(
+                                   condition = "input.tabs == 'tabNET' && input.mapBox === 'Mapview'",  # Updated condition
+                                   tabBox(id = "metricsNET", width = 2,
+                                          tabsetPanel(id = "tabsetNET",
+                                                      tabPanel(HTML("<h4>Number of potential KBA networks</h4>"), 
+                                                               tableOutput("outnetfreq"),
+                                                               selectInput("network", label = "Select network:", choices = NULL),  # Initially empty, updated dynamically
+                                                               tableOutput("outnet")
+                                                      )
+                                          )
+                                   )
+                                 )
                                )
                        )
                      )

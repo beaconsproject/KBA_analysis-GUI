@@ -1,5 +1,5 @@
 assessRepServer <- function(input, output, session, project, map, rv){
-
+  
   # RENDER ASSESS REPRESENTATION UI
   output$assessRep <- renderUI({
     req(input$tabs == "tabKBA")
@@ -23,25 +23,25 @@ assessRepServer <- function(input, output, session, project, map, rv){
   # RENDER KBA FILTERING UI
   output$filterRep <- renderUI({
     req(rv$poly_reactive())
-      
+    
     tagList(
       div("Filter KBAs and/or PAs based on dissimilarity metrics (DMs), upstream area and PAs area",
-        style = "font-size: 14px; font-weight: bold; margin-top: 20px; margin-left: 20px;"),
+          style = "font-size: 14px; font-weight: bold; margin-top: 20px; margin-left: 20px;"),
       div("DMs range from 0 to 1. 0 = low dissimilarity or high representation, 1 = high dissimilarity or low representation",
-        style = "font-size: 12px; margin-left: 20px; margin-top: 20px;"),
-        
+          style = "font-size: 12px; margin-left: 20px; margin-top: 20px;"),
+      
       sliderInput("slideCMI", "CMI:", min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE),
       sliderInput("slideLED", "LED:", min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE),
       sliderInput("slideGPP", "GPP:", min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE),
       sliderInput("slideLCC", "LCC:", min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE),
-        
+      
       uiOutput("slidercrit5"),
-        
+      
       sliderInput("slideUP", "Maximum upstream area (sq.km):", min = 0, max = 100000, value = 25000, step = 1000, ticks = FALSE),
       sliderInput("slidePAs", "Minimum PAs area (sq.km):", min = 0, max = 10000, value = 5, step = 100, ticks = FALSE),
-        
+      
       actionButton("filterRep", "Apply filtering", icon = icon("filter"), class = "btn-primary", style = "width:250px"),
-        
+      
       div(style = "margin-top: 20px;", actionButton("downloadKBA", "Download Filtered KBAs", icon = icon("download"), class = "btn-warning", style = "width:250px")))
   })
   
@@ -71,7 +71,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   observeEvent(input$tabs, {
     req(input$tabs == "tabKBA")
     req(rv$layers_rv$catchments)
-  
+    
     # Initialize KBA/PAs freq table
     x <- tibble(
       Variables = c("KBAs", "PAs", "Filtered KBAs", "Filtered PAs"),
@@ -146,7 +146,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
           div(style = "margin-top: -30px;", sliderInput("slidecrit5", label = paste0(rv$criteria5name(), ":"), min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
         }
       })
-    
+      
       legend <- c(rv$overlayGroups(), rv$kba_init_label())
       rv$overlayGroups(legend)
       
@@ -251,7 +251,6 @@ assessRepServer <- function(input, output, session, project, map, rv){
     extent <- st_union(rv$refarea_reactive(), rv$layers_rv$planreg) %>%     
       st_as_sf() %>%
       st_make_valid()                
-      
     
     #Prep criteria
     if (!file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))) {
@@ -262,7 +261,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       cmi_4326 <- cmi$projected
     }else{
       kba_cmi <- rv$layers_rv$cmi
-      cmi_4326 <- raster(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
+      cmi_4326 <- rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_led.tif"))) {
       r_crop <- crop(rv$layers_rv$led, vect(extent))
@@ -272,7 +271,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       led_4326 <- led$projected
     } else{
       kba_led <- rv$layers_rv$led
-      led_4326 <- raster(file.path(rv$outdir(), "output/kba_led_4326.tif"))
+      led_4326 <- rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))) {
       r_crop <- crop(rv$layers_rv$gpp, vect(extent))
@@ -282,7 +281,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       gpp_4326 <- gpp$projected
     } else{
       kba_gpp <- rv$layers_rv$gpp
-      gpp_4326 <- raster(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
+      gpp_4326 <- rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))) {
       r_crop <- crop(rv$layers_rv$lcc, vect(extent))
@@ -293,7 +292,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       lcc_4326 <- lcc$projected
     }else{
       kba_lcc <- rv$layers_rv$lcc
-      lcc_4326 <- raster(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+      lcc_4326 <- rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
     }
     
     if(!is.null(rv$layers_rv$criteria5)){
@@ -305,8 +304,8 @@ assessRepServer <- function(input, output, session, project, map, rv){
         kba_criteria5 <- crit5$original
         crit5_4326 <- crit5$projected
       }else{
-        kba_criteria5 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))
-        crit5_4326 <- raster(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
+        kba_criteria5 <- rast(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), ".tif")))
+        crit5_4326 <- rast(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
       }
     }else{
       kba_criteria5 <- NULL
@@ -494,7 +493,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
                          options = layersControlOptions(collapsed = TRUE)) %>%
         hideGroup(c("Streams"))
     }
-  
+    
     if(input$assessKBAs == "Only KBAs"){
       rv$upstream_reactive(kba_up)
       rv$poly_reactive(kba_sf)
@@ -808,7 +807,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   # Download KBAs
   ################################################################################################  
   observeEvent(input$downloadKBA, {
-  
+    
     if(input$assessKBAs == "Only KBAs"){
       prefix <- paste0("repKBAs_", sub(".*(reduced\\d+).*", "\\1", input$KBAlayer))
     }else if(input$assessKBAs == "Only PAs"){
@@ -874,6 +873,4 @@ assessRepServer <- function(input, output, session, project, map, rv){
       footer = modalButton("OK"))
     )
   })
-  
-
 }

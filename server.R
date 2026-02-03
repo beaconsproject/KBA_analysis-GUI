@@ -15,14 +15,14 @@ server = function(input, output, session) {
                                                        criteria5 = NULL,
                                                        pas_sf = NULL),
                             layers_rv_4326 = reactiveValues(streams = NULL, 
-                                                       planreg = NULL,
-                                                       catchments = NULL,
-                                                       lcc = NULL,
-                                                       cmi = NULL,
-                                                       gpp = NULL, 
-                                                       led = NULL,
-                                                       criteria5 = NULL,
-                                                       pas_sf = NULL),
+                                                            planreg = NULL,
+                                                            catchments = NULL,
+                                                            lcc = NULL,
+                                                            cmi = NULL,
+                                                            gpp = NULL, 
+                                                            led = NULL,
+                                                            criteria5 = NULL,
+                                                            pas_sf = NULL),
                             nghbrs_reactive = reactiveVal(),
                             seed_reactive = reactiveVal(),
                             kba_sf_reactive = reactiveVal(NULL),
@@ -65,6 +65,16 @@ server = function(input, output, session) {
   output$overviewMD <- renderUI({
     HTML(markdown::markdownToHTML(text = overview_md_text, fragment.only = TRUE))
   })
+  ################################################################################################
+  # test if .Net Framework is installed
+  if (!dotnet_installed()) {
+    showModal(modalDialog(
+      title = "Missing .NET Framework",
+      "This app requires Microsoft .NET Framework. Please install it from https://dotnet.microsoft.com/en-us/download/dotnet-framework",
+      easyClose = TRUE,
+      footer = modalButton("Close")
+    ))
+  }
   
   ################################################################################################
   # RELOAD
@@ -76,7 +86,7 @@ server = function(input, output, session) {
   output$map <- renderLeaflet({
     
     intact_4326 <- intact %>% st_transform(4326)
-
+    
     # Render initial map
     isolate({
       map <- leaflet(options = leafletOptions(attributionControl=FALSE)) %>%
