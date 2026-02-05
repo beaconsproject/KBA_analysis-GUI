@@ -5,6 +5,9 @@ server = function(input, output, session) {
                             project_name = reactiveVal(NULL),
                             outdir = reactiveVal(NULL),
                             layer_paths = reactiveVal(NULL),
+                            display1_name = reactiveVal(),
+                            display2_name = reactiveVal(),
+                            display3_name = reactiveVal(),
                             layers_rv = reactiveValues(streams = NULL, 
                                                        planreg = NULL,
                                                        catchments = NULL,
@@ -13,7 +16,10 @@ server = function(input, output, session) {
                                                        gpp = NULL, 
                                                        led = NULL,
                                                        criteria5 = NULL,
-                                                       pas_sf = NULL),
+                                                       pas_sf = NULL,
+                                                       display1_sf = NULL,
+                                                       display2_sf = NULL,
+                                                       display3_sf = NULL),
                             layers_rv_4326 = reactiveValues(streams = NULL, 
                                                             planreg = NULL,
                                                             catchments = NULL,
@@ -112,6 +118,9 @@ server = function(input, output, session) {
   
   #Set input parameters
   setParamsServer(input, output, session, project, myMap, reactiveValsList)
+  
+  # Add display layers
+  addDisplayServer(input, output, session, project, myMap, reactiveValsList)
   
   #Run BUILDER
   buildKBAServer(input, output, session, project, myMap, reactiveValsList)

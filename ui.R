@@ -39,6 +39,7 @@ ui = dashboardPage(skin="black",
                      sidebarMenu(id = "tabs",
                                  shinydashboard::menuItem("Overview", tabName = "overview", icon = icon("th")),
                                  shinydashboard::menuItem("Set input parameters", tabName = "tabUpload", icon = icon("th"), startExpanded = FALSE),
+                                 shinydashboard::menuItem("Add display elements (OPTIONAL)", tabName = "addLayers", icon = icon(name = "fas fa-plus", lib = "font-awesome")),
                                  shinydashboard::menuItem("Build KBAs (optional)", tabName = "build_kbas", icon = icon(name = "fas fa-tools", lib = "font-awesome"), startExpanded = FALSE,
                                                           menuSubItem("Create Builder input", tabName = "tabinput", icon = icon("th")),                
                                                           menuSubItem("Run Builder and calculate DCI", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
@@ -62,6 +63,39 @@ ui = dashboardPage(skin="black",
                        uiOutput("newproject_ui"),
                        uiOutput("intactCol_ui"),
                        uiOutput("pas_ui")
+                     ),
+                     # EXTRA LAYERS
+                     conditionalPanel(
+                       condition="input.tabs=='addLayers'",
+                       radioButtons("extraupload", "Select source for extra layers to be displayed:",
+                                    choices = list("Shapefile" = "extrashp", 
+                                                   "GeoPackage" = "extragpkg"),
+                                    selected = character(0), 
+                                    inline = TRUE)
+                     ),
+                     conditionalPanel(
+                       condition = "input.tabs=='addLayers' && input.extraupload == 'extrashp'",
+                       div(style = "margin-top: -10px;",fileInput(inputId = "display1",   label = HTML('<span style="display:inline-block; width:15px; height:15px; background-color:#663300; margin-right:8px; border:1px solid #000;"></span>Select layer 1'),
+                                                                  multiple = TRUE, accept = c('.shp','.dbf','.sbn','.sbx','.shx','.prj','.cpg'), placeholder = "Select a ShapeFile")),
+                       div(style = "margin-top: -30px;",fileInput(inputId = "display2", label = HTML('<span style="display:inline-block; width:15px; height:15px; background-color:#330066; margin-right:8px; border:1px solid #000;"></span>Select layer 2'),
+                                                                  multiple = TRUE, accept = c('.shp','.dbf','.sbn','.sbx','.shx','.prj','.cpg'), placeholder = "Select a ShapeFile")),
+                       div(style = "margin-top: -30px;",fileInput(inputId = "display3", label = HTML('<span style="display:inline-block; width:15px; height:15px; background-color:#003333; margin-right:8px; border:1px solid #000;"></span>Select layer 3'),
+                                                                  multiple = TRUE, accept = c('.shp','.dbf','.sbn','.sbx','.shx','.prj','.cpg'), placeholder = "Select a ShapeFile"))
+                     ),
+                     conditionalPanel(
+                       condition = "input.tabs=='addLayers' && input.extraupload == 'extragpkg'",
+                       fileInput(inputId = "display4", label = HTML("<h5><b>OPTIONAL - </b>Upload a GeoPackage that contains layers to be displayed on the map.</h5>"),
+                                 multiple = FALSE, accept = ".gpkg", placeholder = "Select a GeoPackage"),
+                       div(style = "margin-top: -10px;", selectInput("display4a", label = HTML('<span style="display:inline-block; width:15px; height:15px; background-color:#663300; margin-right:8px; border:1px solid #000;"></span>Select layer 1'), choices = NULL)),
+                       div(style = "margin-top: -20px;", selectInput("display4b", label = HTML('<span style="display:inline-block; width:15px; height:15px; background-color:#330066; margin-right:8px; border:1px solid #000;"></span>Select layer 2'), choices = NULL)),
+                       div(style = "margin-top: -20px;", selectInput("display4c", label = HTML('<span style="display:inline-block; width:15px; height:15px; background-color:#003333; margin-right:8px; border:1px solid #000;"></span>Select layer 3'), choices = NULL))
+                     ),
+                     conditionalPanel(
+                       condition = "input.tabs == 'addLayers'",
+                       br(),
+                       hr(),
+                       br(),
+                       actionButton("confExtra", "Confirm", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:250px")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  

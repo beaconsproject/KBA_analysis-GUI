@@ -53,6 +53,11 @@ options(scipen = 999)
 #         ADDON FUNCTIONS
 #########################################################
 #########################################################
+# test prior to map that layer is not null, sf and has rows
+isMappable <- function(x) {
+  !is.null(x) && inherits(x, "sf") && nrow(x) > 0
+}
+
 # Check if Microsoft .Net Framework is installed
 dotnet_installed <- function() {
   key <- "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full"

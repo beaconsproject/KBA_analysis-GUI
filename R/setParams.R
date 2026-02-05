@@ -152,8 +152,12 @@ setParamsServer <- function(input, output, session, project, map, rv){
       rv$outdir(file.path(rv$dirpath(), rv$project_name()))
       project_is_new(FALSE)
       
-      layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-      layers <- layers_info$name
+      layers <-NULL
+      if(file.exists(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))){
+        layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
+        layers <- layers_info$name
+      }
+      
       
       # Load builder input
       if(file.exists(file.path(rv$outdir(), "Builder_input/seeds.csv"))){
@@ -190,7 +194,8 @@ setParamsServer <- function(input, output, session, project, map, rv){
         rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
       }
       
-      if ("reference area" %in% layers){
+      if ("reference area" %in% paths$Layer &&
+          file.exists(paths$Path[paths$Layer == "reference area"])){
         rv$refarea_reactive(st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area"))
       } 
       
