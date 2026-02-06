@@ -6,7 +6,7 @@ hydrologic connectivity for the integration of aquatic and terrestrial conservat
 Download and unzip the BEACONs KBA Explorer on your local machine.
 ## R requirements
 - Install R (R version 4.5.2) and RStudio RStudio 2025.09.1 Build 401) (https://posit.co/download/rstudio-desktop/)
-- Intall the required packages by running this command line in the R console:
+- Install the required packages by running this command line in the R console:
 install.packages(c("leaflet","shiny","sf","shinydashboard","shinyFiles","shinyWidgets","shinyjs","purrr","markdown","tibble","DT","dplyr","terra","exactextractr","tidyr","stringr","ggplot2"))
 
 ## Benchmark BUILDER requirements
