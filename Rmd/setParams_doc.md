@@ -1,19 +1,17 @@
 # Set input parameters
 
-There actions are completed here: 
-(1) select an output directory and identify project subfolder, 
-(2) upload spatial datasets in the App, and 
-(3) specify catchment attribute that describes the propotion of area intact or undisturbed within the catchment.
+Before setting the input parameters, copy BenchmarkBuilder.exe into the output directory you will point to.
+
+Setting input parameters requires to: 
+1. Select an output directory, 
+2. Upload spatial datasets in the application, and 
+3. Specify the catchment attribute that describes the propotion of area intact or undisturbed within the catchment.  
 
 ### Select output Directory
 
-Navigate to the directory where outputs produced by the App will be written, highlight the directory, and click Select (bottom right). 
+Navigate to the directory where the executable BenchmarkBuilder_cmd.exe was copied and click Select (bottom right). 
 
-Next, click the orange "Confirm" button.
-
-### Identify Project
-
-The user has two options: 
+Next, click the orange "Confirm" button. The user has two then options: 
 
 Option 1 - Select **Use an existing project** to revisit an existing project. The project is a subfolder within the Output directory. Use the dropdown menu to select the project and click the orange "Confirm" button. 
 
@@ -21,9 +19,9 @@ Option 1 - Select **Use an existing project** to revisit an existing project. Th
 
 Option 2 - Select **Create a new project** to create a new project. Enter the name for the project, and click the orange "Confirm" button. A subfolder with this name will be created in the Output directory as well as three project subfolders: Builder_input, Builder_output, and output. 
 
-### Source spatial datasets
+### Upload spatial datasets
 
-All spatial datasets for building KBAs are uploaded here, as well as the planning region boundary, protected areas, reference area for representation analyisis, and environmental criteria for assessing representation (CMI, LCC, LED, and GPP). This includes shapefiles and TIF files. 
+All spatial datasets for building KBAs are uploaded here, as well as the planning region boundary, protected areas, reference area for representation analysis, and environmental criteria for assessing representation (CMI, LCC, LED, and GPP). This includes shapefiles and TIF files. 
 
 A shapefile consists of multiple files with the same name but different extensions. All files associated with the shapefile must be uploaded and must include .shp, .shx, .dbf, .prj. 
 
@@ -78,3 +76,7 @@ Spatial datasets will still need to be uploaded. See **Upload spatial datasets**
 ### Output
 
 No output is created at this stage.  
+
+
+
+Values will range from 0 to 1, with 1 = 100% intact.

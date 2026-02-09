@@ -241,6 +241,10 @@ ui = dashboardPage(skin="black",
                                                    includeMarkdown("./Rmd/setParams_doc.md")
                                                  ),
                                                  conditionalPanel(
+                                                   condition = "input.tabs == 'addLayers'",
+                                                   includeMarkdown("./Rmd/addLayers_doc.md")
+                                                 ),
+                                                 conditionalPanel(
                                                    condition = "input.tabs == 'tabinput'",
                                                    includeMarkdown("./Rmd/builderInput_doc.md")
                                                  ),

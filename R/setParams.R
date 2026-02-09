@@ -176,70 +176,136 @@ setParamsServer <- function(input, output, session, project, map, rv){
       
       # Load spatial object
       manifest_file <- file.path(rv$outdir(), "data/layer_paths.csv")
-      rv$layer_paths(read.csv(manifest_file))
-      paths <- rv$layer_paths()
-      rv$layers_rv$catchments <- st_read(paths$Path[paths$Layer == "catchments"])
-      rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
-      
-      rv$layers_rv$streams <- st_read(paths$Path[paths$Layer == "stream"]) 
-      rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
-      
-      rv$layers_rv$planreg <- st_read(paths$Path[paths$Layer == "planning region"])
-      rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
-      
-      if ("protected areas" %in% paths$Layer &&
-          file.exists(paths$Path[paths$Layer == "protected areas"])) {
+      if(file.exists(manifest_file)){
+        rv$layer_paths(read.csv(manifest_file))
+        paths <- rv$layer_paths()
+        rv$layers_rv$catchments <- st_read(paths$Path[paths$Layer == "catchments"])
+        rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
         
-        rv$layers_rv$pas_sf <-st_read(paths$Path[paths$Layer == "protected areas"])
-        rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
-      }
-      
-      if ("reference area" %in% paths$Layer &&
-          file.exists(paths$Path[paths$Layer == "reference area"])){
-        rv$refarea_reactive(st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area"))
-      } 
-      
-      # Load raster
-      if(file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))){
-        rv$layers_rv$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc.tif"))
-        rv$layers_rv_4326$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
-      } else{
-        rv$layers_rv$lcc <- terra::rast(paths$Path[paths$Layer == "LCC"])
-      }
-      if(file.exists(file.path(rv$outdir(), "output/kba_led.tif"))){
-        rv$layers_rv$led <- terra::rast(file.path(rv$outdir(), "output/kba_led.tif"))
-        rv$layers_rv_4326$led <- terra::rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
-      } else{
-        rv$layers_rv$led <- terra::rast(paths$Path[paths$Layer == "LED"])
-      } 
-      if(file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))){
-        rv$layers_rv$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp.tif"))
-        rv$layers_rv_4326$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
-      } else{
-        rv$layers_rv$gpp <- terra::rast(paths$Path[paths$Layer == "GPP"])
-      } 
-      if(file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))){
-        rv$layers_rv$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi.tif"))
-        rv$layers_rv_4326$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
-      } else{
-        rv$layers_rv$cmi <- terra::rast(paths$Path[paths$Layer == "CMI"])
-      }
-      
-      #criteria 5
-      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
-      unexpected_layers <- paths$Layer[!paths$Layer %in% req_layers]
-      if (length(unexpected_layers)>0) {
-        if(length(unexpected_layers)==1){
-          rv$criteria5name(unexpected_layers)
-          if (file.exists(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))) {
-            rv$layers_rv$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))
-            rv$layers_rv_4326$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, "_4326.tif")))
-          } else{
-            orig_path <- paths$Path[paths$Layer == unexpected_layers]
-            rv$layers_rv$criteria5 <- terra::rast(orig_path)
+        rv$layers_rv$streams <- st_read(paths$Path[paths$Layer == "stream"]) 
+        rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
+        
+        rv$layers_rv$planreg <- st_read(paths$Path[paths$Layer == "planning region"])
+        rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
+        
+        if ("protected areas" %in% paths$Layer &&
+            file.exists(paths$Path[paths$Layer == "protected areas"])) {
+          
+          rv$layers_rv$pas_sf <-st_read(paths$Path[paths$Layer == "protected areas"])
+          rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
+        }
+        
+        if ("reference area" %in% paths$Layer &&
+            file.exists(paths$Path[paths$Layer == "reference area"])){
+          rv$refarea_reactive(st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area"))
+        } 
+        
+        # Load raster
+        if(file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))){
+          rv$layers_rv$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc.tif"))
+          rv$layers_rv_4326$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+        } else{
+          rv$layers_rv$lcc <- terra::rast(paths$Path[paths$Layer == "LCC"])
+        }
+        if(file.exists(file.path(rv$outdir(), "output/kba_led.tif"))){
+          rv$layers_rv$led <- terra::rast(file.path(rv$outdir(), "output/kba_led.tif"))
+          rv$layers_rv_4326$led <- terra::rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
+        } else{
+          rv$layers_rv$led <- terra::rast(paths$Path[paths$Layer == "LED"])
+        } 
+        if(file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))){
+          rv$layers_rv$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp.tif"))
+          rv$layers_rv_4326$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
+        } else{
+          rv$layers_rv$gpp <- terra::rast(paths$Path[paths$Layer == "GPP"])
+        } 
+        if(file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))){
+          rv$layers_rv$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi.tif"))
+          rv$layers_rv_4326$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
+        } else{
+          rv$layers_rv$cmi <- terra::rast(paths$Path[paths$Layer == "CMI"])
+        }
+        
+        #criteria 5
+        req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+        unexpected_layers <- paths$Layer[!paths$Layer %in% req_layers]
+        if (length(unexpected_layers)>0) {
+          if(length(unexpected_layers)==1){
+            rv$criteria5name(unexpected_layers)
+            if (file.exists(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))) {
+              rv$layers_rv$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))
+              rv$layers_rv_4326$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, "_4326.tif")))
+            } else{
+              orig_path <- paths$Path[paths$Layer == unexpected_layers]
+              rv$layers_rv$criteria5 <- terra::rast(orig_path)
+            }
+          }
+        }
+      }else{
+        rv$layers_rv$catchments <- st_read(file.path(rv$outdir(), "data/catchments.shp"))
+        rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
+        
+        rv$layers_rv$streams <- st_read(file.path(rv$outdir(), "data/stream.shp")) 
+        rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
+        
+        rv$layers_rv$planreg <- st_read(file.path(rv$outdir(), "data/planning region.shp"))
+        rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
+        
+        if (file.exists(file.path(rv$outdir(), "data/protected areas"))) {
+          
+          rv$layers_rv$pas_sf <-st_read(file.path(rv$outdir(), "data/protected areas.shp"))
+          rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
+        }
+        
+        if (file.exists(file.path(rv$outdir(), "data/reference area"))){
+          rv$refarea_reactive(st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area"))
+        } 
+        
+        # Load raster
+        if(file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))){
+          rv$layers_rv$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc.tif"))
+          rv$layers_rv_4326$lcc <- terra::rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+        } else{
+          rv$layers_rv$lcc <- terra::rast(file.path(rv$outdir(), "data/LCC.tif"))
+        }
+        if(file.exists(file.path(rv$outdir(), "output/kba_led.tif"))){
+          rv$layers_rv$led <- terra::rast(file.path(rv$outdir(), "output/kba_led.tif"))
+          rv$layers_rv_4326$led <- terra::rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
+        } else{
+          rv$layers_rv$led <- terra::rast(file.path(rv$outdir(), "data/LED.tif"))
+        } 
+        if(file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))){
+          rv$layers_rv$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp.tif"))
+          rv$layers_rv_4326$gpp <- terra::rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
+        } else{
+          rv$layers_rv$gpp <- terra::rast(file.path(rv$outdir(), "data/GPP.tif"))
+        } 
+        if(file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))){
+          rv$layers_rv$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi.tif"))
+          rv$layers_rv_4326$cmi <- terra::rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
+        } else{
+          rv$layers_rv$cmi <- terra::rast(file.path(rv$outdir(), "data/CMI.tif"))
+        }
+        
+        #criteria 5
+        req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+        lf <- list.files(file.path(rv$outdir(), "data"), pattern = "\\.(shp|tif)$", ignore.case = TRUE)
+        lf_no_ext <- tools::file_path_sans_ext(lf)
+        unexpected_layers <- lf_no_ext[!lf_no_ext %in% req_layers]
+        if (length(unexpected_layers)>0) {
+          if(length(unexpected_layers)==1){
+            rv$criteria5name(unexpected_layers)
+            if (file.exists(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))) {
+              rv$layers_rv$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, ".tif")))
+              rv$layers_rv_4326$criteria5 <- terra::rast(file.path(rv$outdir(), "output", paste0(unexpected_layers, "_4326.tif")))
+            } else{
+              orig_path <- file.path(rv$outdir(), "data", paste0(unexpected_layers, ".tif"))
+              rv$layers_rv$criteria5 <- terra::rast(orig_path)
+            }
           }
         }
       }
+      
     }
     
     # Case 3: existing subfolders: user chooses new
@@ -397,8 +463,21 @@ setParamsServer <- function(input, output, session, project, map, rv){
         if (file.exists(path)) {
           rv$criteria5name(unexpected_layers)
           rv$layers_rv$criteria5 <- read_tif_from_csv(input$csv_file, unexpected_layers)
+          updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = unexpected_layers)
+          updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = unexpected_layers)
+        } else {
+          stop("The custom variable path in the CSV does not exist.")
         }
+      }else{
+        # show pop-up ...
+        showModal(modalDialog(
+          title = "Provided layer csv pathways include more than one custom layer.", "The app allow only the addtion of one custom layer at the moment. Please fix the csv.",
+          easyClose = TRUE,
+          footer = NULL)
+        )
       }
+    }else{
+      return(NULL) 
     }
   })
   
@@ -407,18 +486,21 @@ setParamsServer <- function(input, output, session, project, map, rv){
   # --- Individual shapefile uploads
   observeEvent(input$upload_catch, {
     rv$layers_rv$catchments <- read_shp_from_upload(input$upload_catch)
+    st_write(rv$layers_rv$catchments, file.path(rv$outdir(), "data/catchments.shp"), append = FALSE)
     rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
     paths <- rv$layer_paths()
   })
   
   observeEvent(input$upload_stream, {
     rv$layers_rv$streams <- read_shp_from_upload(input$upload_stream)
+    st_write(rv$layers_rv$streams, file.path(rv$outdir(), "data/stream.shp"), append = FALSE)
     rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
     paths <- rv$layer_paths()
   })
   
   observeEvent(input$upload_planreg, {
     rv$layers_rv$planreg <- read_shp_from_upload(input$upload_planreg)
+    st_write(rv$layers_rv$planreg, file.path(rv$outdir(), "data/planning region.shp"), append = FALSE)
     rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
     paths <- rv$layer_paths()
   })
@@ -432,7 +514,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     if (!"NAME" %in% colnames(pas_sf)) {
       pas_sf$NAME <- NA_character_
     }
-    
+    st_write(pas_sf, file.path(rv$outdir(), "data/protected areas.shp"), append = FALSE)
     rv$layers_rv$pas_sf <- pas_sf
     rv$layers_rv_4326$pas_sf <- sf::st_transform(pas_sf, 4326)
     paths <- rv$layer_paths()
@@ -441,67 +523,33 @@ setParamsServer <- function(input, output, session, project, map, rv){
   # --- Individual raster uploads
   observeEvent(input$upload_lcc, {
     rv$layers_rv$lcc <- read_tif_from_upload(input$upload_lcc)
+    writeRaster(rv$layers_rv$lcc, file.path(rv$outdir(), "data/LCC.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_led, {
     rv$layers_rv$led <- read_tif_from_upload(input$upload_led)
+    writeRaster(rv$layers_rv$led, file.path(rv$outdir(), "data/LED.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_cmi, {
     rv$layers_rv$cmi <- read_tif_from_upload(input$upload_cmi)
+    writeRaster(rv$layers_rv$cmi, file.path(rv$outdir(), "data/CMI.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_gpp, {
     rv$layers_rv$gpp <- read_tif_from_upload(input$upload_gpp)
+    writeRaster(rv$layers_rv$gpp, file.path(rv$outdir(), "data/GPP.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_custom, {
     rv$layers_rv$criteria5 <- read_tif_from_upload(input$upload_custom)
+    rastName <- sub("\\..*$", "", input$upload_custom$name)
+    rv$criteria5name(rastName)
+    writeRaster(rv$layers_rv$criteria5, file.path(rv$outdir(), "data", paste0(rastName,".tif")), overwrite = TRUE)
+    
+    updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = rastName)
+    updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = rastName)
   })
-  
-  
-  # Set criteria5
-  criteria5 <- reactive({
-    if (!is.null(input$upload_custom)) {
-      # Read raster from file upload
-      rastName <- sub("\\..*$", "", input$upload_custom$name)
-      rv$criteria5name(rastName)
-      updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = rastName)
-      updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = rastName)
-      return(read_tif_from_upload(input$upload_custom))
-    } else if (!is.null(input$csv_file)) {
-      csv_data <- read.csv(input$csv_file$datapath)
-      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
-      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
-      # Read raster from CSV
-      if (length(unexpected_layers)>0) {
-        if(length(unexpected_layers)==1){
-          #print(paste("Unexpected layers found:", paste(unexpected_layers, collapse = ", ")))
-          path <- csv_data$Path[csv_data$Layer == unexpected_layers]
-          if (file.exists(path)) {
-            rv$criteria5name(unexpected_layers)
-            updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = unexpected_layers)
-            updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = unexpected_layers)
-            return(read_tif_from_csv(input$csv_file, unexpected_layers))
-          } else {
-            stop("The custom vatiable path in the CSV does not exist.")
-          }
-        }else{
-          # show pop-up ...
-          showModal(modalDialog(
-            title = "Provided layer csv pathways include more than one custom layer.", "The app allow only the addtion of one custom layer at the moment. Please fix the csv.",
-            easyClose = TRUE,
-            footer = NULL)
-          )
-        }
-      }else{
-        return(NULL) 
-      }
-    }
-    # Return NULL if neither source is available
-    return(NULL)
-  })
-  
   
   ####################################################################################################
   #  Test on required attributes

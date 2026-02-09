@@ -334,6 +334,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
+        
         error_occurred <- FALSE
         tryCatch({
           kba_sf$lcc <- calc_dissimilarity(reserves_sf=kba_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_lcc, raster_type='categorical', plot_out_dir=file.path(rv$outdir(), "/output/plot/lcc"), categorical_class_labels = df_label)
