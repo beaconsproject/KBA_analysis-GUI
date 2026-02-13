@@ -1,0 +1,6 @@
+Layer,Path,Type of analysis,Value
+crbuRg_km2,E:/MelinaStuff/BEACONs/request/Lucy/addMetrics/caribouRange/BorealCaribouRange.shp,amount_area_vect,NA
+crbu_km2,E:/MelinaStuff/BEACONs/request/Lucy/addMetrics/caribouRSF/borshield_n21_reclass_Bprj_50m.tif,amount_area_rast,1-2
+cmiproj,E:/MelinaStuff/BEACONs/request/Lucy/addMetrics/criteria/cmi/kba_cmi.tif,calc_dissimilarity_cont,NA
+bwvel,E:/MelinaStuff/BEACONs/request/Lucy/addMetrics/velocity/bwvel_ensemble_rcp85_2055_wwf9_prj_50m.tif,geometric_mean,NA
+fwvel,E:/MelinaStuff/BEACONs/request/Lucy/addMetrics/velocity/fwvel_ensemble_rcp85_2055_wwf9_prj_50m.tif,geometric_mean,NA
