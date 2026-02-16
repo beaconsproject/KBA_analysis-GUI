@@ -171,4 +171,8 @@ Set the layer in KBA_Analysis.gpkg on which you want the metrics to be calculate
 
 Set the path and file name where the updated layer with metrics should be saved (outLayer).  
 
+**8. Run the analysis**
+
+Source the file to run the analysis and save the results.  
+
 
