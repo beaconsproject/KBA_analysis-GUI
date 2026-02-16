@@ -92,6 +92,8 @@ This metric is ...
 
 
 
+
+
 ## Project Files and Their Roles
 
 The analysis requires three main files in the project directory set by the KBA Explorer:
