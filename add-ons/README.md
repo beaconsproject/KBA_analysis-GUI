@@ -111,7 +111,7 @@ This file outlines ecological criteria to be included and the type of analysis t
 
 **Plot** - Path to folder in which to save dissimilarity plots. Only used by the calc_dissimilarity_cont and calc_disssimilaryity_rast. Default is not to create plots.  
 
-*Note that the file found on GitHub is an example of what the file should look like. You will need to modify it according to your needs. 
+*Note that the file provided serves as an example. You will need to modify it according to your needs. 
 
 ### `net_metrics.R`
 
