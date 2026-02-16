@@ -1,5 +1,12 @@
 # KBA Explorer add ons
 
+## Table of Contents
+
+- [Purpose](#purpose)
+- [Available Types of Analysis](#available-types-of-analysis)
+- [How to Run the Analysis](#how-to-run-the-analysis)
+- [Outputs](#outputs)
+
 This repository contains scripts and tools to calculate network-level metrics used to evaluate and filter KBA networks.
 
 The objective of this analysis is to support management planners in identifying KBA configurations that best meet predefined conservation targets (e.g., connectivity, coverage, resilience, representation).
@@ -118,8 +125,7 @@ Define analysis parameters such as connectivity thresholds, conservation targets
 
 Outputs
 Store calculated metrics and ranked network results.
-
-▶️ How to Run the Analysis
+## How to Run the Analysis
 
 Place candidate network data in the /data folder.
 
