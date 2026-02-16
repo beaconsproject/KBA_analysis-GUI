@@ -135,7 +135,7 @@ This is the main execution script. It reads the inputLayers.csv, access each cri
 
 1. **Download the require files**
 Prior to running the analysis, ensure the following three files are downloaded into your KBA Explorer project directory:
-KBA_Explorer/
+```KBA_Explorer/
 ├── BUILDER_input/
 ├── BUILDER_output/
 ├── data/
@@ -143,9 +143,9 @@ KBA_Explorer/
 │   └── KBA_Analysis.gpkg
 ├── inputLayers.csv 
 ├── net_metrics.R
-└── run_net_metric.R
+└── run_net_metric.R```
  
-2.**Configure inputLayers.csv**
+2. **Configure inputLayers.csv**
 Make sure all fields are properly filled, including custom criteria, file paths, and the type of analysis to perform.
 
 3. **Set up the R environment**
