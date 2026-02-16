@@ -119,6 +119,8 @@ This file outlines ecological criteria to be included and the type of analysis t
 
 **Plot** - Path to folder in which to save dissimilarity plots. Only used by the calc_dissimilarity_cont and calc_disssimilaryity_rast. Default is not to create plots.  
 
+*Note that the file found on GitHub is an example of what the file should look like. You will need to modify it according to your needs. 
+
 ### `net_metrics.R`
 
 This script contains all the helper functions used to calculate network-level metrics (see [Available Types of Analysis](#available-types-of-analysis)).
@@ -131,39 +133,34 @@ This is the main execution script. It reads the inputLayers.csv, access each cri
 
 ## Example of workflow
 
-1. Prior to running the analysis, make sure the following files are present in the project directory used for KBA Explorer:
-- inputLayers.csv
-- net_metrics.R
-- run_net_metrics.R
+1. **Download the require files**
+Prior to running the analysis, ensure the following three files are downloaded into your KBA Explorer project directory:
+KBA_Explorer/
+├── BUILDER_input/
+├── BUILDER_output/
+├── data/
+├── output/
+│   └── KBA_Analysis.gpkg
+├── inputLayers.csv 
+├── net_metrics.R
+└── run_net_metric.R
+ 
+2.**Configure inputLayers.csv**
+Make sure all fields are properly filled, including custom criteria, file paths, and the type of analysis to perform.
 
-2. Download the three files in the project directory used for KBA Explorer.
-3. 
-4. In R Studio, open run_net_metrics.R.
-Load the required R libraries
-Set the working directory pointing on the project directory used for KBA Explorer
+3. **Set up the R environment**
+In R Studio, open run_net_metric.R and set the working directory to the KBA Explorer project directory.
 
+4. **Load the required libraries**
+Load all necessary R packages for the analysis.
 
-# source BEACONs R functions
-source("./net_metrics.R")
+5. **Source helper functions**
+Run net_metrics.R to load the helper functions in the environment.
 
-# Set path to KBA Explorer output (KBA_analysis.gpkg) where network are stored
-outGPKG <- "./output/KBA_analysis.gpkg"
-# Set network layer
-kba_layer <- "wwf9_kba2best_network"
-# Set network column
-net_name <- "netName"
+6. **Specify the network layer and network name**
+Set the layer in KBA_Analysis.gpkg on which you want the metrics to be calculated (kba_layer) and indicates the name of the column holding the network name (net_name).
 
-# Read network and reference from the KBA_analysis.gpkg created by KBA Explorer
-net_sf <- st_read(outGPKG, layer = kba_layer) %>%
-  dplyr::select(netName)
-ref_area <-  st_read(outGPKG, layer = "reference area")
-
-# Set inputLayer and outLayer (path, filename.shp)
-inputLayer <- read_csv("./inputLayers.csv")
-outLayer <- file.path("./output/netMetrics_final.shp")
-
-
-python run_network_metrics.py
+7. **Define output file**
+Set the path and file name where the updated layer with metrics should be saved (outLayer).  
 
 
-Results will be saved in the /outputs directory.
