@@ -4,8 +4,8 @@
 
 - [Purpose](#purpose)
 - [Available Types of Analysis](#available-types-of-analysis)
-- [How to Run the Analysis](#how-to-run-the-analysis)
-- [Outputs](#outputs)
+- [Project files and their roles](#project_files_and_their_roles)
+- [Example of workflow](#example)
 
 This repository contains scripts and tools to calculate network-level metrics used to evaluate and filter KBA networks.
 
@@ -88,11 +88,10 @@ Useful for comparing overall average performance across networks.
 Calculates the geometric mean of values within each network.
 
 **Typical use cases:**
-- Combining multiple performance indicators
-- Penalizing low values in multi-criteria evaluation
-- Creating composite indices where balance among indicators is important
+- ...
+- ...
 
-This metric is particularly useful when low values in one criterion should strongly influence the overall score.
+This metric is ...
 
 ---
 
@@ -100,36 +99,62 @@ This post-analysis framework allows a more flexible and objective comparison of 
 
 By extending the evaluation beyond the initial KBA filtering criteria, this post-analysis framework enables planners to select networks that best align with specific conservation objectives and management priorities.
 
-📂 Folder Structure
+## Project files and their roles
 
-Example structure (adapt to your actual files):
+The analysis requires three main files in the project directory:
 
-/network_metrics/
-│
-├── data/                  # Input spatial or network data
-├── scripts/               # Metric calculation scripts
-├── config/                # Parameter files (targets, thresholds)
-├── outputs/               # Generated metric results
-└── README.md              # Documentation (this file)
+1. inputLayers.csv
 
-Key Components
+This file defines what analysis to run for each dataset. For each input layer, it specifies:
 
-Data folder
-Contains input files representing candidate protected area networks.
+Variable name – a descriptive name for the layer
 
-Scripts
-Compute network metrics and produce summary tables for comparison.
+Access path – location of the input file (vector or raster)
 
-Configuration files
-Define analysis parameters such as connectivity thresholds, conservation targets, or filtering criteria.
+Type of analysis – which metric function to apply (amount_area_vect, calc_dissimilarity_cat, etc.)
 
-Outputs
-Store calculated metrics and ranked network results.
+Think of this file as a control table that tells the scripts which layers to process and how.
+
+2. net_metrics.R
+
+This script contains all the helper functions used to calculate network-level metrics, including:
+
+amount_area_vect
+
+amount_area_rast
+
+calc_dissimilarity_cat
+
+calc_dissimilarity_cont
+
+arithmetic_mean
+
+geometric_mean
+
+It does not run the analysis on its own — it simply provides the functions that run_net_metrics.R calls.
+
+3. run_net_metrics.R
+
+This is the main execution script. It:
+
+Reads the inputLayers.csv control file
+
+For each input layer, selects the appropriate analysis function from net_metrics.R
+
+Computes the requested network metrics
+
+Saves the results to the output/ folder
+
+Essentially, run_net_metrics.R orchestrates the workflow using the helper functions and input definitions.
+
 ## How to Run the Analysis
 
-Place candidate network data in the /data folder.
+Prior to running the analysis, make sure the following files are present in the project directory used for KBA Explorer:
+- inputLayers.csv
+- net_metrics.R
+- run_net_metrics.R
 
-Adjust analysis parameters in the /config file.
+**inputLayers.csv** 
 
 Run the main script:
 
