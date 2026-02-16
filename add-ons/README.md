@@ -90,8 +90,7 @@ Calculates the geometric mean of values within each network.
 
 This metric is ...
 
-
-
+---
 
 ## Project Files and Their Roles
 
