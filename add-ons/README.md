@@ -1,6 +1,6 @@
 # KBA Explorer add ons
 
-## Table of Contents
+### Sections
 
 - [Purpose](#purpose)
 - [Available Types of Analysis](#available-types-of-analysis)
