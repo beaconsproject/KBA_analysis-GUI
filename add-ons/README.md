@@ -101,21 +101,25 @@ By extending the evaluation beyond the initial KBA filtering criteria, this post
 
 ## Project Files and Their Roles
 
-The analysis requires three main files in the project directory:
+The analysis requires three main files in the project directory set by the KBA Explorer:
 
-1. inputLayers.csv
+### `inputLayers.csv`
 
-This file defines what analysis to run for each dataset. For each input layer, it specifies:
+This file defines the ecological criteria to add and thetype of analysis to run for each dataset. For each input layer, it specifies:
 
-Variable name – a descriptive name for the layer
+Variable name – an accronym to be used in the output shapefile where criteria will be saved
 
 Access path – location of the input file (vector or raster)
 
-Type of analysis – which metric function to apply (amount_area_vect, calc_dissimilarity_cat, etc.)
+Type of analysis – which metric function to apply (see [Available Types of Analysis](#available-types-of-analysis))
 
-Think of this file as a control table that tells the scripts which layers to process and how.
+Value	- Raster values to consider in the calc_dissimilarity_cat and amount_area_rast. Default is NA which mean all values are considered. 
 
-2. net_metrics.R
+Range	- Range of raster values to consider in the calc_dissimilarity_cont and amount_area_rast. Default is NA which mean all values are considered. 
+
+Plot - Path to folder in which to save dissimilarity plots. Only used by the calc_dissimilarity_cont and calc_disssimilaryity_rast. Default is not to create plots.  
+
+### `net_metrics.R`
 
 This script contains all the helper functions used to calculate network-level metrics, including:
 
@@ -133,7 +137,7 @@ geometric_mean
 
 It does not run the analysis on its own — it simply provides the functions that run_net_metrics.R calls.
 
-3. run_net_metrics.R
+### `run_net_metrics.R`
 
 This is the main execution script. It:
 
