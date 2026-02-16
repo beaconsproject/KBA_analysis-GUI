@@ -143,7 +143,8 @@ Prior to running the analysis, ensure the following three files are downloaded i
 │   └── KBA_Analysis.gpkg
 ├── inputLayers.csv 
 ├── net_metrics.R
-└── run_net_metric.R```
+└── run_net_metric.R
+```
  
 2. **Configure inputLayers.csv**
 Make sure all fields are properly filled, including custom criteria, file paths, and the type of analysis to perform.
