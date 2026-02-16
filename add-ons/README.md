@@ -107,11 +107,16 @@ The analysis requires three main files in the project directory set by the KBA E
 
 This file defines the ecological criteria to add and thetype of analysis to run for each dataset. For each input layer, it specifies:
 
-**Variable name** – an accronym to be used in the output shapefile where criteria will be saved
-**Access path** – location of the input file (vector or raster)
-**Type of analysis** – which metric function to apply (see [Available Types of Analysis](#available-types-of-analysis))
+**Variable name** – an accronym to be used in the output shapefile where criteria will be saved.
+
+**Access path** – location of the input file (vector or raster).
+
+**Type of analysis** – which metric function to apply (see [Available Types of Analysis](#available-types-of-analysis)).
+
 **Value**	- Raster values to consider in the calc_dissimilarity_cat and amount_area_rast. Default is NA which mean all values are considered. 
+
 **Range**	- Range of raster values to consider in the calc_dissimilarity_cont and amount_area_rast. Default is NA which mean all values are considered. 
+
 **Plot** - Path to folder in which to save dissimilarity plots. Only used by the calc_dissimilarity_cont and calc_disssimilaryity_rast. Default is not to create plots.  
 
 ### `net_metrics.R`
