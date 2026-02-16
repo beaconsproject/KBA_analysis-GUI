@@ -6,7 +6,7 @@ The objective of this analysis is to support management planners in identifying 
 
 Rather than evaluating sites in isolation, this framework treats KBAs as part of a network, allowing planners to assess how different combinations of sites perform collectively.
 
-🎯 Purpose
+## Purpose
 
 When generating network with the KBA Explorer, multiple candidate networks are produced that meet minimum spatial or ecological requirements, such as size and intactness. KBA Explorer offers to filter the network
 based on 4 primary criteria (cmi, gpp, led and lcc). While these criteria provide an important first-level screening, additional metrics may be critical for informed decision-making. 
@@ -15,15 +15,12 @@ These additional criteria can help assess:
 
 This folder provides functions that allow users to compute additional metrics on each candidate network. These functions can be applied to any ecological layer (e.g., caribou, wolverine, marten habitat, climate velocity, land cover, or other spatial indicators).
 
-Available Types of Analysis
+## Available Types of Analysis
 
-The following functions can be applied to each candidate network:
-
-amount_area_vect
-
+`amount_area_vect`
 Calculates the amount (area) of a given vector feature within each network.
 
-Typical use cases:
+Typical use cases: 
 
 Area of species habitat polygons inside the network
 
@@ -33,7 +30,8 @@ Overlap with designated management zones
 
 This helps users quantify how much of a specific spatial feature is captured by each network.
 
-amount_area_rast
+---
+`amount_area_rast`
 
 Calculates the amount (area or proportion) of a given raster-based feature within each network.
 
