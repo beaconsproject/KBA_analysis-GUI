@@ -7,22 +7,14 @@
 - [Project Files and Their Roles](#project-files-and-their-roles)
 - [Example of workflow](#example-of-workflow)
 
-This repository contains scripts and tools to calculate network-level metrics used to evaluate and filter KBA networks.
-
-The objective of this analysis is to support management planners in identifying KBA configurations that best meet predefined conservation targets (e.g., connectivity, coverage, resilience, representation).
-
-Rather than evaluating sites in isolation, this framework treats KBAs as part of a network, allowing planners to assess how different combinations of sites perform collectively.
-
 ## Purpose
+This repository contains scripts and tools to calculate additional network-level metrics on KBA networks.
 
-When generating network with the KBA Explorer, multiple candidate networks are produced that meet minimum spatial or ecological requirements, such as size and intactness. KBA Explorer offers to filter the network
-based on 4 primary criteria (cmi, gpp, led and lcc). While these criteria provide an important first-level screening, additional metrics may be critical for informed decision-making. 
-
-These additional criteria can help assess:
-
-This folder provides functions that allow users to compute additional metrics on each candidate network. These functions can be applied to any ecological layer (e.g., caribou, wolverine, marten habitat, climate velocity, land cover, or other spatial indicators).
+The objective is to support management planners in identifying KBA configurations that best meet predefined conservation targets (e.g., connectivity, coverage, resilience, representation). Rather than evaluating sites in isolation, this framework treats KBAs as part of a network, allowing planners to assess how different combinations of sites perform collectively. When generating network with the KBA Explorer, multiple candidate networks are produced that meet minimum spatial or ecological requirements, such as size, intactness and representation. KBA Explorer offers to filter the network based on 4 primary criteria (cmi, gpp, led and lcc) within the app. While these criteria provide an important first-level screening, additional metrics may be critical for informed decision-making. 
 
 ## Available Types of Analysis
+
+These metrics can be applied to KBA network and are compatible with various ecological layers, such as caribou, wolverine, marten habitat, climate velocity, land cover, or other spatial indicators.
 
 ### `amount_area_vect`
 
