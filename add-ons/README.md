@@ -10,7 +10,7 @@
 ## Purpose
 This repository contains scripts and tools to calculate additional network-level metrics on KBA networks.
 
-The objective is to support management planners in identifying KBA configurations that best meet predefined conservation targets (e.g., connectivity, coverage, resilience, representation). Rather than evaluating sites in isolation, this framework treats KBAs as part of a network, allowing planners to assess how different combinations of sites perform collectively. When generating network with the KBA Explorer, multiple candidate networks are produced that meet minimum spatial or ecological requirements, such as size, intactness and representation. KBA Explorer offers to filter the network based on 4 primary criteria (cmi, gpp, led and lcc) within the app. While these criteria provide an important first-level screening, additional metrics may be critical for informed decision-making. 
+The objective is to support management planners in identifying KBA configurations that best meet predefined conservation targets (e.g., connectivity, coverage, resilience, representation). Rather than evaluating sites in isolation, this framework treats KBAs as part of a network, allowing planners to assess how different combinations of sites perform collectively. When generating network with the KBA Explorer, multiple candidate networks are produced that meet minimum spatial or ecological requirements, such as size, intactness and representation. KBA Explorer offers to filter the network based on 4 primary criteria (cmi, gpp, led and lcc) within the app. While these criteria provide an important first-level screening, additional metrics may be critical to select networks that best align with specific conservation objectives and management priorities.
 
 ## Available Types of Analysis
 
@@ -86,10 +86,6 @@ Calculates the geometric mean of values within each network.
 This metric is ...
 
 ---
-
-This post-analysis framework allows a more flexible and objective comparison of candidate protected area networks beyond the initial KBA filtering criteria.
-
-By extending the evaluation beyond the initial KBA filtering criteria, this post-analysis framework enables planners to select networks that best align with specific conservation objectives and management priorities.
 
 ## Project Files and Their Roles
 
