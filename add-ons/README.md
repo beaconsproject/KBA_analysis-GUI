@@ -129,16 +129,39 @@ It does not run the analysis on its own — it simply provides the functions tha
 
 This is the main execution script. It reads the inputLayers.csv, access each criteria, selects the appropriate analysis function from net_metrics.R and computes the requested network metrics. Essentially, run_net_metrics.R orchestrates the workflow using the helper functions and input definitions.
 
-## How to Run the Analysis
+## Example of workflow
 
-Prior to running the analysis, make sure the following files are present in the project directory used for KBA Explorer:
+1. Prior to running the analysis, make sure the following files are present in the project directory used for KBA Explorer:
 - inputLayers.csv
 - net_metrics.R
 - run_net_metrics.R
 
-**inputLayers.csv** 
+2. Download the three files in the project directory used for KBA Explorer.
+3. 
+4. In R Studio, open run_net_metrics.R.
+Load the required R libraries
+Set the working directory pointing on the project directory used for KBA Explorer
 
-Run the main script:
+
+# source BEACONs R functions
+source("./net_metrics.R")
+
+# Set path to KBA Explorer output (KBA_analysis.gpkg) where network are stored
+outGPKG <- "./output/KBA_analysis.gpkg"
+# Set network layer
+kba_layer <- "wwf9_kba2best_network"
+# Set network column
+net_name <- "netName"
+
+# Read network and reference from the KBA_analysis.gpkg created by KBA Explorer
+net_sf <- st_read(outGPKG, layer = kba_layer) %>%
+  dplyr::select(netName)
+ref_area <-  st_read(outGPKG, layer = "reference area")
+
+# Set inputLayer and outLayer (path, filename.shp)
+inputLayer <- read_csv("./inputLayers.csv")
+outLayer <- file.path("./output/netMetrics_final.shp")
+
 
 python run_network_metrics.py
 
