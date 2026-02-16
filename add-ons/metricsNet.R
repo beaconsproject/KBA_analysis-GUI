@@ -62,8 +62,50 @@ geometric_mean <- function(netLayer, netName, ras, ras_name){
   return(netLayer)
 }
 
+arithmetic_mean <- function(netLayer, netName, ras, ras_name){
+  
+  # Make sure geom exists. Rename if it doesn't
+  geom_idx <- which(names(netLayer) == attr(netLayer, "sf_column"))
+  names(netLayer)[geom_idx] <- "geom"
+  st_geometry(netLayer) <- "geom"
+  
+  # dissolve the networks to get polygons for extract
+  net_shp_dslv <- netLayer %>%
+    group_by(netName) %>%
+    summarise(geom = st_union(geom))
+  
+  # split benchmarks into blocks of 10 for processing
+  net_list <- unique(as.character(netLayer[[netName]]))
+  net_list_grouped <- split(net_list, ceiling(seq_along(net_list)/10))
+  
+  # run in blocks of 10 - seems optimal for maintaining a fast extract
+  counter <- 1
+  for(net_list_g in net_list_grouped){
+    
+    print(paste0("Block ", counter, " of ", length(net_list_grouped)))
+    counter <- counter + 1
+    
+    net_shp_g <- net_shp_dslv[net_shp_dslv$netName %in% net_list_g,] # subset dissolved networks by the block of netnames
+    x <- exact_extract(ras, net_shp_g) # extract
+    
+    names(x) <- net_list_g # name the list elements by their associated netname
+    
+    for(net in net_list_g){
+      
+      # for each network in the block, extract the values...
+      vel_vals <- x[[net]] %>% # get the data frame of values for the network
+        filter(coverage_fraction > 0.5) %>% # only keep values from cells with at least half their area in the polygon
+        pull(value)
+      
+      result <- round(mean(vel_vals, na.rm = TRUE), 3)
+      netLayer[[paste0("gm_",ras_name)]][netLayer[[netName]] == net] <- result
+    }
+  }
+  return(netLayer)
+}
 
-area_from_raster <- function(netLayer, netName, ras, ras_name, values = NULL) {
+
+area_from_raster <- function(netLayer, netName, ras, ras_name, values = NULL, range = NULL) {
   cellarea_km2 <- prod(res(ras)) / 1e6     # m²
 
   # Make sure geom exists. Rename if it doesn't
@@ -99,11 +141,18 @@ area_from_raster <- function(netLayer, netName, ras, ras_name, values = NULL) {
       
       df <- x[[net]]
       
-      area_km2 <- sum(
-        df$coverage_fraction[df$value %in% values],
-        na.rm = TRUE
-      ) * cellarea_km2
+      # Determine which cells to keep
+      if (!is.null(values)) {
+        keep <- df$value %in% values
+      } else if (!is.null(range)) {
+        if (length(range) != 2)
+          stop("range must be a numeric vector of length 2: c(min, max)")
+        keep <- df$value >= min(range) & df$value <= max(range)
+      } else {
+        keep <- rep(TRUE, nrow(df))
+      }
       
+      area_km2 <- sum(df$coverage_fraction[keep], na.rm = TRUE) * cellarea_km2
       netLayer[[ras_name]][netLayer[[netName]] == net] <- area_km2
     }
   }
@@ -296,4 +345,100 @@ calc_dissimilarity <- function(
   }
   
   result_vector
+}
+
+
+# This should be written in RCPP
+ks_stat <- function(refVal, netVal) {
+  # calculate KS statistic (representation index)
+  ri <- suppressWarnings(round(ks.test(refVal, netVal)[[1]][[1]], 3))
+  return(ri)
+}
+
+
+bc_stat <- function(refVal, netVal) {
+  
+  # Extract values as integer vectors WITHOUT copying geometry
+  ref_vec <- refVal[]
+  net_vec <- netVal[]
+  
+  # Ensure NA handling
+  ref_vec <- ref_vec[!is.na(ref_vec)]
+  net_vec <- net_vec[!is.na(net_vec)]
+  
+  # Get all category labels
+  cats <- sort(unique(c(ref_vec, net_vec)))
+  
+  # Map original values → 1..K integer indices
+  idx_ref <- match(ref_vec, cats)
+  idx_net <- match(net_vec, cats)
+  
+  # Very fast counting at C level
+  ref_counts <- tabulate(idx_ref, nbins = length(cats))
+  net_counts <- tabulate(idx_net, nbins = length(cats))
+  
+  # Convert to proportions
+  ref_prop <- ref_counts / sum(ref_counts)
+  net_prop <- net_counts / sum(net_counts)
+  
+  # Bray-Curtis dissimilarity
+  ri <- sum(abs(ref_prop - net_prop)) / sum(ref_prop + net_prop)
+  return(round(ri, 3))
+}
+
+ks_plot <- function(refVal, netVal, plotTitle="") {
+  
+  regLab <- "Reference area"
+  netLab <- "Network"
+  
+  z1 <- c(refVal, netVal)
+  z2 <- c(rep(regLab,length(refVal)), rep(netLab,length(netVal)))
+  zz <- data.frame(cbind(z1,z2),stringsAsFactors=FALSE)
+  names(zz) <- c("values","criteria")
+  zz$values <- round(as.numeric(zz$values),3)
+  
+  # create and save density plot
+  p <- ggplot2::ggplot(zz, ggplot2::aes(x=.data$values)) + ggplot2::geom_density(ggplot2::aes(group=.data$criteria, color=.data$criteria)) +
+    ggplot2::ggtitle(plotTitle) +
+    ggplot2::labs(x="Indicator value", y="Density")
+  
+  return(p)
+}
+
+
+bc_plot <- function(refVal, netVal, plotTitle="", labels=data.frame()) {
+  x1 <- dplyr::as_tibble(refVal) %>%
+    dplyr::count(.data$value)
+  names(x1) <- c("cat","strata")
+  
+  x2 <- dplyr::as_tibble(netVal) %>%
+    dplyr::count(.data$value)
+  names(x2) <- c("cat","reserve")
+  
+  x <- merge(x1,x2,by="cat",all=T)
+  x <- x[order(as.integer(as.character(x$cat))),]
+  x$strata <- as.numeric(x$strata)
+  x$reserve <- as.numeric(x$reserve)
+  x$reserve[is.na(x$reserve)] <- 0
+  x$reserve[is.na(x$strata)] <- 0 # this is needed in case there is one reserve pixel and no strata pixel
+  x$strata[is.na(x$strata)] <- 0
+  x$strata <- x$strata/sum(x$strata) #as.integer(x$strata)
+  x$reserve <- x$reserve/sum(x$reserve) #as.integer(x$reserve)
+  
+  # prep labels if present
+  if(nrow(labels) > 0 & "values" %in% names(labels)){
+    for(i in labels$values){
+      if(i %in% x$cat){
+        x$cat[x$cat == i] <- labels$label[labels$values == i]
+      }
+    }
+  }
+  x$cat <- factor(x$cat, levels = x$cat)
+  
+  p <- ggplot2::ggplot(x, ggplot2::aes(x=.data$cat, y=.data$reserve)) + ggplot2::geom_bar(stat="identity", fill="white", colour="black") + ggplot2::coord_flip()
+  p <- p + ggplot2::geom_point(data=x, ggplot2::aes(x=.data$cat, y=.data$strata), colour="black", size=3) + ggplot2::theme(legend.position = "none")
+  p <- p + ggplot2::labs(x="", y="Proportional area (dots indicate regional proportions)")
+  p <- p + ggplot2::ggtitle(plotTitle)
+  
+  return(p)
 }
