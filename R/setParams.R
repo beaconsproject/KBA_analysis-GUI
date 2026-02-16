@@ -141,11 +141,11 @@ setParamsServer <- function(input, output, session, project, map, rv){
           easyClose = TRUE,
           footer = modalButton("OK"))
         )
-        return() 
       }
     }
     
     # Case 2: existing subfolders: user chooses existing
+    req(input$project_choice)
     if (input$project_choice == "existing") {
       req(input$existing_project)
       rv$project_name(input$existing_project)

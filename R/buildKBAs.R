@@ -23,8 +23,9 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     # Assuming catchment_data is a dataframe or sf object, extract column names
     colnames <- names(catchment_data)
     
+    colzone <- ifelse("ZONE" %in% colnames,  "ZONE", "Please select")
     # Update the choices of the selectInput elements with column names
-    updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = colnames, selected = "ZONE")
+    updateSelectInput(session = getDefaultReactiveDomain(), "zoneColname", choices = c("Please select", colnames), selected = colzone)
     updateSelectInput(session = getDefaultReactiveDomain(), "arealandColname", choices = colnames, selected="Area_land")
   })
   
@@ -134,6 +135,15 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       return()
     }
     
+    if(input$zoneColname == "Please select"){
+      showModal(modalDialog(
+        title = "Missing Zone",
+        "Please select the column in the catchments table that represent the zone.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
     # check existance Benchmark Builder
     if(!file.exists(file.path(rv$dirpath(), "BenchmarkBuilder_cmd.exe"))){
       showModal(modalDialog(
