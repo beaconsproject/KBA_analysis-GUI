@@ -30,108 +30,68 @@ This helps users quantify how much of a specific spatial feature is captured by 
 
 ---
 
-`amount_area_rast`
+### `amount_area_rast`
 
-Calculates the amount (area or proportion) of a given raster-based feature within each network.
+Calculates the amount (area) of a given raster-based feature within each network.
 
-Typical use cases:
-
-Area of suitable habitat derived from a habitat suitability map
-
-Area of climate refugia
-
-Area of high-value conservation pixels
+**Typical use cases:**
+- Area of suitable habitat derived from a habitat suitability map
+- Area of climate refugia
+- Area of high-value conservation pixels
 
 This allows users to compare networks based on raster-derived indicators.
 
-calc_dissimilarity_cat
+---
+
+### `calc_dissimilarity_cat`
 
 Calculates a categorical dissimilarity metric between a candidate network and a reference area.
 
-Typical use cases:
-
-Comparing land cover composition
-
-Comparing habitat class proportions
-
-Selecting the network most similar to a benchmark conservation area
+**Typical use cases:**
+- Comparing land cover composition
+- Selecting the network most similar to a reference area
 
 This helps identify which network best matches a desired ecological composition.
 
-calc_dissimilarity_cont
+---
+### `calc_dissimilarity_cont`
 
 Calculates a continuous dissimilarity metric between a candidate network and a reference area.
 
-Typical use cases:
-
-Comparing continuous habitat suitability values
-
-Comparing climate velocity distributions
-
-Evaluating similarity in ecological gradients
+**Typical use cases:**
+- Comparing continuous habitat suitability values
+- Comparing climate velocity distributions
+- Evaluating similarity in ecological gradients
 
 This supports selection of networks that most closely resemble a target condition.
 
-arithmetic_mean
+### `arithmetic_mean`
 
 Calculates the arithmetic mean of a continuous raster within each network.
 
-Typical use cases:
-
-Mean habitat suitability score
-
-Mean climate velocity
-
-Mean ecological integrity value
+**Typical use cases:**
+- Mean habitat suitability score
+- Mean climate velocity
+- Mean ecological integrity value
 
 Useful for comparing overall average performance across networks.
 
-geometric_mean
+### `geometric_mean`
 
 Calculates the geometric mean of values within each network.
 
-Typical use cases:
-
-Combining multiple performance indicators
-
-Penalizing low values in multi-criteria evaluation
-
-Creating composite indices where balance among indicators is important
+**Typical use cases:**
+- Combining multiple performance indicators
+- Penalizing low values in multi-criteria evaluation
+- Creating composite indices where balance among indicators is important
 
 This metric is particularly useful when low values in one criterion should strongly influence the overall score.
 
-Application
-
-These functions are species-agnostic and indicator-agnostic. Users can apply them to any spatial layer relevant to their conservation objective.
-
-By combining these analyses, planners can:
-
-Quantify representation of key habitats
-
-Compare networks to ecological reference conditions
-
-Integrate continuous model outputs
-
-Rank candidate networks using composite metrics
+---
 
 This post-analysis framework allows a more flexible and objective comparison of candidate protected area networks beyond the initial KBA filtering criteria.
 
 By extending the evaluation beyond the initial KBA filtering criteria, this post-analysis framework enables planners to select networks that best align with specific conservation objectives and management priorities.
-
-
-The content of this folder enables:
-
-Calculation of ecological and structural network metrics
-
-Comparison between alternative protected area networks
-
-Filtering of candidate networks based on quantitative performance thresholds
-
-Support for evidence-based decision-making
-
-These metrics help planners move from “Does this network meet the minimum target?” to “Which network performs best given our objectives?”
-
-
 
 📂 Folder Structure
 
