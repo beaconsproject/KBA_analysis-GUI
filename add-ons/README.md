@@ -4,7 +4,7 @@
 
 - [Purpose](#purpose)
 - [Available Types of Analysis](#available-types-of-analysis)
-- [Project files and their roles](#project_files_and_their_roles)
+- [Project Files and Their Roles](#project-files-and-their-roles)
 - [Example of workflow](#example)
 
 This repository contains scripts and tools to calculate network-level metrics used to evaluate and filter KBA networks.
@@ -99,7 +99,7 @@ This post-analysis framework allows a more flexible and objective comparison of 
 
 By extending the evaluation beyond the initial KBA filtering criteria, this post-analysis framework enables planners to select networks that best align with specific conservation objectives and management priorities.
 
-## Project files and their roles
+## Project Files and Their Roles
 
 The analysis requires three main files in the project directory:
 
