@@ -1,4 +1,4 @@
-# KBA Explorer add ons
+# Add Additional Metrics to KBA_Explorer Output
 
 ### Sections
 
