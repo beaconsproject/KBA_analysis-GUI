@@ -5,7 +5,7 @@
 - [Purpose](#purpose)
 - [Available Types of Analysis](#available-types-of-analysis)
 - [Project Files and Their Roles](#project-files-and-their-roles)
-- [Example of workflow](#example)
+- [Example of workflow](#example-of-workflow)
 
 This repository contains scripts and tools to calculate network-level metrics used to evaluate and filter KBA networks.
 
