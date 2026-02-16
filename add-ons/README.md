@@ -134,6 +134,7 @@ This is the main execution script. It reads the inputLayers.csv, access each cri
 ## Example of workflow
 
 1. **Download the require files**
+
 Prior to running the analysis, ensure the following three files are downloaded into your KBA Explorer project directory:
 ```KBA_Explorer/
 ├── BUILDER_input/
@@ -147,21 +148,27 @@ Prior to running the analysis, ensure the following three files are downloaded i
 ```
  
 2. **Configure inputLayers.csv**
+
 Make sure all fields are properly filled, including custom criteria, file paths, and the type of analysis to perform.
 
 3. **Set up the R environment**
+
 In R Studio, open run_net_metric.R and set the working directory to the KBA Explorer project directory.
 
 4. **Load the required libraries**
+
 Load all necessary R packages for the analysis.
 
 5. **Source helper functions**
+
 Run net_metrics.R to load the helper functions in the environment.
 
 6. **Specify the network layer and network name**
+
 Set the layer in KBA_Analysis.gpkg on which you want the metrics to be calculated (kba_layer) and indicates the name of the column holding the network name (net_name).
 
 7. **Define output file**
+
 Set the path and file name where the updated layer with metrics should be saved (outLayer).  
 
 
