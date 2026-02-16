@@ -53,6 +53,7 @@ Calculates a categorical dissimilarity metric between a candidate network and a 
 This helps identify which network best matches a desired ecological composition.
 
 ---
+
 ### `calc_dissimilarity_cont`
 
 Calculates a continuous dissimilarity metric between a candidate network and a reference area.
@@ -63,6 +64,8 @@ Calculates a continuous dissimilarity metric between a candidate network and a r
 - Evaluating similarity in ecological gradients
 
 This supports selection of networks that most closely resemble a target condition.
+
+---
 
 ### `arithmetic_mean`
 
@@ -75,6 +78,8 @@ Calculates the arithmetic mean of a continuous raster within each network.
 
 Useful for comparing overall average performance across networks.
 
+---
+
 ### `geometric_mean`
 
 Calculates the geometric mean of values within each network.
@@ -85,7 +90,7 @@ Calculates the geometric mean of values within each network.
 
 This metric is ...
 
----
+
 
 ## Project Files and Their Roles
 
