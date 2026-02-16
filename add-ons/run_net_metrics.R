@@ -1,13 +1,16 @@
 # Adding metrics to Networks 
 # This version uses inputLayers and derive analysis from it. 
 
-library(sf)
-library(dplyr)
-library(ggplot2)
-library(terra)
-library(exactextractr)
-library(psych)
-library(readr)
+#Load libraries
+required_packages <- c("sf", "dplyr", "ggplot2", "terra", "exactextractr", "psych", "readr")
+
+# Install any missing packages
+for (pkg in required_packages) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    install.packages(pkg)
+  }
+  library(pkg, character.only = TRUE)
+}
 
 
 ########################################################################
@@ -17,13 +20,13 @@ library(readr)
 ########################################################################
 # Set working directory
 # working directory has:
-#  - metricsNet.R
+#  - net_metrics.R
 #  - inputLayers.csv
 #  - output directory where output GPKG from the KBA explorer is found
 setwd("E:/MelinaStuff/BEACONs/request/Lucy/addMetrics")
 
 # source BEACONs R functions
-source("./metricsNet.R")
+source("./net_metrics.R")
 
 # Set path to KBA Explorer output (KBA_analysis.gpkg) where network are stored
 outGPKG <- "./output/KBA_analysis.gpkg"
@@ -32,10 +35,9 @@ kba_layer <- "wwf9_kba2best_network"
 # Set network column
 net_name <- "netName"
 
-# Read network and reference* (*required for dissimilarity metrics)
-net_sf <- st_read(outGPKG, layer = kba_layer) %>%
-  dplyr::select(netName)
-ref_area <-  st_read("./bnd/wwf9_kba1.shp")
+# Read network and reference from the KBA_analysis.gpkg created by KBA Explorer
+net_sf <- st_read(outGPKG, layer = kba_layer)
+ref_area <-  st_read(outGPKG, layer = "reference area")
 
 # Set inputLayer and outLayer (path, filename.shp)
 inputLayer <- read_csv("./inputLayers.csv")
