@@ -17,20 +17,19 @@ This folder provides functions that allow users to compute additional metrics on
 
 ## Available Types of Analysis
 
-`amount_area_vect`
+### `amount_area_vect`
+
 Calculates the amount (area) of a given vector feature within each network.
 
-Typical use cases: 
-
-Area of species habitat polygons inside the network
-
-Area of intact forest within the network
-
-Overlap with designated management zones
+**Typical use cases:**
+- Area of species habitat polygons inside the network  
+- Area of intact forest within the network  
+- Overlap with designated management zones  
 
 This helps users quantify how much of a specific spatial feature is captured by each network.
 
 ---
+
 `amount_area_rast`
 
 Calculates the amount (area or proportion) of a given raster-based feature within each network.
