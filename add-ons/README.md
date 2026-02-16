@@ -141,7 +141,7 @@ Prior to running the analysis, ensure the following three files are downloaded i
  
 **2. Configure inputLayers.csv**
 
-Make sure all fields are properly filled, including custom criteria, file paths, and the type of analysis to perform.
+Make sure all fields are properly filled, including variable name, access path and the type of analysis to perform.
 
 **3. Set up the R environment**
 
