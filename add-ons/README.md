@@ -105,13 +105,13 @@ The analysis requires three main files in the project directory set by the KBA E
 
 ### `inputLayers.csv`
 
-This file defines the ecological criteria to add and thetype of analysis to run for each dataset. For each input layer, it specifies:
+This file outlines ecological criteria to be included and the type of analysis to be performed for each. For every input layer, it specifies:
 
-**Variable name** – an accronym to be used in the output shapefile where criteria will be saved.
+**Variable name** – An accronym to be used in the output shapefile where criteria will be saved.
 
-**Access path** – location of the input file (vector or raster).
+**Access path** – Location of the input file (vector or raster).
 
-**Type of analysis** – which metric function to apply (see [Available Types of Analysis](#available-types-of-analysis)).
+**Type of analysis** – Specify which metric function to apply (see [Available Types of Analysis](#available-types-of-analysis)).
 
 **Value**	- Raster values to consider in the calc_dissimilarity_cat and amount_area_rast. Default is NA which mean all values are considered. 
 
@@ -121,35 +121,13 @@ This file defines the ecological criteria to add and thetype of analysis to run 
 
 ### `net_metrics.R`
 
-This script contains all the helper functions used to calculate network-level metrics, including:
-
-amount_area_vect
-
-amount_area_rast
-
-calc_dissimilarity_cat
-
-calc_dissimilarity_cont
-
-arithmetic_mean
-
-geometric_mean
+This script contains all the helper functions used to calculate network-level metrics (see [Available Types of Analysis](#available-types-of-analysis)).
 
 It does not run the analysis on its own — it simply provides the functions that run_net_metrics.R calls.
 
 ### `run_net_metrics.R`
 
-This is the main execution script. It:
-
-Reads the inputLayers.csv control file
-
-For each input layer, selects the appropriate analysis function from net_metrics.R
-
-Computes the requested network metrics
-
-Saves the results to the output/ folder
-
-Essentially, run_net_metrics.R orchestrates the workflow using the helper functions and input definitions.
+This is the main execution script. It reads the inputLayers.csv, access each criteria, selects the appropriate analysis function from net_metrics.R and computes the requested network metrics. Essentially, run_net_metrics.R orchestrates the workflow using the helper functions and input definitions.
 
 ## How to Run the Analysis
 
