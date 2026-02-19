@@ -214,7 +214,6 @@ ui = dashboardPage(skin="black",
                                fluidRow(
                                  tabBox(id = "one", width = 8,
                                         tabPanel(HTML("Overview"), htmlOutput("overviewMD")),
-                                        #tabPanel(HTML("Overview"), includeMarkdown("docs/overview.md")),
                                         tabPanel(HTML("User guide"), includeMarkdown("docs/user_guide.md")),
                                         tabPanel(HTML("Dataset"), includeMarkdown("docs/datasets.md"))
                                  )
@@ -238,39 +237,39 @@ ui = dashboardPage(skin="black",
                                                  # Dynamically update the content of Guidance based on selected tab
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabUpload'",
-                                                   includeMarkdown("./Rmd/setParams_doc.md")
+                                                   includeMarkdown("./docs/setParams_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'addLayers'",
-                                                   includeMarkdown("./Rmd/addLayers_doc.md")
+                                                   includeMarkdown("./docs/addLayers_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabinput'",
-                                                   includeMarkdown("./Rmd/builderInput_doc.md")
+                                                   includeMarkdown("./docs/builderInput_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabBuilder'",
-                                                   includeMarkdown("./Rmd/runBuilder_doc.md")
+                                                   includeMarkdown("./docs/runBuilder_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabKBAs'",
-                                                   includeMarkdown("./Rmd/KBAmetrics_doc.md")
+                                                   includeMarkdown("./docs/KBAmetrics_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabPAs'",
-                                                   includeMarkdown("./Rmd/PAmetrics_doc.md")
+                                                   includeMarkdown("./docs/PAmetrics_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabKBA'",
-                                                   includeMarkdown("./Rmd/assessRep_doc.md")
+                                                   includeMarkdown("./docs/assessRep_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabNET'",
-                                                   includeMarkdown("./Rmd/createNet_doc.md")
+                                                   includeMarkdown("./docs/createNet_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'convert'",
-                                                   includeMarkdown("./Rmd/dwd_doc.md")
+                                                   includeMarkdown("./docs/dwd_doc.md")
                                                  )
                                         )
                                  ),
