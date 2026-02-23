@@ -88,7 +88,8 @@ Calculates the geometric mean of values within each network.
 
 This metric is useful for comparing the inbound and outbound velocity-based refugia potential (Carroll and Ray 2021) of KBA options.
 
-Carroll C, Ray JC. Maximizing the effectiveness of national commitments to protected area expansion for conserving biodiversity and ecosystem carbon under climate change. Glob Chang Biol. 2021 Aug;27(15):3395-3414. doi: 10.1111/gcb.15645. 
+Carroll C, Ray JC. Maximizing the effectiveness of national commitments to protected area expansion for conserving biodiversity and ecosystem carbon under climate change. Glob Chang Biol. 2021 Aug;27(15):3395-3414. doi: 10.1111/gcb.15645.
+
 Loarie, S., Duffy, P., Hamilton, H. et al. The velocity of climate change. Nature 462, 1052–1055 (2009). https://doi.org/10.1038/nature08649
 
 ## Project Files and Their Roles
