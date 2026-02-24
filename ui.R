@@ -40,7 +40,7 @@ ui = dashboardPage(skin="black",
                                  shinydashboard::menuItem("Overview", tabName = "overview", icon = icon("th")),
                                  shinydashboard::menuItem("Set input parameters", tabName = "tabUpload", icon = icon("th"), startExpanded = FALSE),
                                  shinydashboard::menuItem("Add display elements (OPTIONAL)", tabName = "addLayers", icon = icon(name = "fas fa-plus", lib = "font-awesome")),
-                                 shinydashboard::menuItem("Build KBAs (optional)", tabName = "build_kbas", icon = icon(name = "fas fa-tools", lib = "font-awesome"), startExpanded = FALSE,
+                                 shinydashboard::menuItem("Build KBAs", tabName = "build_kbas", icon = icon(name = "fas fa-tools", lib = "font-awesome"), startExpanded = FALSE,
                                                           menuSubItem("Create Builder input", tabName = "tabinput", icon = icon("th")),                
                                                           menuSubItem("Run Builder and calculate DCI", tabName = "tabBuilder", icon = icon(name = "fas fa-play", lib = "font-awesome")),                
                                                           menuSubItem("Reduce KBAs (OPTIONAL)", tabName = "tabKBAs", icon = icon(name = "fas fa-plus-circle", lib = "font-awesome"))

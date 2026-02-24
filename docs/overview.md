@@ -1,35 +1,96 @@
 
-## KBA Analysis for the Northern Canadian Shield Taiga Ecoregion
-> Using beaconstools to Design KBAs
+## Welcome to the KBA Explorer
 
-Key biodiversity area (KBA) planning often involves the selection of optimal conservation area scenarios from a suite of options. In the case of KBAs produced by the partner package `beaconsbuilder`, there could be 100's to 1000's of conservation area options for a given planning region. 
-When combined into networks of multiple KBAs, the number of options can often be in the millions.
 
-The `beaconstools` package provides a range of functions for building polygons of KBA and KBA networks, and adding ecological attributes to those polygons to allow 
-options to be ranked. Functions in the package perform the following tasks:
+**KBA Explorer** is a decision-support tool designed to facilitate the identification, evaluation, and ranking of potential **Key Biodiversity Areas (KBAs)** within a defined region.
 
-- **Create KBA polygons** - creates conservation area polygons using output from the `beaconsbuilder` package; combines `beaconsbuilder` conservation areas with polygons defining other conservation areas such as the existing protected area network; combines conservation areas into networks of multiple conservation areas; filters conservation areas and networks to remove spatial overlap and redundancy.
-- **Hydrology and upstream threats** - For a given conservation area or polygon, identifies all watershed catchments upstream (or downstream) and calculates their area and intactness values.
-- **Dendritic connectivity** - Calculates hydrological connectivity within each conservation area or network.
-- **Assess representation using dissimilarity metrics** - An alternate representation metric using dissimilarity statistics to compare raster distributions between a conservation area and a planning region.
-- **Build network** - Generates KBA networks  .
+A KBA is a site that contributes to the global persistence of biodiversity. KBA Explorer enables users to design conservation
+areas according to defined criteria. To do this, it uses the Benchmark BUILDER software, a user friendly application, developed in C# .NET framework. 
+BUILDER explicitly incorporates **hydrologic connectivity** for the integration of aquatic and terrestrial conservation planning in KBAs design. BUILDER 
+constructs conservation areas using a deterministic construction algorithm that aggregates catchments to a user defined **size** (reflecting system resilience to disturbance
+and **intactness** (representing the absence of industrial activity and serving as a proxy for the integrity of ecological processes).
 
-### Network naming conventions
+Depending on the parameter values selected, this process can generate a substantial number of potential KBA candidates.To identify which of these sites best capture ecological variation, 
+users can conduct a representation analysis inside **KBA Explorer** based on four criteria: 
 
-Individual KBA network are defined as a single feature with an associated geometry, stored in a simple features object that typically contains multiple KBA
-and their associated geometries and attributes. Each network should have a unique name which is typically stored in a column named `network`. For consistency, 
-even features representing single conservation areas have their names stored in the `network` column, you can think of these as networks made up of just one conservation area. 
-Simple and standardized conservation area names are encouraged and must not include spaces. 
+  - Climate Moisture Index (CMI), which provides a measure of the climatic conditions that influence species distributions and ecosystem processes. 
+  - Gross Primary Productivity (GPP), which indicates an index of overall ecosystem productivity
+  - Lake Edge Density (LED), which captures landscape heterogeneity and habitat availability at aquatic–terrestrial interfaces
+  - Land Cover (LCC), which provides insight into habitat composition and landscape heterogeneity.
+  
+Once an index has been calculated for each criterion, users can filter the resulting candidate KBAs according to specific thresholds or representation objectives, 
+allowing the final set of conservation areas to be refined in line with management or planning goals.
 
-For networks of multiple conservation areas, the individual KBA names are combined using the separator `__`. 
-So a network named `KBA_0001__KBA_0002` would be the combined geometries of the individual conservation areas `KBA_0001` and `KBA_0002`. 
+To meet conservation objectives, particularly in large or heterogeneous landscapes, a single KBA may not be sufficient. **KBA Explorer** can address this by 
+constructing networks of KBAs, grouping multiple sites to collectively achieve conservation targets. Once a network is proposed, the application can perform a 
+representation analysis across all included KBAs, using the same four criteria to evaluate which network most effectively captures environmental variation.
 
+
+&#x1F4CC; **Note:** In order to run **KBA Explorer**, you need to acquire Benchmark BUILDER from the BEACONs team and have Microsoft .NET Framework installed on a Windows system. 
+
+<br>
+
+### Input data
+  
+**KBA Explorer** requires several key spatial layers. Users can either upload the spatial layers as ShapeFiles or provide a CSV file that specifies access to each spatial layer.
+Please refer to the **Dataset Requirements** tab for details on the required spatial layers and associated attributes and formatting.
 
 ### Functionality
-
-The app demonstrates a KBA networking analysis using KBAs built by `beaconsbuilder`. Comments in the code indicate points where users could instead use polygons of other conservation areas such as the existing protected areas network.
     
-### Output
+The app consists of five sections:
+<br>
 
-Multiples files are saved locally by the app. A destination folder is set at the **Set input parameters"** stage. This destination folder will hold 
-Builder_input, Builder_output and others related output. Spatial layers are saved in a geopackage named KBA_analysis.gpkg in the output folder. If you are pointing to a directory that was use previously to run the analysis, the app won't overwrite the existing files. On the contrary, the app will use the data already generated, thus acting as a cache. 
+#### Set input parameters
+
+  - Select an output directory where Benchmark BUILDER software is located.
+  
+  - Select an existing project or create a new project where candidate KBAs and KBA network will be saved. 
+    
+  - Upload all necessary spatial layers.
+  
+  - Specify intactness attributes within the catchments layer.
+
+&#x1F4CC; **Note:** All layers must have the same projection. Additionally, the study area must capture the full extent of the criteria layers to ensure accurate analysis.
+
+<br>
+
+#### Add display elements (OPTIONAL)
+
+This section allows users to add additional features for visualization. These features must be vector data (points, lines, or polygons) and 
+cannot be rasters. A maximum of three additional vector features can be added. The file or layer names are automatically used as display names on 
+the map. Colors are assigned by the app and cannot be modified.
+
+<br>
+
+#### Build KBAs
+
+This section guides users through the process of generating candidate KBAs using Benchmark BUILDER. It covers the creation of necessary input tables (seed and neighbor 
+tables), running BUILDER to delineate KBAs and calculate the Dendritic Connectivity Index (DCI), and optionally refining the results by reducing spatial redundancy based 
+on user-defined grid criteria. Steps are:
+    
+  - Create BUILDER input (seed and neighbour tables)
+    
+  - Run BUILDER and calculate Dendritic Connectivity Index (DCI).
+
+  - Optional: Reduce KBAs based on spatial similarity within a user defined grid. 
+<br>  
+ 
+#### Assess representation
+
+This section enables users to evaluate how well candidate KBAs — or networks of KBAs — capture key environmental variation based on the four criteria: CMI, GPP, LED, and LCC. 
+Users can then choose one of two approaches to perform the assessment:
+
+  - Assess single KBAs
+
+  - Create and assess networks
+
+Both options allow setting thresholds on the criteria to filter and identify the best-performing KBAs or networks.    
+<br>
+  
+#### Convert as ShapeFiles
+
+All output layers generated during the analysis are saved in a GeoPackage. For users who prefer or require working with individual Shapefiles, this optional step 
+allows you to convert each layer from the GeoPackage into a separate Shapefile. The process automatically loops through all layers in the GeoPackage, creating Shapefiles 
+that can be easily opened and used in other GIS software. This step is particularly useful for users who encounter compatibility issues with GeoPackages or need to share 
+layers in the widely supported Shapefile format.
+
