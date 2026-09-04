@@ -270,8 +270,7 @@ get_upstream <- function(net_sf, upstream) {
 }
 
 
-prep_legend <- function(kba_cmi, kba_led, kba_gpp, lcc_4326, criteria5 = NULL) {
-  
+prep_legend <- function(kba_cmi, kba_led, kba_gpp, kba_lcc, criteria5 = NULL) {
   # Set legend for CMI
   cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
   cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
@@ -293,7 +292,7 @@ prep_legend <- function(kba_cmi, kba_led, kba_gpp, lcc_4326, criteria5 = NULL) {
   gppxpal <- colorBin("RdYlBu", gpp_bins.seq, bins = gpp_bins.seq, na.color = "transparent")
   
   # Prepare labels for LCC
-  unique_sorted_values <- sort(na.omit(unique(values(lcc_4326))))
+  unique_sorted_values <- terra::freq(kba_lcc, bylayer = FALSE)$value
   df_label <- data.frame(values = c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), 
                          labels = c("Temperate conifer forest", "Taiga conifer forest",
                                     "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
