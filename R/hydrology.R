@@ -416,7 +416,13 @@ get_downstream_catchments <- function(conservation_area_sf, conservation_area_id
 #'   dissolve_list = c("PB_0001", "PB_0002"))
 #' calc_dci(conservation_areas, streams_sample)
 #' 
-calc_dci <- function(conservation_area_sf, stream_sf, conservation_area_id = "network", buffer_width = 0.1){
+calc_dci <- function(conservation_area_sf, stream_sf, conservation_area_id = "network", buffer_width = 0.1, progress = NULL){
+  
+  report <- function(value, detail) {
+    if (!is.null(progress)) {
+      progress(value, detail)
+    }
+  }
   
   stopifnot(sf::st_crs(conservation_area_sf) == sf::st_crs(stream_sf))
   
@@ -424,28 +430,51 @@ calc_dci <- function(conservation_area_sf, stream_sf, conservation_area_id = "ne
   sf::st_agr(stream_sf) = "constant"
   sf::st_agr(conservation_area_sf) = "constant"
   
-  # clip streams to full area of all conservation areas
-  reserve_dci <- conservation_area_sf %>%
-    sf::st_intersection(stream_sf, sf::st_union()) %>% # get streams just for the required region
-    dplyr::filter(BASIN != -1) %>% # remove isolated stream segments
-    sf::st_buffer(dist = buffer_width, endCapStyle = "ROUND") %>% # buffer to make sure streams are connected
-    dplyr::summarise(geometry = sf::st_union(geometry)) %>% # merge into single feature
-    sf::st_intersection(conservation_area_sf) %>% # intersect with reserves to get buffered stream for each reserve
-    dplyr::select(dplyr::all_of(conservation_area_id)) %>%
-    sf::st_cast("MULTIPOLYGON", warn = FALSE) %>% # this is needed to avoid geometries being lost in the POLYGON cast
-    sf::st_cast("POLYGON", warn = FALSE) %>% # explode into individual stream segments
-    dplyr::mutate(stream_length = as.numeric(sf::st_area(geometry)) / buffer_width) %>% # divide area by buffer to get length of each stream segment
-    sf::st_drop_geometry() %>% # drop the geometry for speed
-    dplyr::group_by(!!sym(conservation_area_id)) %>% # for each network...
-    dplyr::summarise(L = sum(stream_length), dci = sum((stream_length*stream_length) / (L*L)))  # calculate L2 then use to calculate dci
+  report(0.05, "Clipping streams to conservation areas")
+  
+  conservation_area_union <- sf::st_union(sf::st_geometry(conservation_area_sf))
+  
+  stream_candidates <- stream_sf |>
+    dplyr::filter(BASIN != -1) |>
+    sf::st_filter(conservation_area_union)
+  
+  stream_prepped <- sf::st_intersection(
+    stream_candidates,
+    conservation_area_union
+  )
+  
+  report(0.25, "Buffering stream sections")
+  buffered_streams <- stream_prepped |>
+    sf::st_buffer(dist = buffer_width, endCapStyle = "ROUND")
+  
+  report(0.50, "Merging connected stream sections")
+  merged_streams <- buffered_streams |>
+    dplyr::summarise(geometry = sf::st_union(geometry))
+  
+  report(0.70, "Calculating components within each conservation area")
+  reserve_dci <- sf::st_intersection(merged_streams, conservation_area_sf) |>
+    dplyr::select(dplyr::all_of(conservation_area_id)) |>
+    sf::st_cast("MULTIPOLYGON", warn = FALSE) |>
+    sf::st_cast("POLYGON", warn = FALSE) |>
+    dplyr::mutate(
+      stream_length = as.numeric(sf::st_area(geometry)) / buffer_width
+    ) |>
+    sf::st_drop_geometry() |>
+    dplyr::group_by(!!sym(conservation_area_id)) |>
+    dplyr::summarise(
+      dci = sum(stream_length^2) / sum(stream_length)^2,
+      .groups = "drop"
+    )
   
   # reserves that do not intersect the stream network get dropped during st_intersection.
   # join dci back to original reserves and set missing reserves to have dci of 0
+  report(0.90, "Joining DCI values to conservation areas")
   dci <- dplyr::left_join(sf::st_drop_geometry(conservation_area_sf), reserve_dci, by = conservation_area_id) %>%
-    tidyr::replace_na(list(dci=0)) %>%
+    dplyr::mutate(dci = tidyr::replace_na(dci, 0)) %>%
     dplyr::pull(dci) %>%
     round(3)
   
+  report(1, "Complete")
   return(dci)
 }
 

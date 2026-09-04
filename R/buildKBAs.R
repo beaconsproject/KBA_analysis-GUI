@@ -224,7 +224,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     rv$kba_sf_reactive(poly_sf)  # Store the poly_sf in reactiveVal
     
     # Append the first layer to the GeoPackage
-    #st_write(poly_sf, dsn = file.path(out_dir, "output/KBA_analysis.gpkg"), layer = "KBAs_builder", driver = "GPKG", append = FALSE)
+    st_write(poly_sf, dsn = file.path(out_dir, "output/KBA_analysis.gpkg"), layer = "KBAs_builder", driver = "GPKG", append = FALSE)
     
     # Close the modal once processing is done
     removeModal()
@@ -232,7 +232,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     # show pop-up ...
     showModal(modalDialog(
       title = "Builder output created.",
-      paste0("Number of KBAs created: ", as.character(nrow(poly_sf)), ". Calculating hydrology metrics. Please wait..."),
+      paste0("Number of KBAs created: ", as.character(nrow(poly_sf)), ". Please wait..."),
       easyClose = TRUE,
       footer = NULL)
     )
@@ -399,22 +399,25 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       poly_sf$geometry <- poly_sf$geom
     }
     
-    poly_sf$dci <- calc_dci(conservation_area_sf = poly_sf, stream_sf = rv$layers_rv$streams)
+    #removeModal()
+    
+    poly_sf$dci <- shiny::withProgress(
+      message = "Calculating hydrology metrics ",
+      detail = "Starting...",
+      value = 0,
+      {
+        
+        calc_dci(conservation_area_sf = poly_sf, stream_sf = rv$layers_rv$streams, progress = function(value, detail) {
+            shiny::setProgress(value = value, detail = detail)
+          })
+      }
+    )
     
     #Update reactiveVal
     rv$kba_sf_reactive(poly_sf)
     
     # Export. Append the first layer to the GeoPackage
     st_write(poly_sf, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "KBAs_reducedFALSE", driver = "GPKG", append = FALSE)
-    
-    # Close the modal once processing is done
-    removeModal()
-    
-    showModal(modalDialog(
-      title = "Hydrology metrics added",
-      easyClose = FALSE,
-      footer = modalButton("OK"))
-    )  
     
     # Initialize KBA/PAs freq table
     x <- rv$outfreqhydro()
@@ -429,11 +432,17 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       rv$outfreqhydro()
     })
     
+    showModal(modalDialog(
+      title = "Hydrology metrics added",
+      easyClose = FALSE,
+      footer = modalButton("OK"))
+    )  
+    
   })
   
   observeEvent(rv$kba_sf_reactive(), {
     req(rv$kba_sf_reactive())
-    removeModal()
+    
     updateActionButton(session, "runBuilder", label = "Builder output created!", icon = icon("check", lib = "font-awesome"))
   })
   ####################################################################################################

@@ -197,7 +197,259 @@ ui = dashboardPage(skin="black",
     .treeview-menu > li > a {
       margin-left: 20px;
     }
-  "))
+  ")),
+                       tags$style(HTML("
+      #shiny-notification-panel {
+        top: 50% !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: 50% !important;
+        width: min(420px, calc(100vw - 2rem));
+        transform: translate(-50%, -50%);
+      }
+    ")),
+                       tags$script(HTML("
+  
+  function toggleImageBox(id) {
+    
+    var box = document.getElementById(id);
+    
+    if (!box) return;
+    
+    var button = box.querySelector('.image-expand-btn i');
+    
+    if (box.classList.contains('image-expanded')) {
+      
+      // Restore
+      box.classList.remove('image-expanded');
+      
+      button.classList.remove('fa-compress');
+      button.classList.add('fa-expand');
+      
+      box.querySelector('.image-expand-btn').title = 'Expand image';
+      
+    } else {
+      
+      // Expand
+      box.classList.add('image-expanded');
+      
+      button.classList.remove('fa-expand');
+      button.classList.add('fa-compress');
+      
+      box.querySelector('.image-expand-btn').title = 'Restore image';
+    }
+  }
+  
+  
+  // Press Escape to restore the expanded image
+  document.addEventListener('keydown', function(event) {
+    
+    if (event.key === 'Escape') {
+      
+      var expanded = document.querySelector('.image-box.image-expanded');
+      
+      if (expanded) {
+        
+        toggleImageBox(expanded.id);
+      }
+    }
+  });
+  
+")),
+                       tags$style(HTML("
+
+  /* --------------------------------------------------
+     Four images in one row
+     -------------------------------------------------- */
+
+  .image-box-container {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+
+  /* --------------------------------------------------
+     Normal image box
+     -------------------------------------------------- */
+
+  .image-box {
+    position: relative;
+    flex: 1 1 calc(25% - 10px);
+    min-width: 200px;
+
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+
+    box-sizing: border-box;
+
+    transition: all 0.2s ease;
+  }
+
+
+  /* Header */
+
+  .image-box-header {
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 10px;
+
+    font-weight: 600;
+    font-size: 15px;
+
+    border-bottom: 1px solid #eee;
+  }
+
+
+  /* Expand button */
+
+  .image-expand-btn {
+    border: none;
+    background: transparent;
+
+    color: #777;
+
+    cursor: pointer;
+
+    font-size: 15px;
+
+    padding: 4px 6px;
+
+    border-radius: 3px;
+  }
+
+
+  .image-expand-btn:hover {
+    background: #eee;
+    color: #333;
+  }
+
+
+  /* Image container */
+
+  .image-container {
+    width: 100%;
+    height: 350px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    padding: 8px;
+
+    box-sizing: border-box;
+  }
+
+
+  /* Image */
+
+  .kba-image {
+    width: 100%;
+    height: 100%;
+
+    object-fit: contain;
+
+    display: block;
+  }
+
+
+  /* --------------------------------------------------
+     EXPANDED STATE
+     -------------------------------------------------- */
+
+  .image-box.image-expanded {
+
+    position: fixed !important;
+
+    top: 3vh !important;
+    left: 3vw !important;
+
+    width: 94vw !important;
+    height: 94vh !important;
+
+    z-index: 99999 !important;
+
+    margin: 0 !important;
+
+    box-shadow: 0 5px 30px rgba(0,0,0,0.5);
+
+    border: 1px solid #aaa;
+
+    background: white;
+  }
+
+
+  /* Expanded header */
+
+  .image-box.image-expanded .image-box-header {
+
+    height: 50px;
+
+    font-size: 18px;
+  }
+
+
+  /* Expanded image area */
+
+  .image-box.image-expanded .image-container {
+
+    height: calc(94vh - 50px);
+
+    width: 100%;
+  }
+
+
+  /* Expanded image */
+
+  .image-box.image-expanded .kba-image {
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: contain;
+  }
+
+
+  /* Expanded button */
+
+  .image-box.image-expanded .image-expand-btn {
+
+    font-size: 18px;
+  }
+
+
+  /* --------------------------------------------------
+     Dark overlay behind expanded image
+     -------------------------------------------------- */
+
+  .image-box.image-expanded::before {
+
+    content: '';
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    background: rgba(0,0,0,0.45);
+
+    z-index: -1;
+  }
+
+"))
                      ),
                      # Custom JS to delay removing modal
                      tags$script(HTML("

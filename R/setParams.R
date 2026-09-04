@@ -151,7 +151,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       rv$project_name(input$existing_project)
       rv$outdir(file.path(rv$dirpath(), rv$project_name()))
       project_is_new(FALSE)
-      
+    
       layers <-NULL
       if(file.exists(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))){
         layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
@@ -171,7 +171,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
         )
       }
       if(file.exists(file.path(rv$outdir(), "Builder_input/nghbrs.csv"))){
-        rv$seed_reactive(read.csv(file.path(rv$outdir(), "Builder_input/nghbrs.csv")))
+        rv$nghbrs_reactive(read.csv(file.path(rv$outdir(), "Builder_input/nghbrs.csv")))
       }
       
       # Load spatial object

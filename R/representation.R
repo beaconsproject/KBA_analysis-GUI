@@ -421,202 +421,479 @@ evaluate_criteria_using_clip <- function(conservation_area_sf, criteria_raster, 
 #' calc_dissimilarity(reserves, "network", ref_poly, led_sample, 'categorical', c(1,2,3,4,5), 
 #'   "C:/temp/plots", data.frame(values=c(1,2,3,4,5), labels=c("one","two","three","four","five")))
 #' calc_dissimilarity(reserves, ref_poly, led_sample, 'continuous', plot_out_dir="C:/temp/plots")
-calc_dissimilarity_doesn_use_RAM <- function(
+calc_dissimilarity <- function(
     reserves_sf,
-    reserves_id = NULL,
+    reserves_id,
     reference_sf,
     raster_layer,
-    raster_type,
-    categorical_class_values = c(),
+    raster_type = c("continuous", "categorical"),
+    categorical_class_values = NULL,
     plot_out_dir = NULL,
     categorical_class_labels = data.frame(),
-    nrows_block = 5000  # adjust based on available RAM
+    progress = NULL,
+    reference_sample_n = 1000000L,
+    reserve_sample_n = 500000L,
+    seed = 20260903
 ) {
-  # -------------------------------
-  # Checks
-  # -------------------------------
-  # geometries should match
-  stopifnot(sf::st_crs(reserves_sf) == sf::st_crs(reference_sf))
-  stopifnot(sf::st_crs(reserves_sf) == sf::st_crs(raster_layer))
+  raster_type <- match.arg(raster_type)
   
-  check_for_geometry(reference_sf)
-  check_for_geometry(reserves_sf)
+  report <- function(value, detail) {
+    if (!is.null(progress)) {
+      progress(value, detail)
+    }
+  }
   
+  # --------------------------------------------------
+  # Validate inputs
+  # --------------------------------------------------
+  reserves_vect <- terra::vect(reserves_sf)
+  reference_vect <- terra::vect(reference_sf)
+  
+  if (!terra::same.crs(reserves_vect, raster_layer)) {
+    stop("reserves_sf and raster_layer do not have the same CRS.")
+  }
+  
+  if (!terra::same.crs(reference_vect, raster_layer)) {
+    stop("reference_sf and raster_layer do not have the same CRS.")
+  }
+  
+  if (terra::nlyr(raster_layer) != 1L) {
+    stop("raster_layer must have exactly one layer.")
+  }
+  
+  if (raster_type == "categorical" &&
+      (is.null(categorical_class_values) ||
+       length(categorical_class_values) == 0L)) {
+    stop(
+      "For categorical rasters, provide categorical_class_values."
+    )
+  }
+  
+  if (!reserves_id %in% names(reserves_sf)) {
+    stop("reserves_id is not a column in reserves_sf.")
+  }
+  
+  # --------------------------------------------------
+  # Plot setup
+  # --------------------------------------------------
   make_plots <- !is.null(plot_out_dir)
-  if(make_plots) dir.create(plot_out_dir, recursive = TRUE, showWarnings = FALSE)
   
-  # -------------------------------
-  # Prepare reference raster values (block-wise)
-  # -------------------------------
-  get_ref_counts <- function(r, categories = NULL) {
-    
-    counts <- numeric()   # <-- FIX: use numeric, not integer
-    
-    terra::readStart(r)
-    total_rows <- terra::nrow(r)
-    start_row <- 1
-    
-    while (start_row <= total_rows) {
-      
-      nrows_to_read <- min(nrows_block, total_rows - start_row + 1)
-      
-      vals <- terra::readValues(r, row = start_row, nrows = nrows_to_read)
-      vals <- vals[!is.na(vals)]
-      
-      # filtering by categories
-      if (!is.null(categories)) {
-        vals <- vals[vals %in% categories]
-      }
-      
-      if (length(vals) > 0) {
-        tbl <- table(vals)
-        
-        # ---- FIX: assign directly, do NOT add ----
-        for (cat in names(tbl)) {
-          counts[cat] <- ifelse(is.na(counts[cat]), tbl[cat], counts[cat] + tbl[cat])
-        }
-      }
-      
-      start_row <- start_row + nrows_to_read
-    }
-    
-    terra::readStop(r)
-    
-    return(counts)
+  if (make_plots) {
+    dir.create(plot_out_dir, recursive = TRUE, showWarnings = FALSE)
   }
   
-  reference_counts <- NULL
-  if(raster_type == "categorical") {
-    reference_counts <- get_ref_counts(raster_layer, 
-                                       if(length(categorical_class_values) > 0) categorical_class_values else NULL)
+  # --------------------------------------------------
+  # Helpers
+  # --------------------------------------------------
+  
+  # For continuous rasters: retain a bounded sample, never every cell.
+  sample_values_in_polygon <- function(r, v, n) {
+    r_crop <- terra::crop(r, terra::ext(v), snap = "out")
+    r_mask <- terra::mask(r_crop, v, touches = FALSE)
+    
+    vals <- terra::spatSample(r_mask, size = n, method = "random", na.rm = TRUE, as.df = TRUE, warn = FALSE)[[1]]
+    vals[!is.na(vals)]
+  }
+  
+  # For categorical rasters: retain only one count per class.
+  class_counts_in_polygon <- function(r, v, classes) {
+    r_crop <- terra::crop(r, terra::ext(v), snap = "out")
+    r_mask <- terra::mask(r_crop, v, touches = FALSE)
+    
+    tab <- terra::freq(r_mask, bylayer = FALSE)
+    counts <- setNames(numeric(length(classes)), as.character(classes))
+    
+    if (!is.null(tab) && nrow(tab) > 0L) {
+      keep <- tab$value %in% classes
+      
+      if (any(keep)) {
+        counts[as.character(tab$value[keep])] <- tab$count[keep]
+      }
+    }
+    counts
+  }
+  
+  # Bray-Curtis dissimilarity of class proportions.
+  # Normalizing is important: otherwise larger reserves look more
+  # dissimilar merely because they contain more raster cells.
+  bray_curtis_from_counts <- function(reference_counts, target_counts) {
+    if (sum(reference_counts) == 0 || sum(target_counts) == 0) {
+      return(NA_real_)
+    }
+    
+    reference_prop <- reference_counts / sum(reference_counts)
+    target_prop <- target_counts / sum(target_counts)
+    
+    sum(abs(reference_prop - target_prop)) / 2
+  }
+  
+  categorical_composition_plot <- function(
+    reference_counts,
+    target_counts,
+    title,
+    labels = data.frame()
+  ) {
+    reference_prop <- reference_counts / sum(reference_counts)
+    target_prop <- target_counts / sum(target_counts)
+    
+    class_names <- names(reference_counts)
+    display_names <- class_names
+    
+    # If labels has at least two columns, treat first as class value
+    # and second as display label.
+    if (is.data.frame(labels) && ncol(labels) >= 2L) {
+      label_index <- match(class_names, as.character(labels[[1]]))
+      has_label <- !is.na(label_index)
+      
+      display_names[has_label] <- as.character(
+        labels[[2]][label_index[has_label]]
+      )
+    }
+    
+    plot_data <- data.frame(
+      class = rep(display_names, 2L),
+      proportion = c(reference_prop, target_prop),
+      area = rep(
+        c("Reference", "Reserve"),
+        each = length(display_names)
+      )
+    )
+    
+    ggplot2::ggplot(plot_data, ggplot2::aes(x = class, y = proportion, fill = area)) +
+      ggplot2::geom_col(position = "dodge") +
+      ggplot2::labs(title = title, x = NULL, y = "Class proportion",  fill = NULL) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+  }
+  
+  # --------------------------------------------------
+  # Reference representation, calculated once
+  # --------------------------------------------------
+  report(0.10, "Preparing reference distribution")
+  
+  if (raster_type == "continuous") {
+    set.seed(seed)
+    
+    message("Sampling reference values...")
+    report(0.20, "Sampling reference values")
+    
+    reference_vals <- sample_values_in_polygon(raster_layer, reference_vect, n = reference_sample_n)
+    
+    if (length(reference_vals) == 0L) {
+      stop("No non-missing raster values were found in the reference area.")
+    }
+    
   } else {
-    # For continuous, store all reference values block-wise (may still be large, can consider sampling)
-    reference_vals <- numeric()
-    terra::readStart(raster_layer)
-    total_rows <- terra::nrow(raster_layer)
-    start_row <- 1
-    while(start_row <= total_rows) {
-      nrows_to_read <- min(nrows_block, total_rows - start_row + 1)
-      vals <- terra::readValues(raster_layer, row = start_row, nrows = nrows_to_read)
-      vals <- vals[!is.na(vals)]
-      reference_vals <- c(reference_vals, vals)
-      start_row <- start_row + nrows_to_read
+    message("Counting reference classes...")
+    report(0.20, "Counting reference classes")
+    
+    reference_counts <- class_counts_in_polygon(raster_layer, reference_vect, classes = categorical_class_values)
+    
+    if (sum(reference_counts) == 0L) {
+      stop("No values matching categorical_class_values were found in the reference area.")
     }
-    terra::readStop(raster_layer)
   }
   
-  # -------------------------------
-  # Prepare reserves
-  # -------------------------------
-  net_list <- dplyr::pull(reserves_sf, !!rlang::sym(reserves_id)) |> as.character()
-  result_vector <- numeric(length(net_list))
+  # --------------------------------------------------
+  # Main reserve loop
+  # --------------------------------------------------
+  reserve_ids <- as.character(reserves_sf[[reserves_id]])
   
-  for(i in seq_along(net_list)) {
-    net <- net_list[i]
-    reserves_sf_g <- reserves_sf %>% dplyr::filter(!!rlang::sym(reserves_id) == net)
+  result_vector <- numeric(length(reserve_ids))
+  names(result_vector) <- reserve_ids
+  
+  n_reserves <- length(reserve_ids)
+  
+  if (n_reserves == 0L) {
+    return(result_vector)
+  }
+  
+  for (i in seq_along(reserve_ids)) {
+    id <- reserve_ids[i]
     
-    # extract raster values for this reserve (block-wise)
-    extract_counts <- function(r, sf_obj, categories = NULL) {
-      if (!is.null(categories)) {
-        categories <- as.character(categories)
-        counts <- setNames(integer(length(categories)), categories)
-      } else {
-        counts <- integer()  # will grow dynamically
-      }
-      terra::readStart(r)
-      total_rows <- terra::nrow(r)
-      start_row <- 1
+    message(sprintf("[%d/%d] %s", i, n_reserves, id))
+    
+    report(0.25 + 0.70 * (i - 1) / n_reserves, sprintf("Calculating %d of %d: %s", i, n_reserves, id))
+    
+    reserve_poly <- reserves_vect[
+      reserves_vect[[reserves_id]] == id,
+    ]
+    
+    if (raster_type == "continuous") {
+      target_vals <- try(
+        sample_values_in_polygon(raster_layer, reserve_poly, n = reserve_sample_n),
+        silent = TRUE
+      )
       
-      while (start_row <= total_rows) {
-        nrows_to_read <- min(nrows_block, total_rows - start_row + 1)
-        vals <- terra::readValues(r, row = start_row, nrows = nrows_to_read)
-        vals <- vals[!is.na(vals)]
-        
-        # if categorical filtering is requested
-        if (!is.null(categories)) {
-          vals <- vals[vals %in% categories]
-        }
-        
-        tbl <- table(vals)
-        
-        if (length(tbl) > 0) {
-          for (cat in names(tbl)) {
-            cat <- as.character(cat)
-            
-            # initialize category dynamically when categories=NULL
-            if (is.null(categories) && !(cat %in% names(counts))) {
-              counts[cat] <- 0
-            }
-            
-            counts[cat] <- counts[cat] + as.integer(tbl[cat])
-          }
-        }
-        
-        start_row <- start_row + nrows_to_read
+      if (inherits(target_vals, "try-error") ||
+          length(target_vals) == 0L) {
+        result_vector[i] <- NA_real_
+        next
       }
       
-      terra::readStop(r)
+      metric <- ks_stat(reference_vals, target_vals)
       
-      return(counts)
-    }
-    
-    if(raster_type == "categorical") {
-      target_counts <- extract_counts(raster_layer, reserves_sf_g,
-                                      if(length(categorical_class_values) > 0) categorical_class_values else NULL)
-    
-      # convert counts to proportions
-      ref_prop <- reference_counts / sum(reference_counts)
-      target_prop <- target_counts / sum(target_counts)
-      # compute Bray-Curtis
-      all_cats <- union(names(ref_prop), names(target_prop))
-      ref_vec <- ref_prop[all_cats]; ref_vec[is.na(ref_vec)] <- 0
-      target_vec <- target_prop[all_cats]; target_vec[is.na(target_vec)] <- 0
-      result_vector[i] <- sum(abs(ref_vec - target_vec)) / sum(ref_vec + target_vec)
-      
-      if(make_plots) {
-        outf <- file.path(plot_out_dir, paste0(net, ".png"))
+      if (make_plots) {
+        outfile <- file.path(plot_out_dir, paste0(id, ".png"))
         
-        plt <- bc_plot_counts(
-          ref_counts = reference_counts,
-          tar_counts = target_counts,
-          plotTitle = paste0(net, " (BC=", round(result_vector[i], 3), ")"),
-          labels = categorical_class_labels
-        )
-        
-        ggplot2::ggsave(outf, plt, width = 6, height = 4)
+        plt <- ks_plot(reference_vals, target_vals, plotTitle = paste0(id, " (KS=", round(metric, 3), ")"))
+        ggplot2::ggsave(outfile, plt, width = 7, height = 5)
       }
       
     } else {
-      # continuous: extract values and run ks_stat
-      vals <- numeric()
-      terra::readStart(raster_layer)
-      total_rows <- terra::nrow(raster_layer)
-      start_row <- 1
-      while(start_row <= total_rows) {
-        nrows_to_read <- min(nrows_block, total_rows - start_row + 1)
-        v <- terra::readValues(raster_layer, row = start_row, nrows = nrows_to_read)
-        v <- v[!is.na(v)]
-        vals <- c(vals, v)
-        start_row <- start_row + nrows_to_read
-      }
-      terra::readStop(raster_layer)
-      result_vector[i] <- ks_stat(reference_vals, vals)
+      target_counts <- try(
+        class_counts_in_polygon(raster_layer, reserve_poly, classes = categorical_class_values),
+        silent = TRUE
+      )
       
-      if(make_plots) {
-        outf <- file.path(plot_out_dir, paste0(net, ".png"))
-        plt <- ks_plot(reference_vals, vals,
-                       plotTitle = paste0(net, " (KS=", round(result_vector[i], 3), ")"))
-        ggplot2::ggsave(outf, plt, width = 6, height = 4)
+      if (inherits(target_counts, "try-error") ||
+          sum(target_counts) == 0L) {
+        result_vector[i] <- NA_real_
+        next
+      }
+      
+      metric <- bray_curtis_from_counts(reference_counts, target_counts)
+      
+      if (make_plots) {
+        outfile <- file.path(plot_out_dir, paste0(id, ".png"))
+        
+        plt <- categorical_composition_plot(reference_counts, target_counts, title = paste0(id," (Bray-Curtis=", round(metric, 3),")"), labels = categorical_class_labels)
+        ggplot2::ggsave(outfile, plt, width = 7, height = 5)
       }
     }
     
+    result_vector[i] <- metric
+    gc(verbose = FALSE)
+  }
+  report(1, "Dissimilarity calculation complete")
+  result_vector
+}
+
+calc_dissimilarity_notworking <- function(
+    reserves_sf,
+    reserves_id,
+    reference_sf,
+    raster_layer,
+    raster_type = c("continuous", "categorical"),
+    categorical_class_values = NULL,
+    plot_out_dir = NULL,
+    categorical_class_labels = data.frame(),
+    progress = NULL
+){
+  
+  library(terra)
+  
+  report <- function(value, detail) {
+    if (!is.null(progress)) {
+      progress(value, detail)
+    }
   }
   
+  raster_type <- match.arg(raster_type)
+  
+  # -----------------------------------------
+  # CRS checks
+  # -----------------------------------------
+  stopifnot(
+    terra::same.crs(terra::vect(reserves_sf), raster_layer),
+    terra::same.crs(terra::vect(reference_sf), raster_layer)
+  )
+  
+  # -----------------------------------------
+  # Plotting
+  # -----------------------------------------
+  make_plots <- !is.null(plot_out_dir)
+  
+  if (make_plots) {
+    dir.create(plot_out_dir,
+               recursive = TRUE,
+               showWarnings = FALSE)
+  }
+  
+  # -----------------------------------------
+  # Convert once
+  # -----------------------------------------
+  report(0.10, "Preparing conservation areas and reference area")
+  reserves_vect  <- terra::vect(reserves_sf)
+  reference_vect <- terra::vect(reference_sf)
+  
+  # -----------------------------------------
+  # Crop raster EARLY
+  # -----------------------------------------
+  report(0.20, "Cropping raster to the analysis extent")
+  target_ext <- terra::union(
+    terra::ext(reserves_vect),
+    terra::ext(reference_vect)
+  )
+  
+  r <- terra::crop(raster_layer, target_ext)
+  
+  # -----------------------------------------
+  # Reference extraction ONCE
+  # -----------------------------------------
+  message("Extracting reference values...")
+  report(0.30, "Extracting reference values")
+  ref_vals <- terra::extract(
+    r,
+    reference_vect,
+    ID = FALSE,
+    touches = FALSE
+  )[[1]]
+  
+  reference_vals <- ref_vals[!is.na(ref_vals)]
+  
+  if (raster_type == "categorical" &&
+      !is.null(categorical_class_values)) {
+    
+    reference_vals <- reference_vals[
+      reference_vals %in% categorical_class_values
+    ]
+  }
+  
+  # -----------------------------------------
+  # Setup
+  # -----------------------------------------
+  reserve_ids <- as.character(
+    reserves_sf[[reserves_id]]
+  )
+  
+  result_vector <- numeric(length(reserve_ids))
+  names(result_vector) <- reserve_ids
+  
+  # -----------------------------------------
+  # MAIN LOOP
+  # -----------------------------------------
+  n_reserves <- length(reserve_ids)
+  
+  if (n_reserves == 0L) {
+    return(result_vector)
+  }
+  
+  for (i in seq_along(reserve_ids)) {
+    
+    id <- reserve_ids[i]
+    
+    message(
+      sprintf("[%d/%d] %s",
+              i,
+              length(reserve_ids),
+              id)
+    )
+    report(
+      0.35 + 0.60 * (i - 1) / n_reserves,
+      sprintf("Calculating %d of %d: %s", i, n_reserves, id)
+    )
+    
+    reserve_poly <- reserves_vect[
+      reserves_vect[[reserves_id]] == id,
+    ]
+    
+    # -------------------------------------
+    # Extract ONLY THIS POLYGON
+    # -------------------------------------
+    vals <- try(
+      terra::extract(
+        r,
+        reserve_poly,
+        ID = FALSE,
+        touches = FALSE
+      )[[1]],
+      silent = TRUE
+    )
+    
+    if (inherits(vals, "try-error")) {
+      result_vector[i] <- NA_real_
+      next
+    }
+    
+    target_vals <- vals[!is.na(vals)]
+    
+    # categorical filtering
+    if (raster_type == "categorical" &&
+        !is.null(categorical_class_values)) {
+      
+      target_vals <- target_vals[
+        target_vals %in% categorical_class_values
+      ]
+    }
+    
+    # skip empty
+    if (length(target_vals) == 0) {
+      result_vector[i] <- NA_real_
+      next
+    }
+    
+    # -------------------------------------
+    # Metric
+    # -------------------------------------
+    metric <- if (raster_type == "categorical") {
+      
+      bc_stat(reference_vals, target_vals)
+      
+    } else {
+      
+      ks_stat(reference_vals, target_vals)
+    }
+    
+    result_vector[i] <- metric
+    
+    # -------------------------------------
+    # Plotting
+    # -------------------------------------
+    if (make_plots) {
+      
+      outfile <- file.path(
+        plot_out_dir,
+        paste0(id, ".png")
+      )
+      
+      plt <- if (raster_type == "categorical") {
+        
+        bc_plot(
+          reference_vals,
+          target_vals,
+          plotTitle = paste0(
+            id,
+            " (BC=",
+            round(metric, 3),
+            ")"
+          ),
+          labels = categorical_class_labels
+        )
+        
+      } else {
+        
+        ks_plot(
+          reference_vals,
+          target_vals,
+          plotTitle = paste0(
+            id,
+            " (KS=",
+            round(metric, 3),
+            ")"
+          )
+        )
+      }
+      
+      ggplot2::ggsave(
+        outfile,
+        plt,
+        width = 7,
+        height = 5
+      )
+    }
+    
+    # IMPORTANT
+    rm(vals, target_vals)
+    gc(verbose = FALSE)
+  }
+  
+  report(1, "Dissimilarity calculation complete")
   result_vector
 }
 
 
-calc_dissimilarity <- function(
+calc_dissimilarity_original <- function(
     reserves_sf, reserves_id=NULL, reference_sf,
     raster_layer, raster_type,
     categorical_class_values=c(),
@@ -714,111 +991,6 @@ calc_dissimilarity <- function(
   result_vector
 }
 
-calc_dissimilarity_slow <- function(reserves_sf, reserves_id=NULL, reference_sf, raster_layer, raster_type, categorical_class_values=c(), plot_out_dir=NULL, categorical_class_labels=data.frame()){
-  
-  # geometries should match
-  stopifnot(sf::st_crs(reserves_sf) == sf::st_crs(reference_sf))
-  stopifnot(sf::st_crs(reserves_sf) == sf::st_crs(raster_layer))
-  
-  # set up output vector
-  result_vector <- c()
-  
-  # check raster_layer is valid
-  if(!raster_type %in% c('categorical', 'continuous')){
-    stop("raster_layer must be on of: 'categorical', 'continuous'")
-  }
-  
-  # check geometry column is present in sf objects
-  check_for_geometry(reference_sf)
-  check_for_geometry(reserves_sf)
-  
-  # should plots be made? Attempt to create directory if it doesn't already exist
-  if(!is.null(plot_out_dir)){
-    make_plots <- TRUE
-    dir.create(plot_out_dir, recursive = TRUE, showWarnings = FALSE)
-  } else{
-    make_plots <- FALSE
-  }
-  
-  # get the reference area and make sure it is a single geometry
-  ref_sf <- reference_sf %>%
-    dplyr::summarise(geometry = sf::st_union(.data$geometry))
-  
-  # extract values in ref area
-  ref_ext <- exactextractr::exact_extract(raster_layer, reference_sf, progress = FALSE)[[1]]
-  
-  # filter by class_vals if provided, remove NAs, only keep cells with majority in reference_sf
-  if(raster_type == 'categorical' & length(categorical_class_values) > 0){
-    reference_vals <- ref_ext %>%
-      dplyr::filter(!is.na(.data$value)) %>%
-      dplyr::filter(.data$value %in% categorical_class_values) %>%
-      dplyr::filter(.data$coverage_fraction > 0.5) %>% # only keep values from cells with at least half their area in the polygon
-      dplyr::pull(.data$value)
-  } else{
-    reference_vals <- ref_ext %>%
-      dplyr::filter(!is.na(.data$value)) %>%
-      dplyr::filter(.data$coverage_fraction > 0.5) %>%
-      dplyr::pull(.data$value)
-  }
-  
-  # split reserve into blocks of 10 for processing
-  net_list <- dplyr::pull(reserves_sf, !!reserves_id) |> as.character()
-  net_list_grouped <- split(net_list, ceiling(seq_along(net_list)/10))
-  
-  # run in blocks of 10 - seems optimal for maintaining a fast extract
-  counter <- 1
-  for(net_list_g in net_list_grouped){
-    
-    message(paste0("processing ", counter*10-9, " of ", length(net_list)))
-    counter <- counter + 1
-    
-    reserves_sf_g <- reserves_sf %>%
-      dplyr::filter(!!rlang::sym(reserves_id) %in% net_list_g) # subset dissolved networks by the block of networks
-    x <- exactextractr::exact_extract(raster_layer, reserves_sf_g, progress = FALSE) # extract
-    
-    names(x) <- net_list_g # name the list elements by their associated netname
-    
-    for(net in net_list_g){
-      
-      # for each network in the block, extract the values...
-      if(raster_type == 'categorical' & length(categorical_class_values) > 0){
-        target_vals <- x[[net]] %>%
-          dplyr::filter(!is.na(.data$value)) %>%
-          dplyr::filter(.data$value %in% categorical_class_values) %>%
-          dplyr::filter(.data$coverage_fraction > 0.5) %>% # only keep values from cells with at least half their area in the polygon
-          dplyr::pull(.data$value)
-      } else{
-        target_vals <- x[[net]] %>%
-          dplyr::filter(!is.na(.data$value)) %>%
-          dplyr::filter(.data$coverage_fraction > 0.5) %>%
-          dplyr::pull(.data$value)
-      }
-      
-      # run dissimilarity
-      if(raster_type == "categorical"){
-        result <- bc_stat(reference_vals, target_vals)
-      } else{
-        result <- ks_stat(reference_vals, target_vals)
-      }
-      
-      # add result t return vector
-      result_vector <- c(result_vector, result)
-      
-      # generate plot if requested
-      if(make_plots){
-        plot_out_path <- file.path(plot_out_dir, paste0(net, ".png"))
-        
-        if(raster_type == 'categorical'){
-          plt <- bc_plot(reference_vals, target_vals, plotTitle = paste0(net, " (BC=", result, ")"), labels=categorical_class_labels)
-        } else{
-          plt <- ks_plot(reference_vals, target_vals, plotTitle = paste0(net, " (KS=", result, ")"))
-        }
-        ggplot2::ggsave(plt, file=plot_out_path)
-      }
-    }
-  }
-  return(result_vector)
-}
 
 # This should be written in RCPP
 ks_stat <- function(refVal, netVal) {
