@@ -44,6 +44,7 @@ server = function(input, output, session) {
                             kba_init_label = reactiveVal(NULL),
                             network_reactive = reactiveVal(),
                             dir_exists = reactiveVal(FALSE),
+                            plotDir = reactiveVal(),
                             netDir = reactiveVal(),
                             selected_polygon = reactiveVal(NULL) , # Track the selected polygon on map
                             refarea_reactive = reactiveVal(NULL),

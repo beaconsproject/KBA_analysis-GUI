@@ -330,3 +330,23 @@ prep_legend <- function(kba_cmi, kba_led, kba_gpp, kba_lcc, criteria5 = NULL) {
               df_label = df_label, lcc_labels = cls, lcc_cols = selected_cols, crit_xpal = crit_xpal, val.color = val.color, 
               led_val.color = led_val.color, labeller_function = labeller_function))
 }
+
+make_metric_progress <- function(n_metrics) {
+  
+  metric_number <- 0L
+  
+  function(metric_name) {
+    
+    metric_number <<- metric_number + 1L
+    
+    start <- (metric_number - 1L) / n_metrics
+    end <- metric_number / n_metrics
+    
+    function(value, detail) {
+      shiny::setProgress(
+        value = start + (end - start) * value,
+        detail = paste0(metric_name, ": ", detail)
+      )
+    }
+  }
+}

@@ -14,10 +14,9 @@ buildNetServer <- function(input, output, session, project, map, rv){
   
   observeEvent(input$tabs, {
     req(input$tabs == "tabNET", rv$outdir())
-    
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    rep_kba <- layers[grepl("^KBAs_reduced", layers)]
+    rep_kba <- layers[grepl("^(KBAs_reduced|repKBAs_reduced)", layers)]
     pas_ls <- layers[grepl("^protected_areas", layers) & !grepl("protected_areas_upstream", layers)]
     net_list <- c(rep_kba, pas_ls)
     if (length(rep_kba) > 0) { 
@@ -70,7 +69,6 @@ buildNetServer <- function(input, output, session, project, map, rv){
       if (!(is.null(input$KBArep))){
         kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
       } 
-      
       x <- rv$outfreqnet()
       x <- x %>% 
         mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
@@ -92,7 +90,6 @@ buildNetServer <- function(input, output, session, project, map, rv){
   })
   
   observeEvent(input$buildNet, {
-    
     if(input$intactColname == "Please select"){
       showModal(modalDialog(
         title = "Missing intactness column",
@@ -108,6 +105,9 @@ buildNetServer <- function(input, output, session, project, map, rv){
     req(!(input$KBArep==""))
     kba_sf <- NULL
     pas_sf <- NULL
+    
+    n_metrics <- 4L + !is.null(rv$layers_rv$criteria5)
+    metric_progress <- make_metric_progress(n_metrics)
     
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
@@ -162,7 +162,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       netName <- gsub("rep", "", input$KBArep)
       outName <- paste0("net", netName, "_n", input$set_net)
     }
-    network_dir <- paste0("output/plot", outName)
+    network_dir <- paste0("output/plot/", outName)
     rv$netDir(network_dir)
     
     # Raise warning on `input$set_net`
@@ -185,22 +185,6 @@ buildNetServer <- function(input, output, session, project, map, rv){
       ))
       return()
     }
-    
-    #    # Check if there is a 5 criteria and store the name
-    #    if (!is.null(input$upload_custom)) {
-    #      rastName <- sub("\\..*$", "", input$upload_custom$name)
-    #      rv$criteria5name(rastName)
-    #      updated_grp <- c(rv$legendcrit(), rastName)
-    #      rv$legendcrit(updated_grp) # Update the reactive value
-    #    }
-    #    if (!is.null(input$csv_file)) {
-    #      csv_data <- read.csv(input$csv_file$datapath)
-    #      req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
-    #      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
-    #      rv$criteria5name(unexpected_layers)
-    #      updated_grp <- c(rv$legendcrit(), unexpected_layers)
-    #      rv$legendcrit(updated_grp) # Update the reactive value
-    #    }
     
     #Prep criteria
     if (!file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))) {
@@ -407,25 +391,39 @@ buildNetServer <- function(input, output, session, project, map, rv){
         
         # calculate dissimilarity metric 
         error_occurred <- FALSE
-        tryCatch({
-          networks_sf$lcc <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_lcc, 'categorical', plot_out_dir=file.path(rv$outdir(), network_dir,"lcc"), categorical_class_labels = df_label),3)
-          networks_sf$led <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_led, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"led")),3)
-          networks_sf$cmi <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_cmi, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"cmi")),3)
-          networks_sf$gpp <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_gpp, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir,"gpp")),3)
-          if(!is.null(rv$criteria5name())){
-            networks_sf[[rv$criteria5name()]] <- round(calc_dissimilarity(networks_sf, reserves_id="network", rv$refarea_reactive(), kba_criteria5, 'continuous', plot_out_dir=file.path(rv$outdir(), network_dir, rv$criteria5name())),3) 
+        calculation_error <- shiny::withProgress(
+          message = "Calculating dissimilarity metrics",
+          detail = "Preparing calculation...",
+          value = 0,
+          {
+            tryCatch({
+              networks_sf$cmi <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "cmi"), progress = metric_progress("CMI")),3)
+              networks_sf$lcc <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
+                                               plot_out_dir = file.path(rv$outdir(), network_dir, "lcc"), categorical_class_labels = df_label, progress = metric_progress("LCC")),3)
+              networks_sf$led <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "led"), progress = metric_progress("LED")),3)
+              networks_sf$gpp <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "gpp"), progress = metric_progress("GPP")),3)
+              
+              if (!is.null(rv$layers_rv$criteria5)) {
+                criteria_name <- rv$criteria5name()
+                networks_sf[[criteria_name]] <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, criteria_name), progress = metric_progress(criteria_name)),3)
+              }
+              NULL
+            }, error = function(e) {
+              e
+            })
           }
-        }, error = function(err) {
+        )
+        
+        if (inherits(calculation_error, "error")) {
           error_occurred <- TRUE
           showModal(modalDialog(
-            title = "Error calculating disimilarity",
-            paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", err$message),
-            easyClose = TRUE,
+            title = "Error calculating dissimilarity",
+            paste( "Possible issues may involve partially overlapping objects or a reserve", "being too small relative to the raster resolution. Code error:",
+                   calculation_error$message
+            ),
+            easyClose = FALSE,
             footer = modalButton("OK")
           ))
-        })
-        if (error_occurred) {
-          return(NULL)  # Stop execution of the rest of the observer
         }
         st_write(networks_sf, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = TRUE)
         rv$network_reactive(networks_sf)
@@ -453,10 +451,13 @@ buildNetServer <- function(input, output, session, project, map, rv){
     labelKBA <- rv$reactive_labelKBA()
     #pas_4326 <- pas_sf %>% st_transform(4326)
     
+    overlay_groups <- setdiff(rv$overlayGroups(), input$KBA)
+    rv$overlayGroups(overlay_groups)
+    
     leafletProxy("map") %>%
       clearControls() %>%
       clearGroup(labelKBA) %>%
-      clearGroup("Potential KBAs") %>%
+      #clearGroup("Potential KBAs") %>%
       clearGroup("Protected areas") %>%
       clearGroup("Upstream") %>%  # Clear previous highlight
       clearGroup("CMI") %>%
@@ -468,10 +469,10 @@ buildNetServer <- function(input, output, session, project, map, rv){
       removeControl("legend_GPP") %>%
       removeControl("legend_CMI") %>%
       #addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
-      addRasterImage(lcc_4326, colors=lcc_cols, opacity = 1, group="LCC",  maxBytes = 5 * 1024 * 1024) %>%
-      addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 5 * 1024 * 1024) %>%
-      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 5 * 1024 * 1024) %>%
-      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 5 * 1024 * 1024) %>%
+      addRasterImage(lcc_4326, colors=lcc_cols, opacity = 1, group="LCC",  maxBytes = 10 * 1024 * 1024) %>%
+      addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 10 * 1024 * 1024) %>%
+      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 10 * 1024 * 1024) %>%
+      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 10 * 1024 * 1024) %>%
       
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
                 position = "bottomright", group="LED", layerId = "legend_LED", labFormat = labeller_function)  %>%
@@ -590,7 +591,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     # Highlight the selected KBA on the map
     leafletProxy("map") %>%
-      clearGroup('Potential KBAs') %>%
+      #clearGroup('Potential KBAs') %>%
       clearGroup(labelNET) %>%
       clearGroup("Upstream") %>%  # Clear previous highlight
       addPolygons(data = selected_net, color = "black",  fillColor = "#989898", fillOpacity = 0.9, weight = 3, layerId = ~network,  # Ensure each polygon has a unique ID
@@ -665,32 +666,26 @@ buildNetServer <- function(input, output, session, project, map, rv){
     shiny::addResourcePath("imageNET", file.path(rv$outdir(), rv$netDir()))
     
     output$images <- renderUI({
-      tagList(
-        tags$div(style = "display: flex; flex-wrap: wrap; justify-content: space-around;", 
-                 tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                          tags$h3("CMI"),  # Title
-                          tags$img(src = paste0("imageNET/cmi/", input$network, ".png"), height = "400px", width = "300px")
-                 ),
-                 tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                          tags$h3("GPP"),  # Title
-                          tags$img(src = paste0("imageNET/gpp/", input$network, ".png"), height = "400px", width = "300px")
-                 ),
-                 tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                          tags$h3("LED"),  # Title 
-                          tags$img(src = paste0("imageNET/led/", input$network, ".png"), height = "400px", width = "300px")
-                 ),
-                 tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                          tags$h3("LCC"),  # Title 
-                          tags$img(src = paste0("imageNET/lcc/", input$network, ".png"), height = "400px", width = "300px")
-                 ),
-                 if(!is.null(rv$layers_rv$criteria5)){
-                   tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                            tags$h3(rv$criteria5name()),  # Title 
-                            tags$img(src = paste0("imageNET/", rv$criteria5name(), "/", input$network, ".png"), height = "400px", width = "300px")
-                   )
-                 }
+      image_box <- function(title, src, id) {
+        tags$div(id = id, class = "image-box",
+                 tags$div(class = "image-box-header", tags$span(title),
+                          tags$button(type = "button", class = "image-expand-btn", onclick = paste0("toggleImageBox('", id, "')"), title = "Expand image", 
+                                      tags$i(class = "fa fa-expand"))),
+                 tags$div(class = "image-container", tags$img(src = src, class = "kba-image"))
         )
+      }
+      
+      boxes <- list(image_box("CMI", paste0("imageNET/cmi/", input$network, ".png"), "cmi_box"),
+                    image_box("GPP", paste0("imageNET/gpp/", input$network, ".png"), "gpp_box"),
+                    image_box("LED", paste0("imageNET/led/", input$network, ".png"), "led_box"),
+                    image_box("LCC", paste0("imageNET/lcc/", input$network, ".png"), "lcc_box")
       )
+      
+      if (!is.null(rv$layers_rv$criteria5)) {
+        boxes[[5]] <- image_box(rv$criteria5name(), paste0("imageNET/", rv$criteria5name(), "/", input$KBA, ".png"), "criteria5_box")
+      }
+      
+      tags$div(class = "image-box-container", boxes)
     })
   })
 }

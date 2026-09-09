@@ -254,6 +254,9 @@ assessRepServer <- function(input, output, session, project, map, rv){
       st_as_sf() %>%
       st_make_valid()                
     
+    plot_dir <- file.path(rv$outdir(), "output/plot",  input$KBAlayer)
+    rv$plotDir(plot_dir)
+    
     #Prep criteria
     if (!file.exists(file.path(rv$outdir(), "output/kba_cmi.tif"))) {
       showModal(modalDialog(
@@ -350,6 +353,10 @@ assessRepServer <- function(input, output, session, project, map, rv){
       "Please wait...",
       footer = NULL
     ))
+    
+    n_metrics <- 4L + !is.null(rv$layers_rv$criteria5)
+    metric_progress <- make_metric_progress(n_metrics)
+    
     if(input$assessKBAs == "Only KBAs" || input$assessKBAs == "Both KBAs and PAs"){  
       set_grid <- sub("^KBAs_reduced([^_]+)$", "\\1", input$KBAlayer) 
       kba_up <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "upstream_KBAs") %>%
@@ -361,92 +368,23 @@ assessRepServer <- function(input, output, session, project, map, rv){
           kba_sf$geometry <- kba_sf$geom
         }
         
-        
-        
-        n_metrics <- 4L + !is.null(rv$layers_rv$criteria5)
-        metric_number <- 0L
-        
-        metric_progress <- function(metric_name) {
-          metric_number <<- metric_number + 1L
-          
-          start <- (metric_number - 1L) / n_metrics
-          end <- metric_number / n_metrics
-          
-          function(value, detail) {
-            shiny::setProgress(
-              value = start + (end - start) * value,
-              detail = paste0(metric_name, ": ", detail)
-            )
-          }
-        }
-        
         calculation_error <- shiny::withProgress(
           message = "Calculating dissimilarity metrics",
           detail = "Preparing calculation...",
           value = 0,
           {
-            
             tryCatch({
-              kba_sf$cmi <- calc_dissimilarity(
-                reserves_sf = kba_sf,
-                reserves_id = "network",
-                reference_sf = rv$refarea_reactive(),
-                raster_layer = kba_cmi,
-                raster_type = "continuous",
-                plot_out_dir = file.path(rv$outdir(), "output", "plot", "cmi"),
-                progress = metric_progress("CMI")
-              )
-              
-              kba_sf$lcc <- calc_dissimilarity(
-                reserves_sf = kba_sf,
-                reserves_id = "network",
-                reference_sf = rv$refarea_reactive(),
-                raster_layer = kba_lcc,
-                raster_type = "categorical",
-                categorical_class_values = unique_sorted_values,
-                plot_out_dir = file.path(rv$outdir(), "output", "plot", "lcc"),
-                categorical_class_labels = df_label,
-                progress = metric_progress("LCC")
-              )
-        
-              kba_sf$led <- calc_dissimilarity(
-                reserves_sf = kba_sf,
-                reserves_id = "network",
-                reference_sf = rv$refarea_reactive(),
-                raster_layer = kba_led,
-                raster_type = "continuous",
-                plot_out_dir = file.path(rv$outdir(), "output", "plot", "led"),
-                progress = metric_progress("LED")
-              )
-              
-              kba_sf$gpp <- calc_dissimilarity(
-                reserves_sf = kba_sf,
-                reserves_id = "network",
-                reference_sf = rv$refarea_reactive(),
-                raster_layer = kba_gpp,
-                raster_type = "continuous",
-                plot_out_dir = file.path(rv$outdir(), "output", "plot", "gpp"),
-                progress = metric_progress("GPP")
-              )
+              kba_sf$cmi <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "cmi"), progress = metric_progress("CMI"))
+              kba_sf$lcc <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
+                                               plot_out_dir = file.path(plot_dir, "lcc"), categorical_class_labels = df_label, progress = metric_progress("LCC"))
+              kba_sf$led <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "led"), progress = metric_progress("LED"))
+              kba_sf$gpp <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "gpp"), progress = metric_progress("GPP"))
               
               if (!is.null(rv$layers_rv$criteria5)) {
                 criteria_name <- rv$criteria5name()
-                
-                kba_sf[[criteria_name]] <- calc_dissimilarity(
-                  reserves_sf = kba_sf,
-                  reserves_id = "network",
-                  reference_sf = rv$refarea_reactive(),
-                  raster_layer = kba_criteria5,
-                  raster_type = "continuous",
-                  plot_out_dir = file.path(
-                    rv$outdir(), "output", "plot", criteria_name
-                  ),
-                  progress = metric_progress(criteria_name)
-                )
+                kba_sf[[criteria_name]] <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(plot_dir, criteria_name), progress = metric_progress(criteria_name))
               }
-              
               NULL
-              
             }, error = function(e) {
               e
             })
@@ -455,45 +393,16 @@ assessRepServer <- function(input, output, session, project, map, rv){
         
         if (inherits(calculation_error, "error")) {
           error_occurred <- TRUE
-          
           showModal(modalDialog(
             title = "Error calculating dissimilarity",
-            paste(
-              "Possible issues may involve partially overlapping objects or a reserve",
-              "being too small relative to the raster resolution. Code error:",
+            paste( "Possible issues may involve partially overlapping objects or a reserve", "being too small relative to the raster resolution. Code error:",
               calculation_error$message
             ),
             easyClose = FALSE,
             footer = modalButton("OK")
           ))
         }
-        
-        
-        
-        
-        #error_occurred <- FALSE
-        #tryCatch({
-        #  kba_sf$lcc <- calc_dissimilarity(reserves_sf=kba_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_lcc, raster_type='categorical', plot_out_dir=file.path(rv$outdir(), "/output/plot/lcc"), categorical_class_labels = df_label)
-        #  kba_sf$cmi <- calc_dissimilarity(reserves_sf=kba_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_cmi, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot/cmi"))
-        #  kba_sf$led <- calc_dissimilarity(reserves_sf=kba_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_led, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot/led"))
-        #  kba_sf$gpp <- calc_dissimilarity(reserves_sf=kba_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_gpp, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot/gpp"))
-        #  # criteria5
-        #  if(!is.null(rv$layers_rv$criteria5)){
-       #     kba_sf[[rv$criteria5name()]] <- calc_dissimilarity(reserves_sf=kba_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_criteria5, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot", rv$criteria5name()))
-        #  }
-        #}, error = function(e) {
-        #  error_occurred <<- TRUE
-        #  # Show an error modal with the error message
-       #   showModal(modalDialog(
-       #     title = "Error calculating disimilarity",
-       #     paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
-       #     easyClose = FALSE,
-       #     footer = modalButton("OK")
-       #   ))
-       # })
-       # if (error_occurred) {
-       #   return(NULL)  # Stop execution of the rest of the observer
-       # }
+ 
         kba_sf <- kba_sf %>%
           dplyr::select(-any_of(c("group_id", "Area_PB")))
         st_write(kba_sf, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = paste0("repKBAs_reduced", set_grid), driver = "GPKG", append = FALSE)
@@ -503,26 +412,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
-        if(!is.null(rv$layers_rv$criteria5)){
-          if(!has_name(kba_sf, rv$criteria5name())){
-            error_occurred <- FALSE
-            tryCatch({
-              kba_sf[[rv$criteria5name()]] <- calc_dissimilarity(reserves_sf=kba_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_criteria5, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot", rv$criteria5name()))
-            }, error = function(err) {
-              error_occurred <- TRUE
-              # Show an error modal with the error message
-              showModal(modalDialog(
-                title = "Error calculating disimilarity",
-                paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
-                easyClose = TRUE,
-                footer = modalButton("OK")
-              ))
-            })
-            if (error_occurred) {
-              return(NULL)  # Stop execution of the rest of the observer
-            }
-          }
-        }
+        
         rv$kba_sf_reactive(kba_sf)
         kba_up <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "upstream_KBAs")
         rv$kba_upstream_reactive(kba_up)
@@ -532,37 +422,50 @@ assessRepServer <- function(input, output, session, project, map, rv){
     } 
     
     if(input$assessKBAs == "Only PAs" || input$assessKBAs == "Both KBAs and PAs"){
+      
       pas_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas")
       pas_up <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas_upstream") %>%
         dplyr::select(network)
-      
+      ###
       if (!("repPAs" %in% layers)) {
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
         error_occurred <- FALSE
-        tryCatch({
-          pas_sf$lcc <- round(calc_dissimilarity(reserves_sf=pas_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_lcc, raster_type='categorical', plot_out_dir=file.path(rv$outdir(), "/output/plot/lcc"), categorical_class_labels = df_label),3)
-          pas_sf$cmi <- round(calc_dissimilarity(reserves_sf=pas_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_cmi, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot/cmi")),3)
-          pas_sf$led <- round(calc_dissimilarity(reserves_sf=pas_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_led, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot/led")),3)
-          pas_sf$gpp <- round(calc_dissimilarity(reserves_sf=pas_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_gpp, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot/gpp")),3)
-          # criteria5
-          if(!is.null(rv$layers_rv$criteria5)){
-            pas_sf[[rv$criteria5name()]] <- round(calc_dissimilarity(reserves_sf=pas_sf, reserves_id="network", reference_sf=rv$refarea_reactive(), raster_layer=kba_criteria5, raster_type='continuous', plot_out_dir=file.path(rv$outdir(), "/output/plot", rv$criteria5name())),3)
+        calculation_error <- shiny::withProgress(
+          message = "Calculating dissimilarity metrics on PAs",
+          detail = "Preparing calculation...",
+          value = 0,
+          {
+            tryCatch({
+              pas_sf$cmi <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "cmi"), progress = metric_progress("CMI"))
+              pas_sf$lcc <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
+                                               plot_out_dir = file.path(plot_dir, "lcc"), categorical_class_labels = df_label, progress = metric_progress("LCC"))
+              pas_sf$led <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "led"), progress = metric_progress("LED"))
+              pas_sf$gpp <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "gpp"), progress = metric_progress("GPP"))
+              
+              if (!is.null(rv$layers_rv$criteria5)) {
+                criteria_name <- rv$criteria5name()
+                pas_sf[[criteria_name]] <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(plot_dir, criteria_name), progress = metric_progress(criteria_name))
+              }
+              NULL
+            }, error = function(e) {
+              e
+            })
           }
-        }, error = function(e) {
-          error_occurred <<- TRUE
-          # Show an error modal with the error message
+        )
+        
+        if (inherits(calculation_error, "error")) {
+          error_occurred <- TRUE
           showModal(modalDialog(
-            title = "Error calculating disimilarity",
-            paste("Possible issues may involve partially overlapping objects or the reserve's size being too small relative to the raster's resolution. Code error returns:", e$message),
+            title = "Error calculating dissimilarity",
+            paste( "Possible issues may involve partially overlapping objects or a reserve", "being too small relative to the raster resolution. Code error:",
+                   calculation_error$message
+            ),
             easyClose = FALSE,
             footer = modalButton("OK")
           ))
-        })
-        if (error_occurred) {
-          return(NULL)  # Stop execution of the rest of the observer
-        }
+        } 
         st_write(pas_sf, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "repPAs", driver = "GPKG", append = FALSE)
         rv$pas_sf_reactive(pas_sf)
       }else{
@@ -778,115 +681,29 @@ assessRepServer <- function(input, output, session, project, map, rv){
     # Render Rep Analysis PLOT per KBA
     ####################################################################################################
     # Define a route to serve images from the external directory
-    shiny::addResourcePath("image", file.path(rv$outdir(), "output/plot"))
+    shiny::addResourcePath("image", rv$plotDir())
     
-    output$images_2 <- renderUI({
-      tags$div(style = "display: flex; flex-wrap: wrap; justify-content: space-around;", 
-               tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                       tags$h3("CMI"),  # Title
-                        tags$img(src = paste0("image/cmi/", input$KBA, ".png"), height = "400px", width = "300px")
-               ),
-               tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                        tags$h3("GPP"),  # Title
-                        tags$img(src = paste0("image/gpp/", input$KBA, ".png"), height = "400px", width = "300px")
-               ),
-               tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                        tags$h3("LED"),  # Title 
-                        tags$img(src = paste0("image/led/", input$KBA, ".png"), height = "400px", width = "300px")
-               ),
-               tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                        tags$h3("LCC"),  # Title 
-                        tags$img(src = paste0("image/lcc/", input$KBA, ".png"), height = "400px", width = "300px")
-               ),
-               if(!is.null(rv$layers_rv$criteria5)){
-                 tags$div(style = "text-align: center; margin: 10px;",  # Center align titles and images
-                          tags$h3(rv$criteria5name()),  # Title 
-                          tags$img(src = paste0("image/", rv$criteria5name(), "/", input$KBA, ".png"), height = "400px", width = "300px")
-                 )
-               }
-      )
-    })
     output$images <- renderUI({
-      
       image_box <- function(title, src, id) {
-        
-        tags$div(
-          id = id,
-          class = "image-box",
-          
-          tags$div(
-            class = "image-box-header",
-            tags$span(title),
-            
-            tags$button(
-              type = "button",
-              class = "image-expand-btn",
-              onclick = paste0("toggleImageBox('", id, "')"),
-              title = "Expand image",
-              
-              tags$i(
-                class = "fa fa-expand"
-              )
-            )
-          ),
-          
-          tags$div(
-            class = "image-container",
-            
-            tags$img(
-              src = src,
-              class = "kba-image"
-            )
-          )
+        tags$div(id = id, class = "image-box",
+          tags$div(class = "image-box-header", tags$span(title),
+            tags$button(type = "button", class = "image-expand-btn", onclick = paste0("toggleImageBox('", id, "')"), title = "Expand image", 
+                        tags$i(class = "fa fa-expand"))),
+          tags$div(class = "image-container", tags$img(src = src, class = "kba-image"))
         )
       }
       
-      boxes <- list(
-        
-        image_box(
-          "CMI",
-          paste0("image/cmi/", input$KBA, ".png"),
-          "cmi_box"
-        ),
-        
-        image_box(
-          "GPP",
-          paste0("image/gpp/", input$KBA, ".png"),
-          "gpp_box"
-        ),
-        
-        image_box(
-          "LED",
-          paste0("image/led/", input$KBA, ".png"),
-          "led_box"
-        ),
-        
-        image_box(
-          "LCC",
-          paste0("image/lcc/", input$KBA, ".png"),
-          "lcc_box"
-        )
-      )
+      boxes <- list(image_box("CMI", paste0("image/cmi/", input$KBA, ".png"), "cmi_box"),
+                    image_box("GPP", paste0("image/gpp/", input$KBA, ".png"), "gpp_box"),
+                    image_box("LED", paste0("image/led/", input$KBA, ".png"), "led_box"),
+                    image_box("LCC", paste0("image/lcc/", input$KBA, ".png"), "lcc_box")
+                   )
       
       if (!is.null(rv$layers_rv$criteria5)) {
-        
-        boxes[[5]] <- image_box(
-          rv$criteria5name(),
-          paste0(
-            "image/",
-            rv$criteria5name(),
-            "/",
-            input$KBA,
-            ".png"
-          ),
-          "criteria5_box"
-        )
+        boxes[[5]] <- image_box(rv$criteria5name(), paste0("image/", rv$criteria5name(), "/", input$KBA, ".png"), "criteria5_box")
       }
       
-      tags$div(
-        class = "image-box-container",
-        boxes
-      )
+      tags$div(class = "image-box-container", boxes)
     })
   })
   
