@@ -5,6 +5,17 @@ setParamsServer <- function(input, output, session, project, map, rv){
   ## Observe on actionButton
   observeEvent(input$set_wd, {
     updateActionButton(session, "set_wd", label = "Confirmed", icon = icon("check", lib = "font-awesome"))
+    
+    # check existance Benchmark Builder
+    if(!file.exists(file.path(rv$dirpath(), "BenchmarkBuilder_cmd.exe"))){
+      showModal(modalDialog(
+        title = "Missing Benchmark Builder executable in the output directory",
+        paste0("The selected output directory ",  rv$dirpath(), " does not contain BenchmarkBuilder_cmd.exe, which is required to run Builder. Please reload and select the directory where the executable is installed."),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
   })
   
   #***  
@@ -97,8 +108,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
     tagList(
       br(),
       div(style = "margin-top: -40px;", selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = c("Please select", catch_nm))),
-      #br(),
-      #actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
     )
     
   })

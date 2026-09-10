@@ -144,17 +144,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       ))
       return()
     }
-    # check existance Benchmark Builder
-    if(!file.exists(file.path(rv$dirpath(), "BenchmarkBuilder_cmd.exe"))){
-      showModal(modalDialog(
-        title = "Missing Benchmark Builder executable in the output directory",
-        paste0("The selected output directory ",  rv$dirpath(), " does not contain BenchmarkBuilder_cmd.exe, which is required to run Builder. Please reload and select the directory where the executable is installed."),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return()
-    }
-    
+
     showModal(modalDialog(
       title = "Running BUILDER",
       "Please wait...",
