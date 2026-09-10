@@ -10,6 +10,13 @@ addDisplayServer <- function(input, output, session, project, map, rv){
     req(input$confExtra)  
     i <- NULL
     
+    # show pop-up ...
+    showModal(modalDialog(
+      title = "Uploading layers. Please wait...",
+      easyClose = TRUE,
+      footer = NULL)
+    )
+    
     if(input$extraupload == "extrashp"){
       if(!is.null(input$display1)){
         req(input$display1)
@@ -132,11 +139,11 @@ addDisplayServer <- function(input, output, session, project, map, rv){
       display1 <- st_transform(rv$layers_rv$display1_sf, 4326)
       geom_type <- unique(sf::st_geometry_type(display1))
       if (any(geom_type %in% c("POLYGON", "MULTIPOLYGON"))) {
-        map <- map %>% addPolygons(data=display1,  fillColor='#663300', stroke=F, fill = T, fillOpacity = 0.5, group=rv$display1_name(), options = leafletOptions(pane = "ground"))
+        map <- map %>% addPolygons(data=display1,  fillColor='#FF9933', stroke=F, fill = T, fillOpacity = 0.5, group=rv$display1_name(), options = leafletOptions(pane = "ground"))
       } else if (any(geom_type %in% c("LINESTRING", "MULTILINESTRING"))) {
-        map <- map %>% addPolylines(data = display1, color = '#663300', weight = 2, group = rv$display1_name(), options = leafletOptions(pane = "ground"))
+        map <- map %>% addPolylines(data = display1, color = '#FF9933', weight = 2, group = rv$display1_name(), options = leafletOptions(pane = "ground"))
       } else if (any(geom_type %in% c("POINT", "MULTIPOINT"))) {
-        map <- map %>% addCircleMarkers(data = display1, color = '#663300', radius = 5, fillOpacity = 0.7, group = rv$display1_name(), options = leafletOptions(pane = "ground"))
+        map <- map %>% addCircleMarkers(data = display1, color = '#FF9933', radius = 5, fillOpacity = 0.7, group = rv$display1_name(), options = leafletOptions(pane = "ground"))
       } else {
         showNotification("Unsupported geometry type", type = "error")
       }
@@ -178,5 +185,13 @@ addDisplayServer <- function(input, output, session, project, map, rv){
                        overlayGroups = c(rv$overlayGroups()),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams", "Catchments"))
+    
+    # show pop-up ...
+    showModal(modalDialog(
+      title = "Additional layers uploaded!",
+      easyClose = TRUE,
+      footer = NULL)
+    )
   }) 
+  
 }
