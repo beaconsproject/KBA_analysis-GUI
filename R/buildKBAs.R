@@ -95,6 +95,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
         write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
       }
     }
+    removeModal()
   })
   
   observeEvent(rv$nghbrs_reactive(), {
