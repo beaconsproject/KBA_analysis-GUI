@@ -192,8 +192,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       
       # Show an error modal with the error message
       showModal(modalDialog(
-        title = "Error Running BUILDER",
-        paste("Please check Builder software is found in your beaconsbuilder library and that you have .NET framework 3.5 installed:", conditionMessage(err)),
+        title = "Error Running BUILDER: ", conditionMessage(err),
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
