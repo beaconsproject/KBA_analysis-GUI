@@ -151,7 +151,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       "Please wait...",
       footer = NULL
     ))
-    
+    builder_tab <- NULL
     tryCatch({
       builder_tab <- builder(catchments_sf = rv$layers_rv$catchments,
                              data_source = "catchment",
@@ -193,13 +193,16 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       
       # Show an error modal with the error message
       showModal(modalDialog(
-        title = "Error Running BUILDER: ", conditionMessage(err),
+        title = "Error Running BUILDER: ", 
+        paste("The following error occurred:", conditionMessage(err)),
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
+      return(NULL)
     })
     
     # Fix PB to KBA
+    req(builder_tab)
     builder_tab <- builder_tab %>%
       rename_with(~ str_replace(.x, "PB", "KBA"))
     

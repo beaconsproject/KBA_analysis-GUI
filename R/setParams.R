@@ -2,28 +2,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
   
   project_is_new <- reactiveVal(FALSE)
   
-  ## Observe on actionButton
-  observeEvent(input$set_wd, {
-    updateActionButton(session, "set_wd", label = "Confirmed", icon = icon("check", lib = "font-awesome"))
-    
-    # check existance Benchmark Builder
-    if(!file.exists(file.path(rv$dirpath(), "BenchmarkBuilder_cmd.exe"))){
-      showModal(modalDialog(
-        title = "Missing Benchmark Builder executable in the output directory",
-        paste0("The selected output directory ",  rv$dirpath(), " does not contain BenchmarkBuilder_cmd.exe, which is required to run Builder. Please reload and select the directory where the executable is installed."),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return()
-    }
-  })
-  
-  #***  
-  # Observe map click events to update the selected polygon
-  observeEvent(input$map_shape_click, {
-    rv$selected_polygon(input$map_shape_click$id)  # Store the layerId of the clicked polygon
-  })
-  #***
   ################################################################################################
   # Set dir
   ################################################################################################
@@ -51,6 +29,39 @@ setParamsServer <- function(input, output, session, project, map, rv){
     folders <- list.dirs(rv$dirpath(), full.names = FALSE, recursive = FALSE)
     folders
   })
+  ## Observe on actionButton
+  observeEvent(input$set_wd, {
+    # check no spaces
+    if(grepl(" ", rv$dirpath())){
+      showModal(modalDialog(
+        title = "The output directory cannot have space",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      rv$dirpath(NULL)
+      return()
+    }
+    updateActionButton(session, "set_wd", label = "Confirmed", icon = icon("check", lib = "font-awesome"))
+    
+    # check existance Benchmark Builder
+    if(!file.exists(file.path(rv$dirpath(), "BenchmarkBuilder_cmd.exe"))){
+      showModal(modalDialog(
+        title = "Missing Benchmark Builder executable in the output directory",
+        paste0("The selected output directory ",  rv$dirpath(), " does not contain BenchmarkBuilder_cmd.exe, which is required to run Builder. Please reload and select the directory where the executable is installed."),
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+  })
+  
+  #***  
+  # Observe map click events to update the selected polygon
+  observeEvent(input$map_shape_click, {
+    rv$selected_polygon(input$map_shape_click$id)  # Store the layerId of the clicked polygon
+  })
+  #***
+
   
   #--------
   # reactive UI on existing project
@@ -320,6 +331,17 @@ setParamsServer <- function(input, output, session, project, map, rv){
     # Case 3: existing subfolders: user chooses new
     if (input$project_choice == "new") {
       req(input$new_project)
+      
+      outdir <- input$new_project
+      # check no spaces
+      if(grepl(" ", outdir)){
+        showModal(modalDialog(
+          title = "The project directory cannot have space",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
       
       project_path <- file.path(rv$dirpath(), input$new_project)
       
