@@ -102,7 +102,7 @@ server = function(input, output, session) {
         addMapPane(name = "over", zIndex=420) %>%
         addProviderTiles("Esri.WorldTopoMap", group="Esri.WorldTopoMap") %>% 
         addProviderTiles("Esri.WorldImagery", group="Esri.WorldImagery") %>%
-        addProviderTiles("CartoDB.PositronNoLabels", group = "Blank Background") %>%
+        addProviderTiles("Esri.WorldGrayCanvas", group = "Blank Background") %>%
         addPolygons(data=intact_4326, fill=T, stroke=F, fillColor='#99CC99', fillOpacity=0.5, group="Intact areas", options = leafletOptions(pane = "ground")) %>%
         addPolygons(data=bnd, color='grey', fill=F, weight=1, group="Canada extent", options = leafletOptions(pane = "ground")) %>%
         addLayersControl(position = "topright",
