@@ -843,11 +843,11 @@ assessRepServer <- function(input, output, session, project, map, rv){
   observeEvent(input$downloadKBA, {
     
     if(input$assessKBAs == "Only KBAs"){
-      prefix <- paste0("repKBAs_", sub(".*(reduced\\d+).*", "\\1", input$KBAlayer))
+      prefix <- paste0("repKBAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))
     }else if(input$assessKBAs == "Only PAs"){
       prefix <- "repPAs_"
     }else{
-      prefix <- paste0("repKBAPAs_", sub(".*(reduced\\d+).*", "\\1", input$KBAlayer))
+      prefix <- paste0("repKBAPAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))
     }
     
     filtered_sf_rep <- rv$filtered_rep()

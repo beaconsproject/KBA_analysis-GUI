@@ -1,22 +1,11 @@
 buildNetServer <- function(input, output, session, project, map, rv){
   
-  #output$netPAs <- renderUI({
-  #  req(rv$layers_rv$pas_sf)
-  
-  #  tagList(
-  #    br(),
-  #    div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F)),
-  #    #br(),
-  #    #actionButton("confirm_project", "Confirm", class = "btn-warning", style="width:200px")
-  #  )
-  
-  #})
-  
   observeEvent(input$tabs, {
     req(input$tabs == "tabNET", rv$outdir())
+    
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    rep_kba <- layers[grepl("^(KBAs_reduced|repKBAs_reduced)", layers)]
+    rep_kba <- layers[grepl("^(KBAs_reduced|repKBA)", layers)]
     pas_ls <- layers[grepl("^protected_areas", layers) & !grepl("protected_areas_upstream", layers)]
     net_list <- c(rep_kba, pas_ls)
     if (length(rep_kba) > 0) { 
