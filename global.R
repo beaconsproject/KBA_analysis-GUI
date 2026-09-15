@@ -212,27 +212,8 @@ read_tif_from_csv <- function(csv_file, layer_name) {
   req(csv_file)  # Ensure the CSV file is provided
   csv_data <- read.csv(csv_file$datapath)
   
-  # Check if the specified layer exists in the CSV
-  if (layer_name %in% csv_data$Layer) {
-    path <- csv_data$Path[csv_data$Layer == layer_name]
-    if (file.exists(path)) {
-      return(terra::rast(path))  # Load raster using the terra package
-    } else {
-      showModal(modalDialog(
-        title = paste("The path for", layer_name, "in the CSV does not exist."),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return()
-    }
-  } else {
-    showModal(modalDialog(
-      title = paste(layer_name, "layer not found in CSV."),
-      easyClose = TRUE,
-      footer = modalButton("OK")
-    ))
-    return()
-  }
+  path <- csv_data$Path[csv_data$Layer == layer_name]
+  return(terra::rast(path))  # Load raster using the terra package
 }
 
 # read_tif_from_upload: Read raster file from fileInput

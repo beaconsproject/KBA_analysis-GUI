@@ -409,33 +409,48 @@ setParamsServer <- function(input, output, session, project, map, rv){
   required_layers <- c("catchments", "stream", "planning region", "CMI", "GPP", "LCC", "LED")
   
   # Reactive function to validate the input file
-  validate_csv <- reactive({
-    req(input$csv_file)  # Ensure the file input is not NULL
-    
-    csv_data <- read.csv(input$csv_file$datapath)
+  validate_csv <- function(csv_file){
+    csv_data <- read.csv(csv_file$datapath)
+    missing <- csv_data$Path[!file.exists(csv_data$Path)]
+    # Find non-existing path
+    if (length(missing) > 0) {
+      bad_layers <- csv_data$Layer[!file.exists(csv_data$Path)]
+      return(
+        paste(
+          "The following layer paths do not exist:",
+          paste(bad_layers, collapse = ", ")
+        )
+      )
+    }
     
     # Find missing layers
     missing_layers <- setdiff(required_layers, csv_data$Layer)
     if (length(missing_layers) > 0) {
-      showModal(modalDialog(
-        title = "Missing Layers",
+      return(
         paste("The uploaded CSV is missing the following layers:",
-              paste(missing_layers, collapse = ", "),
-              ". Please fix and re-upload."),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return(FALSE)  # Stop further execution
-    } else {
-      # Return validated data if all checks pass
-      return(TRUE)
+              paste(missing_layers, collapse = ", "))
+        
+      )
     }
-  })
+    return()
+  }
   
   ################################################################################################
   # Read CSV
   observeEvent(input$csv_file, {
-    req(validate_csv())  # ensure CSV is valid
+    error_msg <- validate_csv(input$csv_file)
+    if (!is.null(error_msg)) {
+      showModal(
+        modalDialog(
+          title = "Invalid layer path",
+          error_msg,
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        )
+      )
+      return()
+    }
+    
     csv_data <- read.csv(input$csv_file$datapath)
     layer_paths <- setNames(csv_data$Path, csv_data$Layer)
     
