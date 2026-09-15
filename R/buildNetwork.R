@@ -20,7 +20,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       return()
     }
     output$pasInclude <- renderUI({
-      if (!is.null(rv$layers_rv$pas_sf) && !grepl("PAs", input$KBArep, ignore.case = TRUE)) {
+      if (!is.null(rv$layers_rv$pas_sf)) {
         # If criteria5 is NULL, render the sliderInput with disabled = TRUE
         div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F))
       }
