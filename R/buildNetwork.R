@@ -19,6 +19,13 @@ buildNetServer <- function(input, output, session, project, map, rv){
       )
       return()
     }
+    output$pasInclude <- renderUI({
+      if (!is.null(rv$layers_rv$pas_sf) && !grepl("PAs", input$KBArep, ignore.case = TRUE)) {
+        # If criteria5 is NULL, render the sliderInput with disabled = TRUE
+        div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F))
+      }
+    })
+    
     
     kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
     leafletProxy("map") %>%
