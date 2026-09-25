@@ -193,5 +193,4 @@ addDisplayServer <- function(input, output, session, project, map, rv){
       footer = NULL)
     )
   }) 
-  
 }

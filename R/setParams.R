@@ -79,21 +79,13 @@ setParamsServer <- function(input, output, session, project, map, rv){
       # Subfolders exist = existing projects
       tagList(
         div(style = "margin-top: -10px; margin-left: 15px; font-size:15px; font-weight: bold", "Existing project(s) found in this directory"),
-        
-        radioButtons(
-          "project_choice",
-          "Select an option:",
-          choices = list(
-            "Use an existing project" = "existing",
-            "Create a new project" = "new"
-          )
-        ),
-        
+        radioButtons("project_choice", "Select an option:",choices = list("Use an existing project" = "existing",
+                                                                          "Create a new project" = "new"
+                                                                          )),
         # Shown only if "existing" is selected
         conditionalPanel(
           condition = "input.project_choice == 'existing'",
           div(style = "margin-top: -10px;", selectInput("existing_project", "Choose a project:", choices = folders))
-          
         ),
         
         # Shown only if "new" is selected
@@ -114,19 +106,16 @@ setParamsServer <- function(input, output, session, project, map, rv){
   # reactive UI on existing project
   output$intactCol_ui <- renderUI({
     req(rv$layers_rv$catchments)
-    
     catch_nm <- colnames(rv$layers_rv$catchments)
     tagList(
       br(),
       div(style = "margin-top: -40px;", selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = c("Please select", catch_nm))),
     )
-    
   })
   
   # reactive UI on protected areas
   output$pas_ui <- renderUI({
     req(input$intactColname != "Please select")
-    
     if (is.null(rv$layers_rv$pas_sf)) {
       div(style = "margin-top: -10px;", fileInput(inputId = "upload_pas", label  = "Upload Protected Areas - OPTIONAL", multiple = TRUE, accept = c(".shp", ".dbf", ".shx", ".prj")))
     } 
@@ -181,7 +170,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
           rv$kba_sf_reactive(kba_sf)
         }
       }
-      
       
       # Load builder input
       if(file.exists(file.path(rv$outdir(), "Builder_input/seeds.csv"))){
@@ -329,7 +317,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
           }
         }
       }
-      
     }
     
     # Case 3: existing subfolders: user chooses new
@@ -382,14 +369,12 @@ setParamsServer <- function(input, output, session, project, map, rv){
   # reactive UI on new project
   output$newproject_ui <- renderUI({
     req(project_is_new())
-    
     tagList(
       radioButtons("setUpload", "Set the source for spatial dataset:",
                    choices = list("Use csv with file pathways" = "useCSV", 
                                   "Upload individual layer" = "indUpload"),
                    selected = character(0), 
-                   inline = FALSE)
-      ,
+                   inline = FALSE),
       conditionalPanel(
         condition="input.setUpload=='useCSV'",
         div(style = "margin-top: -20px;",fileInput("csv_file", "Upload CSV file", accept = ".csv"))
@@ -684,7 +669,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
     )
     
     stream_4326 <- rv$layers_rv_4326$streams
-    
     legend <- c(rv$overlayGroups(), "Streams")
     rv$overlayGroups(legend)
     

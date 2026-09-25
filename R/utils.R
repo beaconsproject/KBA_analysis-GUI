@@ -1,10 +1,3 @@
-#check_catchnum <- function(catchments_sf){
-  
-  # check CATCHNUM exists
-#  if(!"CATCHNUM" %in% names(catchments_sf)){
-#    stop("Catchments must contain column 'CATCHNUM'")
-#  }
-#}
 # check conservation area names are in conservation_area_sf$network
 check_conservation_area_names <- function(nets, conservation_area_sf, conservation_areas_id) {
   ids <- conservation_area_sf[[conservation_areas_id]]
@@ -13,7 +6,6 @@ check_conservation_area_names <- function(nets, conservation_area_sf, conservati
     stop(paste0("Requested names are not in sf object column '", conservation_areas_id, "': ", paste(missing, collapse = ", ")), call. = FALSE)
   }
 }
-
 
 check_catchnum_class <- function(catchments_sf, builder_table){
   col_classes <- sapply(colnames(builder_table), function(x) class(builder_table[[x]]))
@@ -47,7 +39,6 @@ logical_to_integer <- function(x){
   if(!x %in% c(TRUE, FALSE)){
     stop("input must be TRUE or FALSE")
   }
-  
   return(as.integer(x))
 }
 

@@ -33,7 +33,6 @@ buildKBAServer <- function(input, output, session, project, map, rv){
   # -Create BUILDER input
   ####################################################################################################
   observeEvent(input$runBuilderInput, {
-    
     #Test if catchments are uploaded
     if (is.null(rv$layers_rv$catchments)) {
       # Create the modal dialog
@@ -302,17 +301,6 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     
     req(rv$layers_rv$streams)
     req(rv$layers_rv$catchments)
-    #layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-    #layers <- layers_info$name
-    #layer_to_check <- "KBAs_reducedFALSE"
-    
-    #if (!layer_to_check %in% layers) {
-    #showModal(modalDialog(
-    #  title = "Processing",
-    #  paste0("Calculating hydrology metrics on ", as.character(nrow(rv$kba_sf_reactive())), " features. Please wait..."),
-    #  footer = NULL
-    #))
-    
     
     # Identify the attributes file and read it
     attributefile <- list.files(file.path(rv$outdir(),"Builder_output"), pattern = "Unique_BAs_attributes")
@@ -388,8 +376,6 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       poly_sf$geometry <- poly_sf$geom
     }
     
-    #removeModal()
-    
     poly_sf$dci <- shiny::withProgress(
       message = "Calculating hydrology metrics ",
       detail = "Starting...",
@@ -426,7 +412,6 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       easyClose = FALSE,
       footer = modalButton("OK"))
     )  
-    
   })
   
   observeEvent(rv$kba_sf_reactive(), {
@@ -434,41 +419,6 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     
     updateActionButton(session, "runBuilder", label = "Builder output created!", icon = icon("check", lib = "font-awesome"))
   })
-  ####################################################################################################
-  # -Render PAs statistics table
-  ####################################################################################################
-  #  observeEvent(input$tabs, {
-  #    req(input$tabs == 'tabBuilder')
-  
-  # Initialize KBA/PAs freq table
-  #    x <- tibble(
-  #      Variables = c("KBAs", "Reduced KBAs"),
-  #      Count = c(NA, NA))  
-  
-  #    layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-  #    layers <- layers_info$name
-  
-  #    if ("KBAs_builder" %in% layers) {
-  #      kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "KBAs_builder")
-  #      x <- x %>% 
-  #        mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
-  #                                 TRUE ~ Count))
-  #    }
-  #if ("KBAs_reduced10000" %in% layers) {
-  #  kba_reduced_sf <- st_read(dsn = file.path(rv$outdir(),  "output/KBA_analysis.gpkg"), layer = "KBAs_reduced10000")
-  #  x <- x %>% 
-  #    mutate(Count = case_when(Variables == "Reduced KBAs" ~  nrow(kba_reduced_sf),
-  #                             TRUE ~ Count))
-  #}  
-  
-  # Generate Stat Tables    
-  #    rv$outfreqhydro(x) 
-  
-  #    output$outkbahydro <- renderTable({
-  #      rv$outfreqhydro()
-  #    })
-  
-  #  })
   
   ####################################################################################################
   # REDUCE KBAs
