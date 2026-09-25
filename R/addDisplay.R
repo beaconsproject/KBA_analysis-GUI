@@ -188,7 +188,7 @@ addDisplayServer <- function(input, output, session, project, map, rv){
     
     # show pop-up ...
     showModal(modalDialog(
-      title = "Additional layers uploaded!",
+      title = "Additional layers uploaded, please wait to have them displayed...", 
       easyClose = TRUE,
       footer = NULL)
     )
