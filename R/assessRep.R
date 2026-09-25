@@ -17,7 +17,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   
   observeEvent(input$upload_refarea, {
     rv$refarea_reactive(read_shp_from_upload(input$upload_refarea))
-    st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = TRUE)
+    st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
   })
   
   # RENDER KBA FILTERING UI
@@ -153,7 +153,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       legend <- c(rv$overlayGroups(), rv$kba_init_label())
       rv$overlayGroups(legend)
       
-      if(input$KBAlayer != rv$mapped_kba_layer){
+      if(input$KBAlayer != rv$mapped_kba_layer()){
         kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
         leafletProxy("map") %>%
           clearControls() %>%
@@ -165,7 +165,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
                            overlayGroups = c(rv$overlayGroups(), "Potential KBAs"),
                            options = layersControlOptions(collapsed = FALSE)) %>%
           hideGroup(c("Streams"))
-        rv$mapped_kba_layer <- input$KBAlayer
+        rv$mapped_kba_layer(input$KBAlayer)
       }
       
       if(!is.null(rv$refarea_reactive())){
@@ -288,7 +288,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       cmi_4326 <- cmi$projected
     }else{
       kba_cmi <- rv$layers_rv$cmi
-      cmi_4326 <- rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
+      cmi_4326 <- rv$layers_rv_4326$cmi
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_led.tif"))) {
       showModal(modalDialog(
@@ -303,7 +303,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       led_4326 <- led$projected
     } else{
       kba_led <- rv$layers_rv$led
-      led_4326 <- rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
+      led_4326 <- rv$layers_rv_4326$led
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_gpp.tif"))) {
       showModal(modalDialog(
@@ -318,7 +318,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       gpp_4326 <- gpp$projected
     } else{
       kba_gpp <- rv$layers_rv$gpp
-      gpp_4326 <- rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
+      gpp_4326 <- rv$layers_rv_4326$gpp
     }
     if (!file.exists(file.path(rv$outdir(), "output/kba_lcc.tif"))) {
       showModal(modalDialog(
@@ -334,7 +334,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       lcc_4326 <- lcc$projected
     }else{
       kba_lcc <- rv$layers_rv$lcc
-      lcc_4326 <- rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+      lcc_4326 <- rv$layers_rv_4326$lcc
     }
     
     if(!is.null(rv$layers_rv$criteria5)){
@@ -437,7 +437,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
         kba_up <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "upstream_KBAs")
         rv$kba_upstream_reactive(kba_up)
       }
-      updated_grp <- c(rv$overlayGroup(), "Potential KBAs")
+      updated_grp <- c(rv$overlayGroups(), "Potential KBAs")
       rv$overlayGroup(updated_grp)
     } 
     

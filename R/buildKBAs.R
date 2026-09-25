@@ -82,13 +82,13 @@ buildKBAServer <- function(input, output, session, project, map, rv){
         req(rv$refarea_reactive())
         catchments <- rv$layers_rv$catchments[st_within(rv$layers_rv$catchments, rv$refarea_reactive(), sparse = FALSE),]
         seed <- catchments %>%
-          filter(input$intactColname >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
+          filter(.data[[input$intactColname]] >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
           seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
         rv$seed_reactive(seed)
         write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
       }else{
         seed <- rv$layers_rv$catchments %>%
-          filter(input$intactColname >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
+          filter(.data[[input$intactColname]] >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
           seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
         rv$seed_reactive(seed)
         write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
@@ -574,7 +574,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       easyClose = TRUE,
       footer = modalButton("OK"))
     )
-    rv$mapped_kba_layer <- paste0("KBAs_reduced", input$set_grid)
+    rv$mapped_kba_layer(paste0("KBAs_reduced", input$set_grid))
     st_write(rv$kba_reduce_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced", input$set_grid), driver = "GPKG", append = FALSE)
   }, ignoreInit = TRUE)
   

@@ -38,7 +38,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
     
-    if(input$KBArep != rv$mapped_kba_layer){
+    if(input$KBArep != rv$mapped_kba_layer()){
       kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
       leafletProxy("map") %>%
         clearControls() %>%
@@ -50,7 +50,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
                          overlayGroups = c(rv$overlayGroups(), "Potential KBAs"),
                          options = layersControlOptions(collapsed = FALSE)) %>%
         hideGroup(c("Streams"))
-      rv$mapped_kba_layer <-input$KBArep
+      rv$mapped_kba_layer(input$KBArep)
     }
     
     x <- rv$outfreqnet()
@@ -721,11 +721,11 @@ buildNetServer <- function(input, output, session, project, map, rv){
     req(filtered_sf_rep)
     prefix <- sub("_up.*$", "", input$KBArep)
     
-    outName <- paste0("net", prefix, "_up", as.character(input$slideUP_view), "_cmi", as.character(input$slideCMI_view),"_gpp", as.character(input$slideGPP_view),"_led", as.character(input$slideLED_view),
-                      "_lcc", as.character(input$slideLCC_view))
+    outName <- paste0("net", prefix, "_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
+                      "_lcc", as.character(input$slideNETLCC))
     
     if(!is.null(rv$layers_rv$criteria5)){
-      outName <- paste0(outName, "_", rv$criteria5name(), as.character(input$slideNETcrit5_view))
+      outName <- paste0(outName, "_", rv$criteria5name(), as.character(input$slideNETcrit5))
       subfolders <- c("cmi", "lcc", "gpp", "led", rv$criteria5name())
     }else{
       subfolders <- c("cmi", "lcc", "gpp", "led")
@@ -733,7 +733,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     st_write(filtered_sf_rep, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
     
-    source_parent_dir <- file.path(rv$outdir(), "output/plot", input$repLayer)
+    source_parent_dir <- file.path(rv$outdir(), "output/plot", input$KBArep)
     destination_parent_dir <- file.path(rv$outdir(), "output/plot", outName)
     
     # Ensure the destination subdirectories exist
