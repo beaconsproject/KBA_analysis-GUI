@@ -107,10 +107,10 @@ viewServer <- function(input, output, session, project, map, rv){
     }
     
     #Prep criteria
-    cmi_4326<- rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
-    led_4326 <- rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
-    gpp_4326 <- rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
-    lcc_4326 <- rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+    cmi_4326<- rv$layers_rv_4326$cmi
+    led_4326 <- rv$layers_rv_4326$led
+    gpp_4326 <- rv$layers_rv_4326$gpp
+    lcc_4326 <- rv$layers_rv_4326$lcc
     
     if(!is.null(rv$layers_rv$criteria5)){
       crit5_4326 <- rast(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
@@ -165,7 +165,7 @@ viewServer <- function(input, output, session, project, map, rv){
       hideGroup(c("Streams"))
     
     if(!is.null(rv$layers_rv$pas_sf)){
-      pas_4326 <- rv$layers_rv$pas_sf %>% st_transform(4326)
+      pas_4326 <- rv$layers_rv_4326$pas_sf
       leafletProxy("map") %>%
         addPolygons(data = pas_4326, color = '#993300', fillColor = "transparent", fillOpacity = 0, weight = 3,  group="Protected areas", options = leafletOptions(pane = "over")) %>%
         addLayersControl(position = "topright",
@@ -430,7 +430,7 @@ viewServer <- function(input, output, session, project, map, rv){
     }else{
       subfolders <- c("cmi", "lcc", "gpp", "led")
     }
-    browser()
+    
     st_write(filtered_sf_rep, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
     
     source_parent_dir <- file.path(rv$outdir(), "output/plot", input$repLayer)
