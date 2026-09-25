@@ -47,9 +47,9 @@ ui = dashboardPage(skin="black",
                                  ),
                                  shinydashboard::menuItem("Assess representation", tabName = "assess", icon = icon(name = "fas fa-compass", lib = "font-awesome"), startExpanded = FALSE,
                                                           menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Assess single KBAs (optional)</span>'), tabName = "tabKBA", icon = icon(name = "fas fa-map", lib = "font-awesome")),
-                                                          menuSubItem("Create and assess KBA networks", tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))#,
-                                                          #menuSubItem("Download Filtered Networks", tabName = "download", icon = icon(name = "fas fa-download", lib = "font-awesome"))
+                                                          menuSubItem(HTML('<span style="display: inline-block; vertical-align: top; margin-left: 5px;">Create and assess KBA networks</span>'), tabName = "tabNET", icon = icon(name = "fas fa-project-diagram", lib = "font-awesome"))
                                  ),
+                                 shinydashboard::menuItem("View previous analysis", tabName = "tabVIEW", icon = icon(name = "fas fa-history", lib = "font-awesome")),
                                  shinydashboard::menuItem("Convert as Shapefiles (OPTIONAL)", tabName = "convert", icon = icon(name = "fas fa-download", lib = "font-awesome")),
                                  hr()
                      ),
@@ -167,6 +167,12 @@ ui = dashboardPage(skin="black",
                        div(style = "margin-top: -30px;",sliderInput("slideNETUP", label="Maximum upstream area (sq.km):", min=0, max=100000, value = 25000, step=1000, ticks=FALSE)),
                        actionButton("filterNet", "Apply filtering", icon = icon(name = "filter", lib = "font-awesome"), class = "btn-primary", style="width:250px"),
                        div(style = "margin-top: 20px;",actionButton("downloadNET", "Download Filtered Networks", icon = icon(name = "fas fa-download", lib = "font-awesome"), class = "btn-warning", style="width:250px"))
+                     ),
+                     conditionalPanel(
+                       condition="input.tabs=='tabVIEW'",
+                       selectInput("repLayer", "Select prior KBAs analyses layer", choices = "No layer found", multiple = FALSE),
+                       actionButton("review", "View results", class = "btn-warning", style="width:250px"),
+                       uiOutput("slideVIEW")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='convert'",
@@ -487,6 +493,18 @@ ui = dashboardPage(skin="black",
                                                                tableOutput("outnetfreq"),
                                                                selectInput("network", label = "Select network:", choices = NULL),  # Initially empty, updated dynamically
                                                                tableOutput("outnet")
+                                                      )
+                                          )
+                                   )
+                                 ),
+                                 conditionalPanel(
+                                   condition = "input.tabs == 'tabVIEW' && input.mapBox === 'Mapview'",  # Updated condition
+                                   tabBox(id = "metricsVIEW", width = 2,
+                                          tabsetPanel(id = "tabsetVIEW",
+                                                      tabPanel(HTML("<h4>Number of potential KBAs / networks</h4>"), 
+                                                               tableOutput("outviewfreq"),
+                                                               selectInput("KBA_net", label = "Select KBA/network:", choices = NULL),  # Initially empty, updated dynamically
+                                                               tableOutput("outview")
                                                       )
                                           )
                                    )

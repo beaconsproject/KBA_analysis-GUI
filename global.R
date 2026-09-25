@@ -331,3 +331,26 @@ make_metric_progress <- function(n_metrics) {
     }
   }
 }
+
+.copy_contents <- function(source_dir, destination_dir) {
+  if (!dir.exists(source_dir)) {
+    return(invisible(FALSE))
+  }
+  
+  dir.create(destination_dir, recursive = TRUE, showWarnings = FALSE)
+  items <- list.files(source_dir, full.names = TRUE, all.files = TRUE, no.. = TRUE, recursive = TRUE)
+  
+  for (item in items) {
+    relative_path <- substring(item, nchar(source_dir) + 2)
+    destination <- file.path(destination_dir, relative_path)
+    
+    if (dir.exists(item)) {
+      dir.create(destination, recursive = TRUE, showWarnings = FALSE)
+    } else {
+      dir.create(dirname(destination), recursive = TRUE,showWarnings = FALSE)
+      file.copy(item, destination, overwrite = FALSE)
+    }
+  }
+  
+  invisible(TRUE)
+}

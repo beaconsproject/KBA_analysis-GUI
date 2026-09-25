@@ -33,6 +33,7 @@ server = function(input, output, session) {
                             seed_reactive = reactiveVal(),
                             kba_sf_reactive = reactiveVal(NULL),
                             kba_reduce_reactive = reactiveVal(NULL),
+                            mapped_kba_layer = "KBAs_reducedFALSE",
                             kba_upstream_reactive = reactiveVal(NULL),
                             upstream_reactive = reactiveVal(NULL),
                             pas_sf_reactive = reactiveVal(NULL),
@@ -41,6 +42,7 @@ server = function(input, output, session) {
                             upstream_network_reactive = reactiveVal(),
                             reactive_labelKBA = reactiveVal(NULL),
                             reactive_labelNET = reactiveVal(NULL),
+                            reactive_labelVIEW = reactiveVal(NULL),
                             kba_init_label = reactiveVal(NULL),
                             network_reactive = reactiveVal(),
                             dir_exists = reactiveVal(FALSE),
@@ -66,6 +68,9 @@ server = function(input, output, session) {
                             ),
                             outfreqnet = reactiveVal(
                               tibble(Variables = c("KBAs", "PAs", "Networks", "Filtered networks"), Count = NA_integer_)
+                            ),
+                            outfreqview = reactiveVal(
+                              tibble(Variables = c("KBAs/PAs/Networks", "Filtered KBAs/PAs/Networks"), Count = NA_integer_)
                             )
   )
   
@@ -132,7 +137,10 @@ server = function(input, output, session) {
   #Build network
   buildNetServer(input, output, session, project, myMap, reactiveValsList)
   
-  #Convert to shp
+  #Build network
+  viewServer(input, output, session, project, myMap, reactiveValsList)
+
+    #Convert to shp
   convertServer(input, output, session, project, myMap, reactiveValsList)
   
 }
