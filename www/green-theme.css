@@ -117,3 +117,9 @@
   color: white !important;   /* Icon color stays white when hovering */
 }
 
+/* Display legend on the same row*/
+.leaflet-bottom .leaflet-control {
+  clear: none;
+  float: left;
+  margin-right: 10px;
+}
