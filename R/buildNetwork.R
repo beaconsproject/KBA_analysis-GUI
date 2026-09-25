@@ -5,7 +5,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
-    rep_kba <- layers[grepl("^(KBAs_reduced|repKBA)", layers)]
+    rep_kba <- layers[grepl("^(KBAs_reduced)", layers)]
     pas_ls <- layers[grepl("^protected_areas", layers) & !grepl("protected_areas_upstream", layers)]
     net_list <- c(rep_kba, pas_ls)
     if (length(rep_kba) > 0) { 
@@ -25,20 +25,33 @@ buildNetServer <- function(input, output, session, project, map, rv){
         div(style = "margin-top: -30px;",checkboxInput("forcePAs", label = "Include all PAs in the network", value = F))
       }
     })
+  })
     
+  observeEvent(input$KBArep, {
+    req(input$KBArep)
     
-    kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
-    leafletProxy("map") %>%
-      clearControls() %>%
-      clearGroup("Potential KBAs (reduced)") %>%
-      clearGroup("Potential KBAs (all)") %>%
-      clearGroup("Potential KBAs") %>%
-      addPolygons(data=kba_sf_4326, fillColor='purple', color= "#000000", weight = 1,  group="Potential KBAs", options = leafletOptions(pane = "over")) %>%
-      addLayersControl(position = "topright",
-                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
-                       overlayGroups = c(rv$overlayGroups(), "Potential KBAs"),
-                       options = layersControlOptions(collapsed = FALSE)) %>%
-      hideGroup(c("Streams"))
+    showModal(modalDialog(
+      title = "Mapping potential KBAs", "Please wait...",
+      easyClose = TRUE,
+      footer = modalButton("OK"))
+    )
+    
+    kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = input$KBArep)
+    
+    if(input$KBArep != rv$mapped_kba_layer){
+      kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
+      leafletProxy("map") %>%
+        clearControls() %>%
+        clearGroup("Potential KBAs (reduced)") %>%
+        clearGroup("Potential KBAs") %>%
+        addPolygons(data=kba_sf_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2,  group="Potential KBAs", options = leafletOptions(pane = "over")) %>%
+        addLayersControl(position = "topright",
+                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
+                         overlayGroups = c(rv$overlayGroups(), "Potential KBAs"),
+                         options = layersControlOptions(collapsed = FALSE)) %>%
+        hideGroup(c("Streams"))
+      rv$mapped_kba_layer <-input$KBArep
+    }
     
     x <- rv$outfreqnet()
     
@@ -46,6 +59,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
       mutate(Count = case_when(Variables == "KBAs" ~  ifelse(!is.null(kba_sf), nrow(kba_sf), NA_integer_),
                                TRUE ~ Count))
     
+    layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
+    layers <- layers_info$name
     if ("protected_areas" %in% layers) {
       pas_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas")
       x <- x %>% 
@@ -54,6 +69,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     } 
     
     rv$outfreqnet(x)
+    removeModal()
   })
   
   observeEvent(input$KBArep, {
@@ -539,6 +555,8 @@ buildNetServer <- function(input, output, session, project, map, rv){
       network_sf_rep <- filter(network_sf, lcc <= input$slideNETLCC & gpp <= input$slideNETGPP & cmi <= input$slideNETCMI & led <= input$slideNETLED &  up_km2 <= input$slideNETUP)
     }
     
+    rv$filtered_rep(network_sf_rep)
+    
     x <- rv$outfreqnet()
     x$Count[x$Variables=="Filtered networks"] <- nrow(network_sf_rep)
     rv$outfreqnet(x) 
@@ -684,4 +702,67 @@ buildNetServer <- function(input, output, session, project, map, rv){
       tags$div(class = "image-box-container", boxes)
     })
   })
+  
+  ################################################################################################
+  # Download NET
+  ################################################################################################  
+  observeEvent(input$downloadNET, {
+    filtered_sf_rep <- rv$filtered_rep()
+    
+    if(is.null(filtered_sf_rep)){
+      showModal(modalDialog(
+        title = "No filtering has been applied",
+        "Please apply filtering prior to save filtered network",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return()
+    }
+    req(filtered_sf_rep)
+    prefix <- sub("_up.*$", "", input$KBArep)
+    
+    outName <- paste0("net", prefix, "_up", as.character(input$slideUP_view), "_cmi", as.character(input$slideCMI_view),"_gpp", as.character(input$slideGPP_view),"_led", as.character(input$slideLED_view),
+                      "_lcc", as.character(input$slideLCC_view))
+    
+    if(!is.null(rv$layers_rv$criteria5)){
+      outName <- paste0(outName, "_", rv$criteria5name(), as.character(input$slideNETcrit5_view))
+      subfolders <- c("cmi", "lcc", "gpp", "led", rv$criteria5name())
+    }else{
+      subfolders <- c("cmi", "lcc", "gpp", "led")
+    }
+    
+    st_write(filtered_sf_rep, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
+    
+    source_parent_dir <- file.path(rv$outdir(), "output/plot", input$repLayer)
+    destination_parent_dir <- file.path(rv$outdir(), "output/plot", outName)
+    
+    # Ensure the destination subdirectories exist
+    for (subfolder in subfolders) {
+      dir.create(file.path(destination_parent_dir, subfolder), recursive = TRUE, showWarnings = FALSE)
+    }
+    
+    # Get the list of networks from the sf object
+    network_names <- filtered_sf_rep$network
+    
+    # Iterate over each subfolder
+    for (subfolder in subfolders) {
+      for (network in network_names) {
+        # Define source and destination file paths
+        source_file <- file.path(source_parent_dir, subfolder, paste0(network, ".PNG"))
+        destination_file <- file.path(destination_parent_dir, subfolder, paste0(network, ".PNG"))
+        
+        # Check if the source file exists before copying
+        if (file.exists(source_file)) {
+          file.copy(source_file, destination_file, overwrite = TRUE)
+        }
+      }
+    }
+    
+    showModal(modalDialog(
+      title = "Filtered KBAs/protected_areas downloaded",
+      paste0("Filtered KBAs/protected_areas were downloaded in the KBA_analysis.gpkg  under the name ", outName, " found in ", rv$outdir(), "/output"),
+      easyClose = TRUE,
+      footer = modalButton("OK"))
+    )
+  })  
 }
