@@ -45,6 +45,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       div(style = "margin-top: 20px;", actionButton("downloadKBA", "Download Filtered KBAs", icon = icon("download"), class = "btn-warning", style = "width:250px")))
   })
   
+  # Disable if no PAs
   observe({
     req(rv$outdir())
     invalidateLater(2000)
@@ -65,7 +66,6 @@ assessRepServer <- function(input, output, session, project, map, rv){
   ####################################################################################################
   # ASSESS REPRESENTATION 
   ####################################################################################################
-  
   #########################################################
   #-UPDATE FREQUENCY TABLE AND MAX UPSTREAM SLIDER
   observeEvent(input$tabs, {
@@ -87,15 +87,12 @@ assessRepServer <- function(input, output, session, project, map, rv){
         x <- x %>% 
           mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
                                    TRUE ~ Count))
-        #rv$kba_init_label("Potential KBAs (reduced)")
       }else{
         updateSelectInput(session = getDefaultReactiveDomain(), "KBAlayer", choices = reduced_kba, selected = isolate(reduced_kba[1]))
         kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = reduced_kba[1])
         x <- x %>% 
           mutate(Count = case_when(Variables == "KBAs" ~  nrow(kba_sf),
                                    TRUE ~ Count))
-        #rv$kba_init_label("Potential KBAs (all)")
-        
       }
       rv$kba_init_label("Potential KBAs")
     }
@@ -118,6 +115,11 @@ assessRepServer <- function(input, output, session, project, map, rv){
   # Update LEAFLET
   observeEvent(input$KBAlayer, {
     if (input$tabs == "tabKBA") {
+      showModal(modalDialog(
+        title = "Mapping potential KBAs", "Please wait...", 
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
       
       layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
       layers <- layers_info$name
@@ -151,18 +153,20 @@ assessRepServer <- function(input, output, session, project, map, rv){
       legend <- c(rv$overlayGroups(), rv$kba_init_label())
       rv$overlayGroups(legend)
       
-      kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
-      leafletProxy("map") %>%
-        clearControls() %>%
-        clearGroup("Potential KBAs (reduced)") %>%
-        clearGroup("Potential KBAs (all)") %>%
-        clearGroup("Potential KBAs") %>%
-        addPolygons(data=kba_sf_4326, fillColor='purple', color= "#000000", weight = 1,  group="Potential KBAs", options = leafletOptions(pane = "over")) %>%
-        addLayersControl(position = "topright",
-                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
-                         overlayGroups = c(rv$overlayGroups(), "Potential KBAs"),
-                         options = layersControlOptions(collapsed = FALSE)) %>%
-        hideGroup(c("Streams"))
+      if(input$KBAlayer != rv$mapped_kba_layer){
+        kba_sf_4326 <- st_transform(kba_sf, 4326) %>% st_simplify(dTolerance = 0.001)
+        leafletProxy("map") %>%
+          clearControls() %>%
+          clearGroup("Potential KBAs (reduced)") %>%
+          clearGroup("Potential KBAs") %>%
+          addPolygons(data=kba_sf_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2,  group="Potential KBAs", options = leafletOptions(pane = "over")) %>%
+          addLayersControl(position = "topright",
+                           baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
+                           overlayGroups = c(rv$overlayGroups(), "Potential KBAs"),
+                           options = layersControlOptions(collapsed = FALSE)) %>%
+          hideGroup(c("Streams"))
+        rv$mapped_kba_layer <- input$KBAlayer
+      }
       
       if(!is.null(rv$refarea_reactive())){
         req(rv$refarea_reactive())
@@ -180,14 +184,16 @@ assessRepServer <- function(input, output, session, project, map, rv){
           hideGroup(c("Streams"))
       }
     }
+    removeModal()
   }, ignoreInit = TRUE)
+  
   
   #########################################################
   #-RUN REPRESENTATION
   #########################################################
   observeEvent(input$runRep, {
-    #Test on required objects
     
+    #Test on required objects
     if (is.null(rv$refarea_reactive()) || is.null(rv$layers_rv$streams) || is.null(rv$layers_rv$planreg) || is.null(rv$layers_rv$cmi) || is.null(rv$layers_rv$gpp) || is.null(rv$layers_rv$led) || is.null(rv$layers_rv$lcc)) {
       missing_layers <- c(
         if (is.null(rv$refarea_reactive())) "reference area",
@@ -238,6 +244,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
         return()
       }
     }
+    
     #Start processing
     showModal(modalDialog(
       title = "Processing representation analysis",
@@ -254,7 +261,17 @@ assessRepServer <- function(input, output, session, project, map, rv){
       st_as_sf() %>%
       st_make_valid()                
     
-    plot_dir <- file.path(rv$outdir(), "output/plot",  input$KBAlayer)
+    #Control plot_dir name
+    if(input$assessKBAs == "Only KBAs"){
+      prefix <- paste0("repKBAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))
+      plot_dir <- file.path(rv$outdir(), "output/plot",  prefix)
+    }else if(input$assessKBAs == "Only PAs"){
+      prefix <- "repPAs"
+      plot_dir <- file.path(rv$outdir(), "output/plot",  prefix)
+    }else{
+      prefix <- paste0("repKBAPAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))
+      plot_dir <- file.path(rv$outdir(), "output/plot",  prefix)
+    }
     rv$plotDir(plot_dir)
     
     #Prep criteria
@@ -364,6 +381,9 @@ assessRepServer <- function(input, output, session, project, map, rv){
       if(!(paste0("repKBAs_reduced", set_grid) %in% layers)) {
         kba_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = input$KBAlayer)
         
+        prefix <- paste0("repKBAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))
+        plot_dir <- file.path(rv$outdir(), "output/plot",  prefix)
+        
         if(attr(kba_sf, "sf_column") != "geometry"){
           kba_sf$geometry <- kba_sf$geom
         }
@@ -428,6 +448,10 @@ assessRepServer <- function(input, output, session, project, map, rv){
         dplyr::select(network)
       ###
       if (!("repPAs" %in% layers)) {
+        
+        prefix <- "repPAs"
+        plot_dir <- file.path(rv$outdir(), "output/plot",  prefix)
+        
         if(attr(pas_sf, "sf_column") != "geometry"){
           pas_sf$geometry <- pas_sf$geom
         }
@@ -584,6 +608,12 @@ assessRepServer <- function(input, output, session, project, map, rv){
         inputId = "slideUP",
         max = max_value
       )
+      
+      #recover plot in plotdir
+      if(isFALSE(dir.exists(rv$plotDir()))){
+        .copy_contents(file.path(rv$outdir(), "output/plot", paste0("repKBAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))) , rv$plotDir())
+        .copy_contents(file.path(rv$outdir(), "output/plot/repPAs"), rv$plotDir())
+      }
     }
     
     unique_kbas <- unique(rv$poly_reactive()$network)
@@ -624,7 +654,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       clearGroup(labelKBA) %>%
       clearGroup(labelNET) %>%
       clearGroup("Upstream") %>%  # Clear previous highlight
-      addPolygons(data = selected_polygon, color = "black",  fillColor = "#989898", fillOpacity = 0.8, weight = 2, group = input$KBA) %>%
+      addPolygons(data = selected_polygon, fillColor='purple', color= "#000000", weight = 2, group = input$KBA) %>%
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
@@ -746,7 +776,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
         leafletProxy("map") %>%
           clearGroup('Potential KBAs') %>% 
           #clearGroup('Protected areas') %>% 
-          addPolygons(data = filtered_sf_4326, color = 'purple', fillColor = "transparent", fillOpacity = 0, weight = 3,
+          addPolygons(data = filtered_sf_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2,
                       layerId = filtered_sf_4326$network, popup = ~network, group = "Potential KBAs", 
                       options = leafletOptions(pane = "over")) %>%
           addLayersControl(position = "topright",
@@ -782,10 +812,10 @@ assessRepServer <- function(input, output, session, project, map, rv){
           )
       }
       if(input$assessKBAs == "Both KBAs and PAs"){
-        kba <- rv$kba_sf_reactive()[rv$kba_sf_reactive()$network %in% rv$filtered_sf_rep$network,]
+        kba <- rv$kba_sf_reactive()[rv$kba_sf_reactive()$network %in% filtered_sf_rep$network,]
         rv$filtered_kba(kba)
         kba_4326 <- kba %>% st_transform(4326)
-        pas <- rv$pas_sf_reactive()[rv$pas_sf_reactive()$network %in% rv$filtered_sf_rep$network,]
+        pas <- rv$pas_sf_reactive()[rv$pas_sf_reactive()$network %in% filtered_sf_rep$network,]
         rv$filtered_pas(pas)
         pas_4326 <- pas %>% st_transform(4326)
         
@@ -845,7 +875,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
     if(input$assessKBAs == "Only KBAs"){
       prefix <- paste0("repKBAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))
     }else if(input$assessKBAs == "Only PAs"){
-      prefix <- "repPAs_"
+      prefix <- "repPAs"
     }else{
       prefix <- paste0("repKBAPAs_", sub(".*(reduced.*)", "\\1", input$KBAlayer))
     }
@@ -874,9 +904,8 @@ assessRepServer <- function(input, output, session, project, map, rv){
     
     st_write(filtered_sf_rep, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
     
-    d <- sub("rep","plot", outName)
-    source_parent_dir <- file.path(rv$outdir(), "output/plot")
-    destination_parent_dir <- file.path(rv$outdir(), "output", d)
+    source_parent_dir <- file.path(rv$outdir(), "output/plot", prefix)
+    destination_parent_dir <- file.path(rv$outdir(), "output/plot", outName)
     
     # Ensure the destination subdirectories exist
     for (subfolder in subfolders) {
