@@ -230,15 +230,11 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       footer = NULL)
     )
     
-    #groups_to_remove <- c(
-    #  "Potential KBAs", "Upstream", rv$reactive_labelKBA(), rv$reactive_labelNET(),
-    #  "CMI", "LED", "GPP", "LCC", rv$criteria5name()
-    #)
     groups_to_remove <- c("Potential KBAs", "Upstream")
     
     # Remove these groups from overlayGroups()
     rv$overlayKBA(setdiff(rv$overlayKBA(), groups_to_remove))
-    legend <- c(rv$overlayKBA(), "Potential KBAs (all)")
+    legend <- c(rv$overlayKBA(), "Potential KBAs")
     rv$overlayKBA(legend)
     
     kba_sf_4326 <- st_transform(rv$kba_sf_reactive(), 4326) %>% st_simplify(dTolerance = 0.001)
@@ -253,7 +249,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       clearGroup("GPP") %>%
       clearGroup("LCC") %>%
       clearGroup(rv$criteria5name()) %>%
-      addPolygons(data=kba_sf_4326, color='black', fillColor = "transparent", fillOpacity = 0, weight=1, group="Potential KBAs (all)", options = leafletOptions(pane = "over")) %>%
+      addPolygons(data=kba_sf_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2, group="Potential KBAs", options = leafletOptions(pane = "over")) %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
                        overlayGroups = c(rv$overlayGroups(), rv$overlayKBA()),
@@ -579,10 +575,6 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       footer = modalButton("OK")
     ))
     
-    #groups_to_remove <- c(
-    #  "Potential KBAs", "Upstream", rv$reactive_labelKBA(), rv$reactive_labelNET(),
-    #  "CMI", "LED", "GPP", "LCC", rv$criteria5name()
-    #)
     groups_to_remove <- c("Potential KBAs", "Upstream")
     
     # Remove these groups from overlayGroups()
@@ -602,12 +594,12 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       clearGroup("LED") %>%
       clearGroup("GPP") %>%
       clearGroup("LCC") %>%
-      addPolygons(data=kba_sf_4326, fillColor='#666666', color= "#000000", weight = 1,  group="Potential KBAs (reduced)", options = leafletOptions(pane = "ground")) %>%
+      addPolygons(data=kba_sf_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2,  group="Potential KBAs (reduced)", options = leafletOptions(pane = "ground")) %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
                        overlayGroups = c(rv$overlayGroups(), rv$overlayKBA()),
                        options = layersControlOptions(collapsed = FALSE)) %>%
-      hideGroup(c("Streams", "Potential KBAs (all)"))
+      hideGroup(c("Streams", "Potential KBAs"))
     
     # Initialize KBA/PAs freq table
     x <- rv$outfreqhydro()
@@ -632,6 +624,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       easyClose = TRUE,
       footer = modalButton("OK"))
     )
+    rv$mapped_kba_layer <- paste0("KBAs_reduced", input$set_grid)
     st_write(rv$kba_reduce_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = paste0("KBAs_reduced", input$set_grid), driver = "GPKG", append = FALSE)
   }, ignoreInit = TRUE)
   
