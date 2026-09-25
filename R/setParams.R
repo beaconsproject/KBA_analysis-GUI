@@ -192,8 +192,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
         rv$layer_paths(read.csv(manifest_file))
         paths <- rv$layer_paths()
         rv$layers_rv$catchments <- st_read(paths$Path[paths$Layer == "catchments"])
-        rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
-        
+
         rv$layers_rv$streams <- st_read(paths$Path[paths$Layer == "stream"]) 
         rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
         
@@ -255,8 +254,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
         }
       }else{
         rv$layers_rv$catchments <- st_read(file.path(rv$outdir(), "data/catchments.shp"))
-        rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
-        
+
         rv$layers_rv$streams <- st_read(file.path(rv$outdir(), "data/stream.shp")) 
         rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
         
@@ -447,8 +445,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
     write.csv(csv_data, file.path(rv$outdir(), "data/layer_paths.csv"))
     
     rv$layers_rv$catchments  <- read_shp_from_csv(input$csv_file, "catchments")
-    rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
-    
+
     rv$layers_rv$streams     <- read_shp_from_csv(input$csv_file, "stream")
     rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
     
@@ -479,7 +476,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
       rv$refarea_reactive(
         read_shp_from_csv(input$csv_file, "reference area")
       )
-      st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = TRUE)
+      st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
     } else {
       rv$refarea_reactive(NULL)
     }
@@ -522,7 +519,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
   observeEvent(input$upload_catch, {
     rv$layers_rv$catchments <- read_shp_from_upload(input$upload_catch)
     st_write(rv$layers_rv$catchments, file.path(rv$outdir(), "data/catchments.shp"), append = FALSE)
-    rv$layers_rv_4326$catchments <- rv$layers_rv$catchments %>% st_transform(4326)
     paths <- rv$layer_paths()
   })
   
@@ -591,7 +587,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
   ####################################################################################################
   observeEvent(rv$layers_rv$catchments, {
     req(rv$layers_rv$catchments)
-    missing_cols <- check_colnames(rv$layers_rv$catchments, c("Isolated", "length_m", "FDA_M", "Area_land", "Area_water", "Area_total", "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "SKELUID"))
+    missing_cols <- check_colnames(rv$layers_rv$catchments, c("Isolated", "length_m", "FDA_M", "Area_land", "Area_water", "Area_total", "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "SKELUID", "STRAHLER"))
     
     if (length(missing_cols) > 0) {
       showModal(modalDialog(
@@ -601,7 +597,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
         footer = modalButton("OK")
       )
       )
-      rv$layers_rv$catchment <- NULL
+      rv$layers_rv$catchments <- NULL
     }
     
   }, ignoreNULL = TRUE)
