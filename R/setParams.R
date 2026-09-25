@@ -176,6 +176,10 @@ setParamsServer <- function(input, output, session, project, map, rv){
       if(file.exists(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))){
         layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
         layers <- layers_info$name
+        if("KBAs_reducedFALSE" %in% layers){
+          kba_sf <- st_read(file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer ="KBAs_reducedFALSE")
+          rv$kba_sf_reactive(kba_sf)
+        }
       }
       
       
@@ -651,6 +655,20 @@ setParamsServer <- function(input, output, session, project, map, rv){
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery", "Blank Background"),
                        overlayGroups = rv$overlayGroups(),
                        options = layersControlOptions(collapsed = FALSE))
+    
+    if(!is.null(rv$kba_sf_reactive())){
+      kba_4326 <- st_transform(rv$kba_sf_reactive(), 4326)
+      overlayGroups <- rv$overlayGroups()
+      overlayGroups <- c(overlayGroups, "Potential KBAs")
+      
+      leafletProxy("map") %>%
+        addPolygons(data=kba_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2,  group="Potential KBAs", options = leafletOptions(pane = "over")) %>%
+        addLayersControl(position = "topright",
+                         baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery", "Blank Background"),
+                         overlayGroups = overlayGroups,
+                         options = layersControlOptions(collapsed = FALSE))
+      rv$overlayGroups(overlayGroups)
+    }
   })
   
   # STREAMS
