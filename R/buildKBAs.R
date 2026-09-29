@@ -78,27 +78,84 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       rv$seed_reactive(seed)
       write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
     }else{
+      catchments <- rv$layers_rv$catchments
       if(input$seedRefARea){
         req(rv$refarea_reactive())
-        catchments <- rv$layers_rv$catchments[st_within(rv$layers_rv$catchments, rv$refarea_reactive(), sparse = FALSE),]
-        seed <- catchments %>%
-          filter(.data[[input$intactColname]] >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
-          seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
-        rv$seed_reactive(seed)
-        write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
-      }else{
-        seed <- rv$layers_rv$catchments %>%
-          filter(.data[[input$intactColname]] >= input$seedintact, STRAHLER == as.numeric(input$set_strahler)) %>%
-          seeds(catchments_sf = ., areatarget_value = as.numeric(input$set_areatarget))
-        rv$seed_reactive(seed)
-        write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert neighbours table to csv file.
+        catchments <- catchments[st_within(catchments, rv$refarea_reactive(), sparse = FALSE),]
       }
+      if(as.numeric(input$seedintact)>1){
+        showModal(modalDialog(
+          title = "Seed intactness must be between 0-1",
+          paste("Please change seed intactness prior to generate Builder inputs"),
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
+      
+      seed_catch <- tryCatch(
+        catchments %>%
+          filter(
+            .data[[input$intactColname]] >= as.numeric(input$seedintact),
+            STRAHLER == as.numeric(input$set_strahler)
+          ),
+        error = function(err) {
+          showModal(modalDialog(
+            title = "Error finding seed catchments",
+            paste("An error occurred:", conditionMessage(err)),
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+          NULL
+        }
+      )
+      
+      if (is.null(seed_catch) || nrow(seed_catch) == 0) {
+        showModal(modalDialog(
+          title = "No seed catchment found",
+          "No catchment meets the seed criteria. Please lower the minimum seed intactness or change the Strahler order.",
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+        return()
+      }
+      req(seed_catch)
+      #seed_catch <- catchments %>%
+      #  filter(.data[[input$intactColname]] >= as.numeric(input$seedintact), STRAHLER == as.numeric(input$set_strahler))
+
+      # Stop if no catchment meets the seed criteria
+      #if(nrow(seed_catch) == 0){
+      #  showModal(modalDialog(
+      #    title = "No seed catchment found",
+       #   "No catchment meets the seed criteria. Please lower the minimum seed intactness or change the Strahler order.",
+       #   easyClose = TRUE,
+       #   footer = modalButton("OK")
+       # ))
+       # return()
+      #}
+
+      seed <- tryCatch(
+        seeds(catchments_sf = seed_catch, areatarget_value = as.numeric(input$set_areatarget)),
+        error = function(err) {
+          showModal(modalDialog(
+            title = "Error creating the seed list",
+            paste("The following error occurred:", conditionMessage(err)),
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+          NULL
+        }
+      )
+      req(seed)
+      rv$seed_reactive(seed)
+      write.csv(seed, file=file.path(out_dir,"Builder_input/seeds.csv"), row.names=FALSE) # Convert seed table to csv file.
     }
     removeModal()
   })
   
   observeEvent(rv$nghbrs_reactive(), {
     req(rv$nghbrs_reactive())
+    req(rv$seed_reactive())
     removeModal()
     updateActionButton(session, "runBuilderInput", label = "Builder input now set!", icon = icon("check", lib = "font-awesome"))
   })
