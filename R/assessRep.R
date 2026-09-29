@@ -1,20 +1,30 @@
 assessRepServer <- function(input, output, session, project, map, rv){
-  
   # RENDER ASSESS REPRESENTATION UI
   output$assessRep <- renderUI({
-    req(input$tabs == "tabKBA")
-    tagList(
-      div("Select reference area.", style = "font-size: 15px; font-weight: bold; margin-left: 15px; margin-top: 20px;"),
-      if (is.null(rv$refarea_reactive())) {
-        fileInput("upload_refarea", "Upload reference area shapefile", multiple = TRUE)
-      } else {
-        div(HTML('<i class="fa fa-thumb-tack" style="color:#d9534f; "></i>'), "Reference area already uploaded.", style = "font-size: 12px; margin-top: 20px; margin-left: 30px;")
-      },
-      div(style = "margin-top: 0px;", radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs", "Both KBAs and PAs"))),
-      actionButton("runRep", "Run representation analysis", icon = icon("image"), class = "btn-warning", style="width:250px"),
-    )
-  })
+  req(input$tabs == "tabKBA", rv$outdir())
+
+  gpkg_path <- file.path(rv$outdir(), "output/KBA_analysis.gpkg")
+  has_pas <- file.exists(gpkg_path) &&
+             "protected_areas" %in% sf::st_layers(gpkg_path)$name
+
+  # Send after the UI reaches the browser, so the radio inputs exist
+  session$onFlushed(function() {
+    session$sendCustomMessage(if (has_pas) "enablePAchoices" else "disablePAchoices", list())
+  }, once = TRUE)
+
+  tagList(
+    div("Select reference area.", style = "font-size: 15px; font-weight: bold; margin-left: 15px; margin-top: 20px;"),
+    if (is.null(rv$refarea_reactive())) {
+      fileInput("upload_refarea", "Upload reference area shapefile", multiple = TRUE)
+    } else {
+      div(HTML('<i class="fa fa-thumb-tack" style="color:#d9534f; "></i>'), "Reference area already uploaded.", style = "font-size: 12px; margin-top: 20px; margin-left: 30px;")
+    },
+    div(style = "margin-top: 0px;", radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs", "Both KBAs and PAs"))),
+    actionButton("runRep", "Run representation analysis", icon = icon("image"), class = "btn-warning", style="width:250px"),
+  )
+})
   
+   
   observeEvent(input$upload_refarea, {
     rv$refarea_reactive(read_shp_from_upload(input$upload_refarea))
     st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
@@ -45,23 +55,6 @@ assessRepServer <- function(input, output, session, project, map, rv){
       div(style = "margin-top: 20px;", actionButton("downloadKBA", "Download Filtered KBAs", icon = icon("download"), class = "btn-warning", style = "width:250px")))
   })
   
-  # Disable if no PAs
-  observe({
-    req(rv$outdir())
-    invalidateLater(2000)
-    gpkg_path <- file.path(rv$outdir(), "output/KBA_analysis.gpkg")
-    req(file.exists(gpkg_path))
-    
-    layers <- sf::st_layers(gpkg_path)$name
-    
-    # If protected areas do NOT exist → disable PA-dependent options
-    if (!"protected_areas" %in% layers) {
-      # Insert disabled attributes after UI is drawn
-      session$sendCustomMessage( "disablePAchoices", list())
-    } else{
-      session$sendCustomMessage("enablePAchoices", list())
-    }
-  })
   ####################################################################################################
   ####################################################################################################
   # ASSESS REPRESENTATION 
@@ -79,6 +72,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
     
     layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
     layers <- layers_info$name
+
     reduced_kba <- layers[grepl("^KBAs_reduced", layers)]
     if (length(reduced_kba) > 0) { 
       if(paste0("KBAs_reduced", input$set_grid) %in% reduced_kba){
