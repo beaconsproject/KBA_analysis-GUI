@@ -1,31 +1,25 @@
 # Set input parameters
 
-Before setting the input parameters, copy BenchmarkBuilder.exe into the output directory you will point to.
-
 Setting input parameters requires to: 
-1. Select an output directory, 
-2. Upload spatial datasets in the application, and 
-3. Specify the catchment attribute that describes the propotion of area intact or undisturbed within the catchment.  
 
-### Select output Directory
+### 1. Select the output directory and project
+1. Select an output directory:
+   - Navigate to the directory where BenchmarkBuilder_cmd.exe is located.
+   - Click Select (bottom right), then confirm your selection. 
+2. Select the project type:
+   - **Use an existing project**: pick a project (subfolder) from the list. Previously uploaded layers and results are reloaded automatically, so you can go to step 3.
+   - **Create a new project**: enter a name. The app creates the project folder with the subfolders `data`, `output`, `Builder_input` and `Builder_output`.
 
-Navigate to the directory where the executable BenchmarkBuilder_cmd.exe was copied and click Select (bottom right). 
+&#x1F4CC; **Note:** Directory and project names must not contain spaces.
 
-Next, click the orange "Confirm" button. The user has two then options: 
+<br>
 
-Option 1 - Select **Use an existing project** to revisit an existing project. The project is a subfolder within the Output directory. Use the dropdown menu to select the project and click the orange "Confirm" button. 
-
-**If this option is selected, the App will automatically recognized data previously uploaded into the App, and the steps below are not required.**
-
-Option 2 - Select **Create a new project** to create a new project. Enter the name for the project, and click the orange "Confirm" button. A subfolder with this name will be created in the Output directory as well as three project subfolders: Builder_input, Builder_output, and output. 
-
-### Upload spatial datasets
-
+### 2. Upload spatial datasets
 All spatial datasets for building KBAs are uploaded here, as well as the planning region boundary, protected areas, reference area for representation analysis, and environmental criteria for assessing representation (CMI, LCC, LED, and GPP). This includes shapefiles and TIF files. 
 
 A shapefile consists of multiple files with the same name but different extensions. All files associated with the shapefile must be uploaded and must include .shp, .shx, .dbf, .prj. 
 
-A tif is a single file. 
+A tif is a single .tif file. 
 
 All spatial datasets must have the same projectiong e.g., `NAD 1983 Albers`.
 
@@ -39,9 +33,12 @@ The following spatial datasets are required:
 - **GPP**: A TIF representing Gross Primary Productivity (continuous)
 
 Optional spatial dataset: 
+- **Protected areas**: A shapefile representing existing protected areas.
+- **Reference area**: A polygon defining the area against which KBA representation will be assessed.
 - **Custom criteria**: One additional spatial dataset for the representation analysis can be uploaded e.g., climate-projected CMI. The name of file will appear in the map legend, naming of output files, and as an attribute name in shapefile tables. As such, a short name is recommended e.g., projcmi. 
 
-There are two options for uploading the spatial datasets: (1) use csv file with pathways and (2) upload individual layers. 
+
+There are two options for uploading the spatial datasets: (1) use csv with file pathways and (2) upload individual layers. 
 
 **OPTION 1: Use CSV with file pathways**
 
@@ -67,16 +64,30 @@ Template can be downloaded [here](./accessPath.csv)
 
 Datasets are uploaded by navigating to the shapefile or tif, select the dataset, and click open. A shapefile consists of multiple files with the same name but different extensions. All files associated with the shapefile must be selected before clicking "Open".  
 
-### Using the app: Scenario 2 - Add to Previous Analysis
+<br>
+
+### 3. Specify the intactness attribute
+
+Select the catchment attribute giving the proportion of each catchment that is intact (0 to 1, where 1 = 100% intact). **This is required before using any other section.**
+
+<br>
+
+### 4. Protected areas (optional)
+Once the intactness attribute is set, upload the protected areas here if they were not in the CSV. The app then automatically calculates, for each PA:
+
+- **area_km2**: area of the PA
+- **AWI**: area-weighted intactness of the PA (0–1)
+- **up_km2** and **up_AWI**: area and intactness of the land upstream of the PA, using the same method as BUILDER
+- **dci**: Dendritic Connectivity Index, from 0 (fragmented) to 1 (fully connected stream network within the PA) (Cote et al. 2009)
+
+The results are shown on the map and in the **Protected areas statistics** table below it. Click a PA on the map to highlight its row. A `NAME` attribute is used for display. If it is missing, the table shows empty names.
+
+This step is required to include PAs in **Assess representation** and in KBA networks.
 
 
-
-Spatial datasets will still need to be uploaded. See **Upload spatial datasets** above. If tif files of spatial datasets for the representation analysis (e.g., kba_cmi.tif) exist in the "output" subfolder, these datasets do not need to be uploaded again.
+<br>
 
 ### Output
-
-No output is created at this stage.  
-
-
-
-Values will range from 0 to 1, with 1 = 100% intact.
+Uploaded spatial datasets are copied to the project's data folder. When a CSV file is used, layer_paths.csv is also saved in this folder. 
+This allows the project to be reopened later with the same input datasets.
+ 

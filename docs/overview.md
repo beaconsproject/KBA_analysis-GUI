@@ -10,7 +10,7 @@ BUILDER explicitly incorporates **hydrologic connectivity** for the integration 
 constructs conservation areas using a deterministic construction algorithm that aggregates catchments to a user defined **size** (reflecting system resilience to disturbance
 and **intactness** (representing the absence of industrial activity and serving as a proxy for the integrity of ecological processes).
 
-Depending on the parameter values selected, this process can generate a substantial number of potential KBA candidates.To identify which of these sites best capture ecological variation, 
+Depending on the parameter values selected, this process can generate a substantial number of potential KBA candidates. To identify which of these sites best capture ecological variation, 
 users can conduct a representation analysis inside **KBA Explorer** based on four criteria: 
 
   - Climate Moisture Index (CMI), which provides a measure of the climatic conditions that influence species distributions and ecosystem processes. 
@@ -18,79 +18,75 @@ users can conduct a representation analysis inside **KBA Explorer** based on fou
   - Lake Edge Density (LED), which captures landscape heterogeneity and habitat availability at aquatic–terrestrial interfaces
   - Land Cover (LCC), which provides insight into habitat composition and landscape heterogeneity.
   
+&#x1F4CC; **Note:** An optional **fifth, custom criterion** (any continuous raster) can be added.
+  
+Representation is measured against a **reference area**, the region the KBAs are meant to represent (e.g., an ecoregion). The reference area can be the same as the planning 
+region or smaller. Key metrics are as follow:
+
+| Metric | Description | Range |
+|---|---|---|
+| AWI | Area-weighted intactness: proportion of the area that is intact | 0-1 |
+| Upstream area / upstream AWI | Size and intactness of the land draining into the KBA, PA or network | sq.km / 0-1 |
+| DCI | Dendritic Connectivity Index: longitudinal connectivity of the stream network within the area | 0 (fragmented) - 1 (connected) |
+| Dissimilarity metric (DM) | Kolmogorov–Smirnov (continuous criteria) or Bray–Curtis (LCC) statistic comparing the area with the reference area | 0 (well represented) - 1 (poorly represented) |
+
+<br>
+
+Existing **protected areas (PAs)** can optionally be included. The app calculates the same hydrology metrics for PAs as for KBAs, so PAs can be assessed on their own, together 
+with KBAs, or forced into KBA networks.
+
 Once an index has been calculated for each criterion, users can filter the resulting candidate KBAs according to specific thresholds or representation objectives, 
 allowing the final set of conservation areas to be refined in line with management or planning goals.
 
-To meet conservation objectives, particularly in large or heterogeneous landscapes, a single KBA may not be sufficient. **KBA Explorer** can address this by 
-constructing networks of KBAs, grouping multiple sites to collectively achieve conservation targets. Once a network is proposed, the application can perform a 
-representation analysis across all included KBAs, using the same four criteria to evaluate which network most effectively captures environmental variation.
+To meet conservation objectives, particularly in large or heterogeneous landscapes, a single KBA may not be sufficient. **KBA Explorer** can therefore build **networks of KBAs** 
+(and PAs) that together achieve conservation targets, and assess their representation using the same criteria.
 
 
-&#x1F4CC; **Note:** In order to run **KBA Explorer**, you need to acquire Benchmark BUILDER from the BEACONs team and have Microsoft .NET Framework installed on a Windows system. 
+&#x1F4CC; **Note:** To run **KBA Explorer**, you need Benchmark BUILDER (`BenchmarkBuilder_cmd.exe`, available from the BEACONs team) and have Microsoft .NET Framework installed locally on your Windows system. 
 
 <br>
+<br>
 
-### Input data
+#### Input data
   
-**KBA Explorer** requires several key spatial layers. Users can either upload the spatial layers as ShapeFiles or provide a CSV file that specifies access to each spatial layer.
-Please refer to the **Dataset Requirements** tab for details on the required spatial layers and associated attributes and formatting.
+**KBA Explorer** requires several spatial layers: catchments, streams, planning region, and the CMI, GPP, LED and LCC rasters. Protected areas, a reference area and one 
+custom criterion are optional. Layers can be uploaded individually or listed in a CSV file that gives the path to each layer. See the **Dataset Requirements** tab for the required attributes and formatting.
 
-### Functionality
-    
-The app consists of five sections:
-<br>
-
-#### Set input parameters
-
-  - Select an output directory where Benchmark BUILDER software is located.
-  
-  - Select an existing project or create a new project where candidate KBAs and KBA network will be saved. 
-    
-  - Upload all necessary spatial layers.
-  
-  - Specify intactness attributes within the catchments layer.
-
-&#x1F4CC; **Note:** All layers must have the same projection. Additionally, the study area must capture the full extent of the criteria layers to ensure accurate analysis.
+&#x1F4CC; **Note:** All layers must use the same projected coordinate reference system (CRS). The CRS must be a standard, recognized 
+coordinate system (e.g., identified by an EPSG or ESRI code). Custom or unrecognized projections are not supported. A projected CRS is 
+required to ensure accurate area calculations and spatial statistics. Additionally, the study area must encompass the full extent of all 
+criteria layers to ensure accurate analysis.
 
 <br>
 
-#### Add display elements (OPTIONAL)
+#### Project folder and outputs
 
-This section allows users to add additional features for visualization. These features must be vector data (points, lines, or polygons) and 
-cannot be rasters. A maximum of three additional vector features can be added. The file or layer names are automatically used as display names on 
-the map. Colors are assigned by the app and cannot be modified.
+Each project is stored as a folder within the BUILDER directory:
+
+| Folder | Content |
+|---|---|
+| `data/` | Uploaded layers and `layer_paths.csv` |
+| `Builder_input/` | Seed and neighbour tables |
+| `Builder_output/` | Raw BUILDER outputs |
+| `output/` | `KBA_analysis.gpkg` (all result layers), criteria rasters clipped to the reference area, and `plot/` (representation plots) |
+
+Main layers in `KBA_analysis.gpkg`: `KBAs_builder`, `KBAs_reducedFALSE` (all KBAs with metrics), `KBAs_reducedxxxxxx>`, `upstream_KBAs`, `protected_areas`, `protected_areas_upstream`, `repKBAs_*`, `repPAs`, `net*`, and `upstream_net*`.
+
+&#x1F4CC; **Note:** When an existing project is reopened, results already saved in the GeoPackage are reused rather than recalculated.
 
 <br>
 
-#### Build KBAs
+#### Typical workflow
 
-This section guides users through the process of generating candidate KBAs using Benchmark BUILDER. It covers the creation of necessary input tables (seed and neighbor 
-tables), running BUILDER to delineate KBAs and calculate the Dendritic Connectivity Index (DCI), and optionally refining the results by reducing spatial redundancy based 
-on user-defined grid criteria. Steps are:
-    
-  - Create BUILDER input (seed and neighbour tables)
-    
-  - Run BUILDER and calculate Dendritic Connectivity Index (DCI).
+The workflow below outlines the main steps for using KBA Explorer, from project setup and KBA construction to representation assessment and network development.
 
-  - Optional: Reduce KBAs based on spatial similarity within a user defined grid. 
-<br>  
- 
-#### Assess representation
+1. **Set input parameters**: Select the directory where Benchmark BUILDER software is located, create or open a project, load the spatial layers, and select the intactness attribute.
+2. **Add display elements** (optional): add up to three vector layers for visual reference.
+3. **Build KBAs**: create BUILDER input, run BUILDER and calculate DCI, then optionally reduce the number of KBAs.
+4. **Assess single KBAs** (optional): measure how well each KBA and/or PA represents the reference area, and filter the results.
+5. **Create and assess KBA networks**: combine KBAs (and optionally PAs) into networks, assess them, and filter the results.
+6. **View previous analysis**: reopen any saved representation or network result.
+7. **Convert as Shapefiles** (optional): export all results from the GeoPackage as shapefiles.
 
-This section enables users to evaluate how well candidate KBAs — or networks of KBAs — capture key environmental variation based on the four criteria: CMI, GPP, LED, and LCC. 
-Users can then choose one of two approaches to perform the assessment:
-
-  - Assess single KBAs
-
-  - Create and assess networks
-
-Both options allow setting thresholds on the criteria to filter and identify the best-performing KBAs or networks.    
-<br>
-  
-#### Convert as ShapeFiles
-
-All output layers generated during the analysis are saved in a GeoPackage. For users who prefer or require working with individual Shapefiles, this optional step 
-allows you to convert each layer from the GeoPackage into a separate Shapefile. The process automatically loops through all layers in the GeoPackage, creating Shapefiles 
-that can be easily opened and used in other GIS software. This step is particularly useful for users who encounter compatibility issues with GeoPackages or need to share 
-layers in the widely supported Shapefile format.
+For step-by-step instructions, see the help panel of each section.
 
