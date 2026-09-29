@@ -5,6 +5,26 @@ addDisplayServer <- function(input, output, session, project, map, rv){
   # Add display elements
   ################################################################################################
   ################################################################################################
+  observe({
+    req(input$display4)
+    file <- input$display4$datapath
+    layers <- st_layers(file)$name
+    updateSelectInput(session = getDefaultReactiveDomain(), "display4a", choices = c("Select a layer", layers))
+  })
+  observe({
+    req(input$display4)
+    file <- input$display4$datapath
+    layers <- st_layers(file)$name
+    updateSelectInput(session = getDefaultReactiveDomain(), "display4b", choices = c("Select a layer", layers))
+  })
+  observe({
+    req(input$display4)
+    file <- input$display4$datapath
+    layers <- st_layers(file)$name
+    updateSelectInput(session = getDefaultReactiveDomain(), "display4c", choices = c("Select a layer", layers))
+  })
+  
+  
   # Display1
   display1_sf <- eventReactive(input$confExtra,{
     req(input$confExtra)  
@@ -133,6 +153,12 @@ addDisplayServer <- function(input, output, session, project, map, rv){
       clearGroup(rv$display2_name()) %>%
       clearGroup(rv$display3_name())
     
+    # show pop-up ...
+    showModal(modalDialog(
+      title = "Additional layers uploaded, please wait to have them displayed...", 
+      easyClose = TRUE,
+      footer = NULL)
+    )
     grps <- rv$overlayGroups()
     
     if (isMappable(display1_sf())) { 
@@ -186,11 +212,6 @@ addDisplayServer <- function(input, output, session, project, map, rv){
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams", "Catchments"))
     
-    # show pop-up ...
-    showModal(modalDialog(
-      title = "Additional layers uploaded, please wait to have them displayed...", 
-      easyClose = TRUE,
-      footer = NULL)
-    )
+   removeModal()
   }) 
 }
