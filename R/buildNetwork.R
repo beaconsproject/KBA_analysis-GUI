@@ -696,7 +696,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
       )
       
       if (!is.null(rv$layers_rv$criteria5)) {
-        boxes[[5]] <- image_box(rv$criteria5name(), paste0("imageNET/", rv$criteria5name(), "/", input$KBA, ".png"), "criteria5_box")
+        boxes[[5]] <- image_box(rv$criteria5name(), paste0("imageNET/", rv$criteria5name(), "/", input$network, ".png"), "criteria5_box")
       }
       
       tags$div(class = "image-box-container", boxes)
