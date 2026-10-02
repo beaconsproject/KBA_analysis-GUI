@@ -442,7 +442,7 @@ ui = dashboardPage(skin="black",
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabKBAs'",
-                                                   includeMarkdown("./docs/KBAmetrics_doc.md")
+                                                   includeMarkdown("./docs/KBAreduced_doc.md")
                                                  ),
                                                  conditionalPanel(
                                                    condition = "input.tabs == 'tabKBA'",
