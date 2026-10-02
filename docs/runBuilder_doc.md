@@ -1,8 +1,8 @@
 ## Run Builder and calculate DCI
 
-This step runs BUILDER to construct candidate KBAs from the seed list and neighbours table, then calculates hydrology metrics for each KBA.
-
-&#x1F4CC; **Before you start:** `BenchmarkBuilder_cmd.exe` must be in the directory selected in **Set input parameters**, Microsoft .NET Framework must be installed, and **Create Builder input** must be completed.
+This step runs BUILDER to construct candidate KBAs from the seed list and neighbours table, then calculates hydrology metrics (DCI, upstream 
+area and upstrea area weigthed intactness) for each KBA. DCI (Dendritic Connectivity Index) quantifies the “longitudinal connectivity of 
+river networks based on the expected probability of an organism being able to move freely between two random points of the network”, (Cote et al. 2009).
 
 <br>
 
