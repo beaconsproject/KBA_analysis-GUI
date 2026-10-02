@@ -1,94 +1,88 @@
 ## Assess representation of KBAs and PAs
 
-KBAs and PAs representative of the planning region and/or reference area are identified using four biophysical indicators of environmental variation, which serve as surrogates for biodiversity: soil moisture (CMI), primary productivity (GPP), lake‐edge density (LED), and land cover (LCC). These indicators are described on the **Overview - Dataset** tab. An optional fifth indicator can be used - see **Set parameter inputs**.
+KBAs and PAs are assessed on how well they represent the environmental variation of a **reference area**, using four indicators that serve 
+as surrogates for biodiversity: climate moisture (CMI), gross primary productivity (GPP), lake-edge density (LED) and land cover (LCC). 
+An optional fifth, custom indicator can be added in **Set input parameters**. See the **Dataset Requirements** tab for descriptions.
 
-Representation is assessed using two dissimilarity metrics (DMs): Kolmogorov‐Smirnov (KS) for continuous indicators (CMI, GPP, LED) and Bray‐Curtis (BC) for categorical indicators (landcover or LCC). Dissimilarity metrics compare the distribution of indicators within KBAs and/or PAs against the distribution within a reference area. 
+The reference area may differ from the planning region. For example, KBAs may be built within an ecoregion plus its intersecting watersheds (planning region), 
+while representation is measured against the ecoregion only (reference area).
 
-The reference area may or may not be the same as the planning region. For example, the planning region is the extent at which KBAs are identified such as an ecoregion plus intersecting FDAs (i.e., watersheds), while the reference area may be restricted to the ecoregion.
+### Dissimilarity metrics (DMs)
+For each indicator, the distribution of pixel values within a KBA or PA is compared with the distribution within the reference area:
+- **Kolmogorov–Smirnov (KS)** for continuous indicators (CMI, GPP, LED and the custom indicator)
+- **Bray–Curtis (BC)** for land cover (LCC)
 
-The indicator distributions are based on pixel‐level values. Both dissimilarity metrics, range from 0 to 1, where 0 is most similar and 1 is most dissimilar. The closer the two distributions are to each other, the more representative the KBA or PA is to its reference area and the lower the value of the dissimilarity metric. 
+Both range from **0** (identical distributions, perfect proportional representation) to **1** (completely different). The lower the value,
+the more representative the KBA or PA.
 
-For each KBA / PA, the App produces plots of the distributions used to generate the DM (Figures 1 and 2). 
 <br>
 
 <img src="figure1_KSplot.png" width="30%">
+
 <br>
 
 **Figure 1.** For continuous indicators (e.g., CMI), density plots show the distribution of the indicator within the KBA or PA (red) and within the reference area (blue). The Kolmogorov‐Smirnov (KS) statistic describes the dissimilarity between these distributions, and ranges in value from 0 to 1, where 0 indicates perfect proportional representation within the KBA or PA. Portions of the KBA or PA distribution (red) that fall below the blue represent values for which proportional representation was not achieved.
+
 <br>
 
 <img src="figure2_BCplot.png" width="30%">
+
 <br>
 
 **Figure 2.** For categorical indicators (e.g., landcover), barplots show the proportions of each indicator class (i.e., land cover types) within the KBA or PA (bars) and within the reference area (black dots). The Bray‐Curtis (BC) statistic describes the dissimilarity between the bars and dots, and ranges in value from 0 to 1, where 0 indicates perfect proportional representation within the KBA or PA. Bars that fall below the black dots indicate that proportional representation of that class was not achieved. 
+
 <br>
 
 ### Using the app
 
-First, upload the reference area shapefile. If this shapefile was uploaded earlier under **Set input parameters** via the csv file, the shapefile does not need to be uploaded again.
+1. **Select the potential KBAs layer**: `KBAs_reducedFALSE` (all KBAs) or a saved reduction such as `KBAs_reduced10000`.
+2. **Reference area**: upload it here if it was not provided in **Set input parameters**. Select all of the shapefile's
+files (`.shp`, `.shx`, `.dbf`, `.prj`).
+3. **Assess representation using**: **Only KBAs**, **Only PAs** or **Both KBAs and PAs**. The PA options are greyed out when no protected
+areas were provided in **Set input parameters**.
+4. Click **Run representation analysis**. The app:
+   - clips each indicator raster to the reference area (done once per project)
+   - calculates the DMs for every KBA and/or PA, with a progress bar
+   - displays the indicator rasters and their legends on the map (toggle them in the layer control, top right)
 
-**Upload reference area shapefile**
+   This can take a while, depending on the number of KBAs/PAs and the raster resolution. Results already calculated for the same layer are reloaded instead of recalculated.
 
-To upload the shapefile, Browse to the location of the file and select all files associated with the shapefile (.shp, .shx, .dbf, .prj, etc.) and click "Open".
+5. **Explore**: choose a KBA or PA in **Select KBAs/PAs** (top right). It is highlighted on the map with its upstream area, a summary table 
+is shown, and the indicator plots appear below the map. Click the expand icon to enlarge a plot.
+6. **Filter**: set the maximum DM for each indicator, the **maximum upstream area** and the **minimum PA area** (applies to PAs only), 
+then click **Apply filtering**. The map, counts table and **Select KBAs/PAs** list are restricted to the KBAs/PAs that pass all thresholds.
+7. **Download Filtered KBAs**: saves the filtered set to the GeoPackage and copies its plots (see Output).
 
-Second, specify if KBAs and/or PAs are to be assessed. For PAs to be included, the PAs must first be evaluated under the **Evaluate PAs (optional)** step. 
+<br>
 
-**Assess representation using:**
-- **Only KBAs** - select this option if only KBAs are to be assessed.
-- **Only PAs** - select this option if only PAs are to be assessed. **See note above regarding PAs.**  
-- **Both KBAs and PAs** - select this option if both KBAs and PAs are to be assessed. **See note above regarding PAs.** 
+### Summary table
+| Variable | Description |
+|---|---|
+| Area km2 | Area of the KBA/PA |
+| AWI (%) | Area-weighted intactness of the KBA/PA |
+| Upstream area km2 | Area upstream of the KBA/PA |
+| Upstream AWI (%) | Area-weighted intactness of the upstream area |
+| DCI | Dendritic Connectivity Index (0–1) 0 = fragmented, 1 = fully connected stream network within the KBA (Cote et al. 2009) |
+| CMI, GPP, LED, *custom* | KS statistic (0–1) 0 = low dissimilarity or high representation, 1 = high dissimilarity or low representation | 
+| LCC | BC statistic (0–1)  0 = low dissimilarity or high representation, 1 = high dissimilarity or low representation |
 
-Click on the orange **Run representation analysis** button to launch the representation analysis. Depending on the number of KBAs/PAs and the resolution of the indicators, this step can take a while to finish. Once completed, a spatial layer called "KBA_att" and/or "PA_att" will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below.
+<br>
 
-Once the analysis is complete, the KBAs/PAs will appear in the map. The table in the upper right provides a count of the KBAs and protected areas (PAs) in the analysis. The attributes of each KBA/PA can be explored by selecting the KBA/PA from the dropdown menu. When selected, the KBA/PA and its upstream area will be highlighted in the map. 
+### Output
+In `output/KBA_analysis.gpkg`:
+- `repKBAs_reduced<grid>`: KBAs with DMs (Only KBAs or Both)
+- `repPAs`: PAs with DMs (Only PAs or Both)
+- `repKBAPAs_reduced<grid>`: KBAs and PAs combined (Both)
+- Filtered sets saved with **Download**, named after the thresholds, e.g. `repKBAs_reduced10000_up25000_cmi0.2_gpp0.2_led0.2_lcc0.2`
 
-**Table Attributes:**
-- Area km2: area of KBA/PA in km2   
-- AWI: mean catchment area-weighted intactness of the KBA/PA (%)
-- Upstream Area km2: area upstream of the KBA/PA in km2 
-- Upstream AWI: mean catchment area-weighted intactness of the upstream area (%)
-- DCI: Dendritic Connectivity Index
-- CMI: KS statistic for Climate Moisture Index
-- GPP: KS statistic for Gross Primary Productivity
-- LED: KS statistic for lake-edge density
-- LCC: BC statistic for landcover
+Attributes: `network`, `area_km2`, `AWI`, `up_km2`, `up_AWI`, `dci`, `cmi`, `gpp`, `led`, `lcc` and the custom indicator, if used.
 
-**Filter KBAs and/or PAs based on dissimilarity metrics (DMs) and upstream area**
+In the `output` folder:
+- `kba_cmi.tif`, `kba_gpp.tif`, `kba_led.tif`, `kba_lcc.tif` (+ `_4326` display versions): indicator rasters clipped to the reference area
+- `plot/<layer name>/<indicator>/<KBA or PA>.png`: distribution plots for each KBA/PA
 
-To explore the results, use the sliders to set maximum DM values for each indicator and the maximum upstream area for the KBA/PA. Click on the orange **Apply filtering** button. The table on the upper right will update and the KBAs/PAs available for exploration, and displayed on the map, will be restricted to the filtered KBAs/PAs. No new spatial layers are created.
+&nbsp;
 
-**Interacting with the Map**
+&#x1F4CC; **Note:** Clipped rasters and representation layers are reused when the project is reopened. If you change the reference area or the indicators, delete them first so they are recalculated.
 
-Click on the icon in the top right corner of the map to view the full list of spatial layers available to turn on and off on the map.
 
-## Output
-
-If KBAs are include in the representation analysis, a spatial layer called "KBAs_att" is added to the "KBA_analysis" geopackage (KBA_analysis.gpkg) in the "output" subfolder. 
-
-**KBAs_att** - KBA polygons with the following attributes:
-
-- **Network** is the unique identifier for the KBA.  
-- **AWI** is the mean area-weighted catchment intactness of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **area_km2** is the area of the KBA in km2.  
-- **up_km2** is the total area upstream of the KBA in km2.  
-- **up_AWI** is the mean area-weighted catchment intactness of the area upstream of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **dci** is the Dendritic Connectivity Index (DCI) of the KBA.
-- **cmi** is the KS statistic measuring the KBA's representation of CMI.
-- **led** is the KS statistic measuring the KBA's representation of LED.
-- **gpp** is the KS statistic measuring the KBA's representation of GPP.
-- **lcc** is the KS statistic measuring the KBA's representation of landcover. 
-
-If PAs are include in the representation analysis, a spatial layer called "PAs_att" is added to the "KBA_analysis" geopackage (KBA_analysis.gpkg) in the "output" subfolder. 
-
-**PAs_att** - PA polygons with the following attributes:
-
-- **Network** is the unique identifier for the PA.  
-- **AWI** is the mean area-weighted catchment intactness of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **area_km2** is the area of the KBA in km2.  
-- **up_km2** is the total area upstream of the KBA in km2.  
-- **up_AWI** is the mean area-weighted catchment intactness of the area upstream of the KBA reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact).  
-- **dci** is the Dendritic Connectivity Index (DCI) of the KBA.
-- **cmi** is the KS statistic measuring the KBA's representation of CMI.
-- **led** is the KS statistic measuring the KBA's representation of LED.
-- **gpp** is the KS statistic measuring the KBA's representation of GPP.
-- **lcc** is the KS statistic measuring the KBA's representation of landcover. 
