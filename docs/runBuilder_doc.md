@@ -1,34 +1,46 @@
-## Run Builder
+## Run Builder and calculate DCI
 
-Before continuing, ensure the command line version of the Builder software is in the R library (e.g., C:\R\R-4.4.1\library\beaconsbuilder) and that Microsoft .NET Framework is installed on the computer.
+This step runs BUILDER to construct candidate KBAs from the seed list and neighbours table, then calculates hydrology metrics for each KBA.
 
-Here, parameters for running Builder are specified.
-  
+&#x1F4CC; **Before you start:** `BenchmarkBuilder_cmd.exe` must be in the directory selected in **Set input parameters**, Microsoft .NET Framework must be installed, and **Create Builder input** must be completed.
+
+<br>
+
 ### Using the app
 
-First, set the minimum intactness standards for a candidate KBA. Intactness values range from 0 (0% intact) to 1 (100% intact).
+#### 1. Specify minimum intactness (0–1) 
 
-**Specify minimum intactness (0-1)**  
+Intactness ranges from 0 (0% intact) to 1 (100% intact).
 
-- **catchment-level**: This is the minimum allowable intactness for a catchment to be included in the construction of a KBA. For example, if all catchments in the KBA must be ≥ 80% intact, enter 0.8.  
-    
-- **KBA-level**: This is the overall intactness for the KBA and is measured as the catchment area-weighted mean intactness. For example, if the KBA must be ≥ 90% intact, enter 0.9. 
+- **Catchment-level**: minimum intactness for a catchment to be added to a KBA. For example, `0.8` means every catchment in the KBA
+must be at least 80% intact.
+- **KBA-level**: minimum area-weighted mean intactness of the whole KBA. For example, `0.9` means the KBA must be at least 90% intact.
 
+Enter `0` at both levels to remove the influence of intactness. No catchment is then excluded, which maximizes hydrologic connectivity within KBAs. Default: `0` at both levels.
 To remove the influence of intactness on the building process, enter 0 at both the catchment- and KBA-level. This will maximize hydrologic connectivity within the KBA because no catchments will be excluded due to intactness.
 
-Next, specify what Builder will track to determine when the area target (e.g., 10,000 km2) is met. 
+&nbsp;
 
-**Specify area target type for KBA size** - As Builder assembles catchments, it tracks the area of land (land), area of water (water), and area of land and water (landwater) by summing amounts in the catchment dataset attribute table. If the area target is the total area of the KBA, the user would select "landwater". If the area target is for land only, the user would select "land" - in this case, the overall size of the KBA would be larger than the area target due to water in the KBA. 
+#### 2. Specify area target type
+
+Defines what BUILDER sums to decide when the seed's area target is reached:
+
+- **landwater** (default): total area of the KBA.
+- **land**: land area only. The KBA will be larger than the target because of its water area.
+- **water**: water area only.
+
 
 Next, identify the attributes in the catchment dataset that will be used for intactness, zone of construction, and area of land via dropdown menus.
 
-**Specify catchment attributes**  
+&nbsp;
 
-- **intactness**: This is the catchment intactness attribute (proportion 0-1) that is used by Builder to determine if a catchment is included in the building process and to calculate the overall intactness of the KBA (see "Specify minimum intactness" above).  
+#### 3. Specify catchment attributes**  
 
-- **zone**: This attribute restricts Builder to a zone when building KBAs. For example, if the planning region is comprised of two watersheds. Each watershed could be assigned to a separate zone. As such, Builder would not construct KBAs that cross the watershed boundary. Construction would stay within a watershed.  
- 
-- **area land**: This is the attribute used to track the area of land (Area_land) in the KBA. This attribute can be hijacked to track a custom measure for the area target. For example, if the objective was to protect 1000 km2 of caribou habitat, the catchment dataset would include an attribute for the amount of caribou habitat in each catchment (e.g., caribou_m2). Builder would track the amount of caribou habitat and stop construction when 1000 km2 was met. For this to work, the user would specify the area target type as "land" (see above) and set the catchment's "area land" attribute as "caribou_m2".  
+- **Zone**: BUILDER does not build KBAs across zones. For example, if the planning region contains two watersheds with different zone 
+values, no KBA will cross from one watershed to the other. `ZONE` is selected automatically if present. **A zone must be selected.**
+- **Area land**: attribute used to track land area (default `Area_land`). It can be replaced by a custom measure. For example, to 
+protect 1,000 km² of caribou habitat, select a `caribou_m2` attribute, choose area target type **land**, and set the seeds' area target 
+to 1,000,000,000 m².
 
 Finally, click the "Run Builder" button to start the construction process, which proceeds as follows:  
 
@@ -36,20 +48,45 @@ First, the App will check to see if Builder output files already exist in the su
 
 Second, if there are no files in the "Builder_output" folder, the App will launch Builder, and files will be written to "Builder_output".  
 
+<br>
+
+### Run
+
+Click **Run Builder**. The app:
+
+1. Runs BUILDER. Output tables are written to `Builder_output`, prefixed with the run's date and time. The button changes to 
+**Builder output created!**
+2. Converts the KBAs to polygons and maps them as **Potential KBAs**.
+3. Adds hydrology metrics to each KBA and calculates DCI. A progress bar is shown during this step.
+
+The table under the map shows the number of KBAs created.
+
+&#x1F4CC; **Note:** Each click runs BUILDER again. The app always uses the most recent output in `Builder_output`.
+
+<br>
+
+### KBA attributes
+| Attribute | Description |
+|---|---|
+| `network` | KBA identifier (e.g., KBA_1) |
+| `area_km2` | KBA area (km²) |
+| `AWI` | Area-weighted mean intactness of the KBA (0–1) |
+| `up_km2` | Area upstream of the KBA (km²) |
+| `up_AWI` | Area-weighted mean intactness of the upstream area (0–1) |
+| `dci` | Dendritic Connectivity Index: 0 = fragmented, 1 = fully connected stream network within the KBA (Cote et al. 2009) |
+
+<br>
+
 ### Output
+- **`Builder_output` folder**: BUILDER tables, prefixed with the run's date and time. Those used by the app are:
+  - `*_COLUMN_All_Unique_BAs.csv`: all unique KBAs, one column per KBA. Row 1 is the KBA identifier, and the following rows list its catchments. Used to create the KBA polygons.
+  - `*_Unique_BAs_attributes.csv`: area and intactness (AWI) of each KBA.
+  - `*_HYDROLOGY_METRICS.csv`: upstream area and upstream intactness of each KBA.
+  - `*_ROW_UPSTREAM_CATCHMENTS.csv`: list of catchment that form the upstream per KBA.
+- **`output/KBA_analysis.gpkg`**:
+  - `KBAs_builder`: KBA polygons as built by BUILDER
+  - `upstream_KBAs`: upstream area of each KBA
+  - `KBAs_reducedFALSE`: KBA polygons with all the attributes above. This layer is used in the next steps.
 
-Builder produces a suite of files that are written to the subfolder "Builder_output". Based on these files, a spatial layer of KBA polygons will be written to a geopackage in the folder called "output".
-
-From the suite of files created, there are three essential files used by the App:
-
-◦ **date_time_All_Unique_BAs.csv** : This file is a list of all unique KBA in column format. Each column represents a single KBA. Row 1 is the unique identifier of the KBA, and row 2 to n is a list of the catchments that comprise the KBA. 
-
-◦ **date_time_ROW_UPSTREAM_CATCHMENTS_ROW.csv** : This file lists the catchments upstream of each KBA in row format.
-
-◦ **date_time_ HYDROLOGY_METRICS.csv** : This file contains hydrology metrics that describe the area upstream and downstream of each KBA, and associated intactness and length of stream network. 
-
-All of the filenames include the prefix "date_time_" which is the date and time of when the Builder run was started.
-
-KBAs created by Builder are converted to polygons and saved to a geopackage called "KBA_analysis.gpkg". The polygon layer is called **KBAs_builder**.
-
+*Cote, D., Kehler, D.G., Bourne, C. et al. (2009). A new measure of longitudinal connectivity for stream networks. Landscape Ecol 24, 101–113.*
 
