@@ -708,7 +708,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
   ################################################################################################  
   observeEvent(input$downloadNET, {
     filtered_sf_rep <- rv$filtered_rep()
-    
+    browser()
     if(is.null(filtered_sf_rep)){
       showModal(modalDialog(
         title = "No filtering has been applied",
@@ -721,7 +721,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     req(filtered_sf_rep)
     prefix <- sub("_up.*$", "", input$KBArep)
     
-    outName <- paste0("net", prefix, "_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
+    outName <- paste0("net", prefix, "_n",input$set_net,"_up", as.character(input$slideNETUP), "_cmi", as.character(input$slideNETCMI),"_gpp", as.character(input$slideNETGPP),"_led", as.character(input$slideNETLED),
                       "_lcc", as.character(input$slideNETLCC))
     
     if(!is.null(rv$layers_rv$criteria5)){
@@ -733,7 +733,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
     
     st_write(filtered_sf_rep, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = outName, driver = "GPKG", append = FALSE)
     
-    source_parent_dir <- file.path(rv$outdir(), "output/plot", input$KBArep)
+    source_parent_dir <- file.path(rv$outdir(), rv$netDir())
     destination_parent_dir <- file.path(rv$outdir(), "output/plot", outName)
     
     # Ensure the destination subdirectories exist
