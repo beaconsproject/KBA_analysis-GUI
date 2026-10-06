@@ -453,6 +453,10 @@ ui = dashboardPage(skin="black",
                                                    includeMarkdown("./docs/createNet_doc.md")
                                                  ),
                                                  conditionalPanel(
+                                                   condition = "input.tabs == 'tabVIEW'",
+                                                   includeMarkdown("./docs/reviewAnalysis_doc.md")
+                                                 ),
+                                                 conditionalPanel(
                                                    condition = "input.tabs == 'convert'",
                                                    includeMarkdown("./docs/dwd_doc.md")
                                                  )
