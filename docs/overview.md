@@ -90,3 +90,12 @@ The workflow below outlines the main steps for using KBA Explorer, from project 
 
 For step-by-step instructions, see the help panel of each section.
 
+
+### KBA Explorer workflow diagram
+
+The worflow diagram below provides an overview of the process.
+
+<br><br>
+<center><img src="pics/workflow.png" width="800"></center>
+<br><br>
+
