@@ -1,7 +1,13 @@
 
-> Dataset
+## Datasets
+  
+This page outlines the required and optional spatial layers used by **KBA Explorer**. The required layers are uploaded via .csv that provides 
+access path to each of the payers or by indivually uploading the shapefile and raster layers. All layers must use a projected coordinate system 
+(not geographic/lat-long) and must share the same coordinate reference system (CRS) to ensure accurate distance measurements and consistent mapping 
+across all layers. For accurate analysis, the plannig region must contain the full extent of all layers.
+Optional layers are uploaded in the same Geopackage with the exception of **Other disturbances** (see below).
 
-The following data are required:
+The following dataset are required:
 - catchments
 - stream network
 - planning region boundary defines the region within which the KBAs are identified

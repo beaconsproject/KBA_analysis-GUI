@@ -1,78 +1,62 @@
 ## Create Networks
 
-Individual KBAs and/or PAs may not be sufficiently representative of the reference area, and a network may be required to achieve representation objectives. In those cases, networks of more than one KBA and the PAs network can be created and assessed. 
+A single KBA or PA may not represent the reference area well enough. This step combines several KBAs (and optionally all protected areas) 
+into **networks**, then assesses the representation of each network as a whole, using the same indicators and dissimilarity metrics as 
+**Assess single KBAs**.
 
-The following network options are available:
+<br>
 
-1. Networks comprised of only KBAs with the specified number of KBAs per network (≥ 2). All combinations of KBAs are evaluated.
-2. Networks comprised of KBAs with the specified number KBAs per network (≥ 1) plus the PA network forced into all networks. All combinations of KBAs are evaluated.
-3. Network comprised of all PAs. 
+### How networks are built
+- Every combination of *n* KBAs from the selected layer is created. For example, 3 KBAs taken 2 at a time gives 3 networks: KBA_1 + KBA_2, 
+KBA_1 + KBA_3 and KBA_2 + KBA_3.
+- Combinations containing **overlapping KBAs** are discarded.
+- If **Include all PAs in the network** is checked, all protected areas are added to every network.
+- Each network is assessed as one unit. Its area, intactness, upstream area and dissimilarity metrics are calculated for all its parts 
+together.
 
-The KBAs used to create the networks can be restricted to filtered KBAs identified in the previous step **Upload reference area and assess representation**.
+&nbsp;
 
-### Using the app
+&#x1F4CC; **Note:** The number of combinations grows very quickly. For example, 50 KBAs give 1,225 networks of 2 and 19,600 networks of 3. 
+Reduce the number of KBAs first (**Reduce KBAs**), and start with 2 KBAs per network.
 
-Three inputs are required:
+<br>
 
-**Set number of KBAs per network** - Specify the number of KBAs in the network. 
+1. **Select KBA Layer**: the KBAs to combine, either `KBAs_reducedFALSE` (all KBAs) or a saved reduction such as `KBAs_reduced10000`.
+2. **Set number of potential KBAs per network**: minimum 2, and no more than the number of KBAs in the layer.
+3. **Include all PAs in the network** (optional; shown only when protected areas were provided in **Set input parameters**).
+4. Click **Build network**. The app builds the networks, calculates their metrics with a progress bar, and displays the indicator rasters on the map. This can take a long time when there are many combinations. Networks already built with the same settings are reloaded instead of recalculated.
+5. **Explore**: choose a network in **Select network** (top right). It is shown on the map with its upstream area, along with a summary table and the indicator plots below the map.
+6. **Filter**: set the maximum dissimilarity for each indicator and the **maximum upstream area**, then click **Apply filtering**. The counts table and the **Select network** list are restricted to the networks that pass all thresholds.
+7. **Download Filtered Networks**: saves the filtered networks to the GeoPackage and copies their plots (see Output).
 
-**Apply KBA filtering in the network** - Check the box if the KBAs used to create the network is restricted to the last set of filtered KBAs identified in the previous step **Upload reference area and assess representation**.
+<br>
 
-**Force PAs in the network** - Click the box if the PA network is forced into the KBA networks. 
+### Network names
+A network is named after its KBAs, joined by `__`, e.g. `KBA_3__KBA_12`. When PAs are included, they appear as `PAs`, e.g. `KBA_3__KBA_12__PAs`.
 
-To evaluate only the PA network, "Set the number of KBAs per network" = 0 and check the box for "Force PAs in the network".
+<br>
 
-Click on the orange button **Build network** to launch the representation analysis. Depending on the number of KBAs, the size of the PA network, and the resolution of the indicators, this step can take a while to finish. Once completed, a spatial layer of the networks will be added to the KBA_analysis geopackage in the folder called "output". The attributes added to this spatial layer are listed and described below. Density and bar plots are also created for each network. 
+### Summary table
+| Variable | Description |
+|---|---|
+| Area km2 | Total area of the network |
+| AWI (%) | Area-weighted intactness of the network |
+| Upstream area km2 | Area upstream of the network |
+| Upstream AWI (%) | Area-weighted intactness of the upstream area |
+| DCI | Not calculated for networks (NA) |
+| CMI, GPP, LED, *custom* | Kolmogorov–Smirnov statistic (0 = well represented, 1 = poorly represented) |
+| LCC | Bray–Curtis statistic (0–1) |
 
-When the analysis is complete, the table in the upper right provides a count of the networks in the analysis. Only one network is displayed on the map at a time. The attributes of each network can be explored by selecting the network from the dropdown menu. When selected, the network and its upstream area will be highlighted in the map. 
+<br>
 
-**Table Attributes:**
-- Area km2: total area of the network in km2   
-- AWI: mean catchment area-weighted intactness of the network (%)
-- Upstream Area km2: area upstream of the network in km2 
-- Upstream AWI: mean catchment area-weighted intactness of the upstream area (%)
-- DCI: Dendritic Connectivity Index
-- CMI: KS statistic for Climate Moisture Index
-- GPP: KS statistic for Gross Primary Productivity
-- LED: KS statistic for lake-edge density
-- LCC: BC statistic for landcover
+### Output
+In `output/KBA_analysis.gpkg`:
+- `net<KBA layer>_n<number>[_includePAs]` (e.g., `netKBAs_reduced10000_n2_includePAs`): all networks, with `network`, `area_km2`, 
+`AWI`, `up_km2`, `up_AWI`, `cmi`, `gpp`, `led`, `lcc` and the custom indicator, if used
+- `upstream_<network layer>`: upstream area of each network
+- `net<KBA layer>_up<max upstream>_cmi<…>_gpp<…>_led<…>_lcc<…>` (e.g., `netKBAs_reduced10000_n2_up25000_cmi0.2_gpp0.2_led0.2_lcc0.2`): filtered networks saved with **Download Filtered Networks**
 
-**Filter networks based on dissimilarity metrics (DMs) and upstream area**
+In `output/plot/`:
+- `<network layer>/<indicator>/<network>.png`: distribution plots for each network
+- `<filtered layer name>/<indicator>/`: copies of the plots for the filtered networks
 
-To explore the results, use the sliders to set maximum DM values for each indicator and the maximum upstream area for the network. Click on the orange **Apply filtering** button. The table on the upper right will update and the networks available for exploration, and displayed on the map, will be restricted to the filtered networks. A spatial layer of networks based on the last filter applied can be downloaded in the next step of the App: **Download results**.
-
-**Interacting with the Map**
-
-Click on the icon in the top right corner of the map to view the full list of spatial layers available to view on the map.
-
-## Output
-
-**Spatial Layers**
-
-Spatial layers are created for the networks and the areas upstream of the networks. 
-
-The following naming convention is used for the network spatial layers added to the KBA_analysis geopackage: <br>
-**net_** + (*number of KBAs e.g., KBA2_*) + (*apply KBA filtering - True or False e.g., forceFALSE*) + (*force PAs in the network e.g., _includePAs*)
-
-Example 1, if number of KBAs per network = 2, KBA filtering is not applied (FALSE), and PAs are forced in the network, the name of the spatial layer is **net_KBA2_forceFALSE_includePAs**.
-
-Example 2, if number of KBAs per network = 2, KBA filtering is applied (TRUE), and PAs are not forced in the network, the name of the spatial layer is **net_KBA2_forceTRUE**.
-
-The network spatial layer has the following attributes:
-- **Network**: unique identifier for the network 
-- **AWI**: mean area-weighted catchment intactness of the network reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact) 
-- **area_km2**: total area of the network in km2  
-- **up_km2**: total area upstream of the networkin km2  
-- **up_AWI**: mean area-weighted catchment intactness of the area upstream of the network reported as a proportion, ranging from 0 (0% intact) to 1 (100% intact)  
-- **dci**: Dendritic Connectivity Index (DCI) of the network (changes coming to this attribute)
-- **cmi**: KS statistic measuring the network's representation of CMI
-- **led**: KS statistic measuring the network's representation of LED
-- **gpp**: KS statistic measuring the network's representation of GPP
-- **lcc**: KS statistic measuring the network's representation of landcover 
-
-The upstream spatial layer has the following attribute: 
-- **Network**: unique identifier for the network 
-
-**Density and Bar Plots**
-
-Plots for the networks are saved to a folder with a name that includes the spatial layer name e.g., **plotnet_KBA2_forceFALSE_includePAs**.
