@@ -476,10 +476,10 @@ buildNetServer <- function(input, output, session, project, map, rv){
       clearGroup("LED") %>%
       clearGroup("LCC") %>%
       clearGroup("GPP") %>%
-      removeControl("legend_LCC") %>%
-      removeControl("legend_LED") %>%
-      removeControl("legend_GPP") %>%
-      removeControl("legend_CMI") %>%
+      removeControl("legendLED") %>%
+      removeControl("legendGPP") %>%
+      removeControl("legendCMI") %>%
+      removeControl("legendLCC") %>%
       #addPolygons(data=pas_4326, color='#6b4b38', fillOpacity = 0.6, weight=2, layerId = pas_4326$network, popup = ~network, group="Protected areas", options = leafletOptions(pane = "layer2")) %>%
       addRasterImage(lcc_4326, colors=lcc_cols, opacity = 1, group="LCC",  maxBytes = 10 * 1024 * 1024) %>%
       addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 10 * 1024 * 1024) %>%
@@ -487,13 +487,13 @@ buildNetServer <- function(input, output, session, project, map, rv){
       addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 10 * 1024 * 1024) %>%
       
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
-                position = "bottomright", group="LED", layerId = "legend_LED", labFormat = labeller_function)  %>%
+                position = "bottomright", group="LED", layerId = "legendLED", labFormat = labeller_function)  %>%
       addLegend(pal = gpp_xpal, values = values(gpp_4326), opacity = 1, title = "GPP",
-                position = "bottomright", group="GPP", layerId = "legend_GPP", labFormat = labeller_function)  %>%
+                position = "bottomright", group="GPP", layerId = "legendGPP", labFormat = labeller_function)  %>%
       addLegend(pal = cmi_xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
-                position = "bottomright", group="CMI", layerId = "legend_CMI", labFormat = labeller_function)  %>%
+                position = "bottomright", group="CMI", layerId = "legendCMI", labFormat = labeller_function)  %>%
       addLegend(colors = lcc_cols, label = lcc_labels,  position=c("bottomleft"), opacity = 1, title = "LCC",
-                group="LCC", layerId = "legend_LCC") %>%
+                group="LCC", layerId = "legendLCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
                        overlayGroups = c(rv$overlayGroups(), rv$legendcrit()),

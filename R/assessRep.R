@@ -517,6 +517,10 @@ assessRepServer <- function(input, output, session, project, map, rv){
     
     leafletProxy("map") %>%
       clearControls() %>%
+      removeControl("legendLED") %>%
+      removeControl("legendGPP") %>%
+      removeControl("legendCMI") %>%
+      removeControl("legendLCC") %>%
       clearGroup(rv$reactive_labelKBA()) %>%
       clearGroup(rv$reactive_labelNET()) %>%
       addTiles() %>%
@@ -527,13 +531,13 @@ assessRepServer <- function(input, output, session, project, map, rv){
       addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 10 * 1024 * 1024) %>%
       
       addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
-                position = "bottomright", group="LED", labFormat = labeller_function)  %>%
+                position = "bottomright", group="LED", layerId = "legendLED", labFormat = labeller_function)  %>%
       addLegend(pal = gpp_xpal, values = values(gpp_4326), opacity = 1, title = "GPP",
-                position = "bottomright", group="GPP", labFormat = labeller_function)  %>%
+                position = "bottomright", group="GPP", layerId = "legendGPP", labFormat = labeller_function)  %>%
       addLegend(pal = cmi_xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
-                position = "bottomright", group="CMI", labFormat = labeller_function)  %>%
+                position = "bottomright", group="CMI", layerId = "legendCMI", labFormat = labeller_function)  %>%
       addLegend(colors = lcc_cols, label = lcc_labels,  position=c("bottomleft"), opacity = 1, title = "LCC",
-                group="LCC") %>%
+                group="LCC", layerId = "legendLCC") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
                        overlayGroups = c(rv$overlayGroups(), rv$legendcrit()),
@@ -652,7 +656,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
       addPolygons(data = selected_up, color = "blue",  fillColor = "blue", fillOpacity = 0.2, weight = 2, group = "Upstream") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
-                       overlayGroups = c(rv$overlayGroups(), rv$legendcrit()), 
+                       overlayGroups = c(rv$overlayGroups(), input$KBA, rv$legendcrit()), 
                        options = layersControlOptions(collapsed = TRUE)
       )
     

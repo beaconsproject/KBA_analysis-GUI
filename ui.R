@@ -209,6 +209,13 @@ ui = dashboardPage(skin="black",
   }
 ")),
                        tags$style(HTML("
+   .leaflet-bottom.leaflet-right .leaflet-control {
+   float: left !important;
+   clear: none !important;
+   margin-right: 10px;
+   }
+                        ")),
+                       tags$style(HTML("
     .treeview-menu > li > a {
       margin-left: 20px;
     }
@@ -256,7 +263,6 @@ ui = dashboardPage(skin="black",
   });
 ")),
                        tags$style(HTML("
-
   /* --------------------------------------------------
      Four images in one row
      -------------------------------------------------- */
