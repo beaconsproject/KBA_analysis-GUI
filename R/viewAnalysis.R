@@ -106,31 +106,18 @@ viewServer <- function(input, output, session, project, map, rv){
       rv$upstream_reactive(up_sf)
     }
     
-    #Prep criteria
-    cmi_4326<- rv$layers_rv_4326$cmi
-    led_4326 <- rv$layers_rv_4326$led
-    gpp_4326 <- rv$layers_rv_4326$gpp
-    lcc_4326 <- rv$layers_rv_4326$lcc
-    
+    #Prep criteria (display rasters clipped to the reference area)
+    cmi_4326 <- rast(file.path(rv$outdir(), "output/kba_cmi_4326.tif"))
+    led_4326 <- rast(file.path(rv$outdir(), "output/kba_led_4326.tif"))
+    gpp_4326 <- rast(file.path(rv$outdir(), "output/kba_gpp_4326.tif"))
+    lcc_4326 <- rast(file.path(rv$outdir(), "output/kba_lcc_4326.tif"))
+
     if(!is.null(rv$layers_rv$criteria5)){
       crit5_4326 <- rast(file.path(rv$outdir(), "output", paste0(rv$criteria5name(), "_4326.tif")))
     }else{
       crit5_4326 <- NULL
     }
-    
-    # Access elements
-    legend_data <- prep_legend(cmi_4326, led_4326, gpp_4326, lcc_4326, crit5_4326)
-    cmi_xpal <- legend_data$cmi_xpal
-    led_xpal <- legend_data$led_xpal
-    gpp_xpal <- legend_data$gpp_xpal
-    lcc_labels <- legend_data$lcc_labels
-    df_label <- legend_data$df_label
-    lcc_cols <- legend_data$lcc_cols
-    val.color <- legend_data$val.color
-    led_val.color <- legend_data$led_val.color
-    crit_xpal <- legend_data$crit_xpal
-    labeller_function <- legend_data$labeller_function
-    
+
     #Delete previous dynamic label if
     labelKBA <- rv$reactive_labelVIEW()
     refarea <- rv$refarea_reactive() %>% st_transform(4326)
@@ -138,37 +125,16 @@ viewServer <- function(input, output, session, project, map, rv){
     kba_4326 <- st_transform(kba_sf, 4326)
     
     leafletProxy("map") %>%
-      clearControls() %>%
-      removeControl("legendLED") %>%
-      removeControl("legendGPP") %>%
-      removeControl("legendCMI") %>%
-      removeControl("legendLCC") %>%
-      clearGroup(rv$criteria5name()) %>%
       clearGroup(rv$reactive_labelVIEW()) %>%
       clearGroup('Potential KBAs') %>%
       clearGroup('Protected areas') %>%
       addTiles() %>%
       addPolygons(data=refarea, color='#6b4b38', fill = F, weight=3, group="Reference area", options = leafletOptions(pane = "ground")) %>%
-      addPolygons(data=kba_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2,  group="Potential KBAs/PAs/network", options = leafletOptions(pane = "over")) %>%
-      addRasterImage(lcc_4326, colors=lcc_cols, opacity = 1, group="LCC",  maxBytes = 10 * 1024 * 1024) %>%
-      addRasterImage(led_4326, colors=led_val.color, opacity = 1, group="LED",  maxBytes = 10 * 1024 * 1024) %>%
-      addRasterImage(gpp_4326, colors=val.color, opacity = 1, group="GPP",  maxBytes = 10 * 1024 * 1024) %>%
-      addRasterImage(cmi_4326, colors=val.color, opacity = 1, group="CMI",  maxBytes = 10 * 1024 * 1024) %>%
-      
-      addLegend(pal = led_xpal, values = values(led_4326), opacity = 1, title = "LED",
-                position = "bottomright", group="LED", layerId = "legendLED", labFormat = labeller_function)  %>%
-      addLegend(pal = gpp_xpal, values = values(gpp_4326), opacity = 1, title = "GPP",
-                position = "bottomright", group="GPP", layerId = "legendGPP", labFormat = labeller_function)  %>%
-      addLegend(pal = cmi_xpal, values = values(cmi_4326), opacity = 1, title = "CMI",
-                position = "bottomright", group="CMI", layerId = "legendCMI", labFormat = labeller_function)  %>%
-      addLegend(colors = lcc_cols, label = lcc_labels,  position=c("bottomleft"), opacity = 1, title = "LCC",
-                group="LCC", layerId = "legendLCC") %>%
-      addLayersControl(position = "topright",
-                       baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
-                       overlayGroups = c(rv$overlayGroups(), "Potential KBAs/PAs/network", rv$legendcrit()),
-                       options = layersControlOptions(collapsed = TRUE)) %>%
-      hideGroup(c("Streams"))
-    
+      addPolygons(data=kba_4326, color = 'black', fillColor = "transparent", fillOpacity = 0, weight = 2,  group="Potential KBAs/PAs/network", options = leafletOptions(pane = "over"))
+
+    # Criteria rasters and legends (drawn only once per project)
+    draw_criteria(rv, cmi_4326, led_4326, gpp_4326, lcc_4326, crit5_4326)
+
     if(!is.null(rv$layers_rv$pas_sf)){
       pas_4326 <- rv$layers_rv_4326$pas_sf
       leafletProxy("map") %>%
@@ -176,17 +142,10 @@ viewServer <- function(input, output, session, project, map, rv){
         
     }
     
-    if(!is.null(rv$layers_rv$criteria5)){
-      crit5_4326 <- rv$layers_rv_4326$criteria5
-      leafletProxy("map") %>%
-        addRasterImage(crit5_4326, colors=val.color, opacity = 1, group=rv$criteria5name()) %>%
-        addLegend(pal = crit_xpal, values = values(crit5_4326), opacity = 1, title = rv$criteria5name(),
-                  position = "bottomright", group=rv$criteria5name(), labFormat = labeller_function)  
-    }
     leafletProxy("map") %>%
       addLayersControl(position = "topright",
                        baseGroups=c("Esri.WorldTopoMap", "Esri.WorldImagery" , "Blank Background"),
-                       overlayGroups = c(rv$overlayGroups(), "Potential KBAs/PAs/network", rv$legendcrit(), rv$criteria5name()),
+                       overlayGroups = unique(c(rv$overlayGroups(), "Potential KBAs/PAs/network", rv$legendcrit(), rv$criteria5name())),
                        options = layersControlOptions(collapsed = TRUE)) %>%
       hideGroup(c("Streams"))
     # Close the modal once processing is done
