@@ -311,6 +311,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
                        overlayGroups = c(rv$overlayGroups(), rv$overlayKBA()),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams"))
+    rv$criteria_drawn(FALSE)  # criteria rasters and legends were removed from the map
     
     x <- tibble(
       Variables = c("KBAs", "Reduced KBAs"),
@@ -607,6 +608,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
                        overlayGroups = c(rv$overlayGroups(), rv$overlayKBA()),
                        options = layersControlOptions(collapsed = FALSE)) %>%
       hideGroup(c("Streams", "Potential KBAs"))
+    rv$criteria_drawn(FALSE)  # criteria rasters and legends were removed from the map
     
     # Initialize KBA/PAs freq table
     x <- rv$outfreqhydro()

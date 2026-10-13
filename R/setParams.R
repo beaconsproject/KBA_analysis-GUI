@@ -125,7 +125,8 @@ setParamsServer <- function(input, output, session, project, map, rv){
   # Confirm project
   observeEvent(input$confirm_project, {
     folders <- subprojects()
-    
+    reset_criteria(rv)  # new project: criteria rasters and legends must be redrawn
+
     # Case 1: no existing subfolders → must create new project
     if (length(folders) == 0) {
       req(input$new_project)
@@ -797,9 +798,14 @@ setParamsServer <- function(input, output, session, project, map, rv){
     rv$pas_ready(TRUE)
   }, ignoreInit = TRUE)
   
+  # Reference area or custom criterion changed: criteria rasters and legends must be redrawn
+  observeEvent(list(rv$refarea_reactive(), rv$criteria5name()), {
+    reset_criteria(rv)
+  }, ignoreInit = TRUE)
+
   observeEvent(rv$refarea_reactive(), {
     req(rv$refarea_reactive())
-    
+
     legend <- c(rv$overlayGroups(), "Reference area")
     rv$overlayGroups(legend)
     

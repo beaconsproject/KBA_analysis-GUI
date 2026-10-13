@@ -56,6 +56,9 @@ server = function(input, output, session) {
                             overlayKBA = reactiveVal(character()),
                             legendcrit =  reactiveVal(c("CMI", "LED", "GPP", "LCC")),
                             criteria5name = reactiveVal(NULL),
+                            criteria_drawn = reactiveVal(FALSE),  # criteria rasters/legends already on the map
+                            legend_data = reactiveVal(NULL),      # legend bins/labels computed once
+
                             
                             outfreqhydro = reactiveVal(
                               tibble(Variables = c("KBAs", "Reduced KBAs"), Count = NA_integer_)
