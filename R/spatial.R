@@ -346,7 +346,7 @@ build_network_polygons <- function(conservation_areas_sf, conservation_areas_id,
   for(net in network_list){
     
     # get benchmark names and check they are in conservation_areas_sf$network
-    nets <- sep_network_names(net)
+    nets <- unlist(sep_network_names(net))
     check_conservation_area_names(nets, conservation_areas_sf, conservation_areas_id)
     
     # dissolve the network

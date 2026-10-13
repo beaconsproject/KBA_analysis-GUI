@@ -53,30 +53,13 @@ options(scipen = 999)
 #         ADDON FUNCTIONS
 #########################################################
 #########################################################
-# test prior to map that layer is not null, sf and has rows
-isMappable <- function(x) {
-  !is.null(x) && inherits(x, "sf") && nrow(x) > 0
-}
-
 # Check if Microsoft .Net Framework is installed
 dotnet_installed <- function() {
   key <- "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full"
-  
   out <- try(shell(paste0('reg query "', key, '" /v Release'), intern = TRUE), silent = TRUE)
-  
   if (inherits(out, "try-error")) return(FALSE)
-  
   # Check if there is a "Release" line
   any(grepl("Release", out))
-}
-
-# sep_network_names :Fix sep_network_names
-sep_network_names <- function (network_names){
-  out_val <- lapply(network_names, function(x) {
-    strsplit(x, "__")[[1]]
-  })
-  names(out_val) <- network_names
-  return(out_val)
 }
 
 # get_available_drives: Helper function to detect available drives (Windows only)
@@ -85,6 +68,11 @@ get_available_drives <- function() {
   available_drives <- drives[file.exists(drives)] # Keep only existing drives
   names(available_drives) <- available_drives
   available_drives
+}
+
+# test prior to map that layer is not null, sf and has rows
+isMappable <- function(x) {
+  !is.null(x) && inherits(x, "sf") && nrow(x) > 0
 }
 
 # Function to check if all required shapefile components exist
@@ -106,33 +94,8 @@ check_shp <- function(shapefile_path) {
     showNotification("Shapefile is incomplete. Please provide all required files.", type = "error")
     req(FALSE)  # Stop further execution
   }
-  
   return(TRUE)  # Return TRUE if all files exist
 }
-
-# process_raster: crop and mask criteria layer
-process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4,  aggregation_fun = NULL, ignored = NULL) {
-  output_path <- file.path(dir_path, "output", paste0(file_name, ".tif"))
-  
-  projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
-  cropped <- crop(input_raster, ref_area, snap = "near", extend = TRUE)
-  masked <- mask(cropped, ref_area)
-  masked <- terra::trim(masked, value = NA)
-  
-  if (!is.null(ignored)) {
-    masked[masked %in% ignored] <- NA # cropland = 15, urban = 17 are NA 
-  }
-  
-  terra::writeRaster(masked, output_path, filetype = "GTiff")
-  aggregated <- terra::aggregate(input_raster, fact = fact, fun = aggregation_fun)
-  projected <- project(aggregated, "EPSG:4326")
-  terra::writeRaster(projected, projected_path, filetype = "GTiff")
-  
-  list(original = masked, projected = projected)
-}
-
-
-
 
 # read_shp_from_csv: read layer from path found in csv uploaded with fileInput
 read_shp_from_csv <- function(csv_file, layer_name) {
@@ -233,96 +196,128 @@ read_tif_from_upload <- function(upload_input) {
   }
 }
 
-
-
-# get_stat_on_net: compute stats on NET
-get_upstream <- function(net_sf, upstream) {
-  # Extract upstream 
-  p_name <- sep_network_names(net_sf$network)
-  up_net <- upstream[upstream$network %in% p_name[[1]],]
-  if(nrow(up_net)>0){
-    up_bind <- st_union(up_net) %>% 
-      st_as_sf()%>% 
-      mutate(network = net_sf$network)
-    return(up_bind)
-  }else{
-    return(NULL)
-  } 
-}
-
-
-prep_legend <- function(kba_cmi, kba_led, kba_gpp, kba_lcc, criteria5 = NULL) {
-  # Set legend for CMI
-  cmi_minVar <- min(floor(values(kba_cmi)), na.rm = TRUE)
-  cmi_maxVar <- max(ceiling(values(kba_cmi)), na.rm = TRUE)
-  cmi_bins.seq <- seq(cmi_minVar, cmi_maxVar, length.out = 5)
-  xpal <- colorBin("RdYlBu", cmi_bins.seq, bins = cmi_bins.seq, na.color = "transparent")
-  val.color <- "RdYlBu"
+#########################################################
+# Criteria rasters on the map
+#########################################################
+# process_raster: crop and mask criteria layer
+process_raster <- function(input_raster, ref_area, dir_path, file_name, fact = 4,  aggregation_fun = NULL, ignored = NULL) {
+  output_path <- file.path(dir_path, "output", paste0(file_name, ".tif"))
   
-  # Set legend for LED
-  led_minVar <- min(floor(values(kba_led)), na.rm = TRUE)
-  led_maxVar <- max(ceiling(values(kba_led)), na.rm = TRUE)
-  led_bins.seq <- seq(led_minVar, led_maxVar, length.out = 5)
-  led_xpal <- colorBin("Blues", led_bins.seq, bins = led_bins.seq, na.color = NA)
-  led_val.color <- "Blues"
+  projected_path <- file.path(dir_path, "output", paste0(file_name, "_4326.tif"))
+  cropped <- crop(input_raster, ref_area, snap = "near", extend = TRUE)
+  masked <- mask(cropped, ref_area)
+  masked <- terra::trim(masked, value = NA)
   
-  # Set legend for GPP
-  gpp_minVar <- min(floor(values(kba_gpp)), na.rm = TRUE)
-  gpp_maxVar <- max(ceiling(values(kba_gpp)), na.rm = TRUE)
-  gpp_bins.seq <- seq(gpp_minVar, gpp_maxVar, length.out = 5)
-  gppxpal <- colorBin("RdYlBu", gpp_bins.seq, bins = gpp_bins.seq, na.color = "transparent")
-  
-  # Prepare labels for LCC
-  unique_sorted_values <- terra::freq(kba_lcc, bylayer = FALSE)$value
-  df_label <- data.frame(values = c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19), 
-                         labels = c("Temperate conifer forest", "Taiga conifer forest",
-                                    "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland", 
-                                    "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
-                                    "Wetland", "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
-  df_label <- df_label[df_label$values %in% unique_sorted_values, ]
-  cls <- df_label$labels
-  
-  # Read LCC colors
-  lcc_cols <- read.csv('www/lc_cols.csv') %>%
-    filter(value %in% unique_sorted_values) %>%
-    mutate(color = rgb(red, green, blue, maxColorValue = 255)) %>%
-    pull(color)
-  selected_cols <- lcc_cols    
-  
-  # Labeller function
-  labeller_function <- function(type, breaks) {
-    return(c('Low', '', '', 'High'))
+  if (!is.null(ignored)) {
+    masked[masked %in% ignored] <- NA # cropland = 15, urban = 17 are NA 
   }
   
-  # Set legend for criteria5 if it exists
-  if (!is.null(criteria5)) {
-    c5_minVar <- min(floor(values(criteria5)), na.rm = TRUE)
-    c5_maxVar <- max(ceiling(values(criteria5)), na.rm = TRUE)
-    c5_bins.seq <- seq(c5_minVar, c5_maxVar, length.out = 5)
-    crit_xpal <- colorBin("RdYlBu", c5_bins.seq, bins = c5_bins.seq, na.color = "transparent")
-    val.color <- "RdYlBu"
+  terra::writeRaster(masked, output_path, filetype = "GTiff")
+  aggregated <- terra::aggregate(input_raster, fact = fact, fun = aggregation_fun)
+  projected <- project(aggregated, "EPSG:4326")
+  terra::writeRaster(projected, projected_path, filetype = "GTiff")
+  
+  list(original = masked, projected = projected)
+}
+
+# LCC class labels and colours (read once at start-up)
+LCC_CLASSES <- data.frame(values = c(1,2,5,6,8,10,11,12,13,14,15,16,17,18,19),
+                          labels = c("Temperate conifer forest", "Taiga conifer forest",
+                                     "Broadleaf forest", "Mixed Forest", "Shrubland", "Grassland",
+                                     "Shrubland-lichen-moss", "Grassland-lichen-moss","Barren-lichen-moss",
+                                     "Wetland", "Cropland", "Barren Lands", "Urban", "Water", "Snow"))
+lc_cols_tab <- read.csv("www/lc_cols.csv")
+LCC_COLS <- setNames(rgb(lc_cols_tab$red, lc_cols_tab$green, lc_cols_tab$blue, maxColorValue = 255), lc_cols_tab$value)
+
+# lcc_class_labels: LCC classes present in a raster (used for dissimilarity and legend)
+# If cache_file is given, classes are read from it when it exists, otherwise computed and saved to it
+lcc_class_labels <- function(lcc, cache_file = NULL) {
+  if (!is.null(cache_file) && file.exists(cache_file)) {
+    present <- read.csv(cache_file)$value
   } else {
-    crit_xpal <- NULL
+    present <- as.data.frame(terra::freq(lcc, bylayer = FALSE))$value
+    if (!is.null(cache_file)) write.csv(data.frame(value = present), cache_file, row.names = FALSE)
   }
-  
-  # Return everything as a list
-  return(list(cmi_xpal = xpal, led_xpal = led_xpal, gpp_xpal = gppxpal, 
-              cmi_bins = cmi_bins.seq, led_bins = led_bins.seq, gpp_bins = gpp_bins.seq,
-              df_label = df_label, lcc_labels = cls, lcc_cols = selected_cols, crit_xpal = crit_xpal, val.color = val.color, 
-              led_val.color = led_val.color, labeller_function = labeller_function))
+  LCC_CLASSES[LCC_CLASSES$values %in% present, ]
 }
 
-make_metric_progress <- function(n_metrics) {
+# raster_range: min/max of a raster without loading all cells in R
+raster_range <- function(r) {
+  terra::setMinMax(r)
+  rg <- as.numeric(terra::minmax(r))
+  if (any(!is.finite(rg))) rg <- range(terra::values(r), na.rm = TRUE)
+  rg
+}
+
+# prep_legend_fast: legend bins/labels from the display (4326) rasters
+prep_legend <- function(cmi, led, gpp, lcc, crit5 = NULL) {
+  bins <- function(r) {
+    rg <- raster_range(r)
+    seq(floor(rg[1]), ceiling(rg[2]), length.out = 5)
+  }
+  df_label <- lcc_class_labels(lcc)
+  list(cmi_bins = bins(cmi), led_bins = bins(led), gpp_bins = bins(gpp),
+       crit_bins = if (!is.null(crit5)) bins(crit5),
+       lcc_labels = df_label$labels,
+       lcc_cols = unname(LCC_COLS[as.character(df_label$values)]))
+}
+
+# add criteria rasters and their legends to a leaflet proxy
+add_criteria_layers <- function(map, r, leg, crit_name = NULL) {
+  pal <- function(b, p) leaflet::colorBin(p, b, bins = b, na.color = "transparent")
+  lab <- function(type, breaks) c("Low", "", "", "High")
+
+  map <- map %>%
+    clearGroup(c("CMI", "GPP", "LED", "LCC", crit_name)) %>%
+    removeControl(c("legendCMI", "legendGPP", "legendLED", "legendLCC", "legendCustom")) %>%
+    addRasterImage(r$lcc, colors = leg$lcc_cols, opacity = 1, group = "LCC", maxBytes = 10 * 1024 * 1024) %>%
+    addRasterImage(r$led, colors = "Blues", opacity = 1, group = "LED", maxBytes = 10 * 1024 * 1024) %>%
+    addRasterImage(r$gpp, colors = "RdYlBu", opacity = 1, group = "GPP", maxBytes = 10 * 1024 * 1024) %>%
+    addRasterImage(r$cmi, colors = "RdYlBu", opacity = 1, group = "CMI", maxBytes = 10 * 1024 * 1024) %>%
+    addLegend(pal = pal(leg$cmi_bins, "RdYlBu"), values = leg$cmi_bins, opacity = 1, title = "CMI",
+              position = "bottomright", group = "CMI", layerId = "legendCMI", labFormat = lab) %>%
+    addLegend(pal = pal(leg$gpp_bins, "RdYlBu"), values = leg$gpp_bins, opacity = 1, title = "GPP",
+              position = "bottomright", group = "GPP", layerId = "legendGPP", labFormat = lab) %>%
+    addLegend(pal = pal(leg$led_bins, "Blues"), values = leg$led_bins, opacity = 1, title = "LED",
+              position = "bottomright", group = "LED", layerId = "legendLED", labFormat = lab) %>%
+    addLegend(colors = leg$lcc_cols, labels = leg$lcc_labels, opacity = 1, title = "LCC",
+              position = "bottomleft", group = "LCC", layerId = "legendLCC")
+
+  if (!is.null(crit_name) && !is.null(r$crit5)) {
+    map <- map %>%
+      addRasterImage(r$crit5, colors = "RdYlBu", opacity = 1, group = crit_name, maxBytes = 10 * 1024 * 1024) %>%
+      addLegend(pal = pal(leg$crit_bins, "RdYlBu"), values = leg$crit_bins, opacity = 1, title = crit_name,
+                position = "bottomright", group = crit_name, layerId = "legendCustom", labFormat = lab)
+  }
+  map
+}
+
+# draw criteria rasters once; skipped when already on the map
+draw_criteria <- function(rv, cmi, led, gpp, lcc, crit5 = NULL) {
   
+  if (isTRUE(rv$criteria_drawn())) return(invisible(FALSE))
+  if (is.null(rv$legend_data())) {
+    rv$legend_data(prep_legend(cmi, led, gpp, lcc, crit5))
+  }
+  leafletProxy("map") %>%
+    add_criteria_layers(list(cmi = cmi, led = led, gpp = gpp, lcc = lcc, crit5 = crit5),
+                        rv$legend_data(), rv$criteria5name())
+  rv$criteria_drawn(TRUE)
+  invisible(TRUE)
+}
+
+# force criteria rasters and legends to be recomputed and redrawn
+reset_criteria <- function(rv) {
+  rv$criteria_drawn(FALSE)
+  rv$legend_data(NULL)
+}
+
+.make_metric_progress <- function(n_metrics) {
   metric_number <- 0L
-  
   function(metric_name) {
-    
     metric_number <<- metric_number + 1L
-    
     start <- (metric_number - 1L) / n_metrics
     end <- metric_number / n_metrics
-    
     function(value, detail) {
       shiny::setProgress(
         value = start + (end - start) * value,

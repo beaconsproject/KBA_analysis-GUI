@@ -1,6 +1,6 @@
 # check conservation area names are in conservation_area_sf$network
-check_conservation_area_names <- function(nets, conservation_area_sf, conservation_areas_id) {
-  ids <- conservation_area_sf[[conservation_areas_id]]
+check_conservation_area_names <- function(nets, conservation_areas_sf, conservation_areas_id) {
+  ids <- conservation_areas_sf[[conservation_areas_id]]
   if (!all(nets %in% ids)) {
     missing <- nets[!nets %in% ids]
     stop(paste0("Requested names are not in sf object column '", conservation_areas_id, "': ", paste(missing, collapse = ", ")), call. = FALSE)
@@ -240,5 +240,29 @@ list_to_wide <- function(values_list){
   out_tab <- as.data.frame(do.call(cbind, values_list_nas))
   
   return(out_tab)
+}
+
+# sep_network_names :Fix sep_network_names
+sep_network_names <- function (network_names){
+  out_val <- lapply(network_names, function(x) {
+    strsplit(x, "__")[[1]]
+  })
+  names(out_val) <- network_names
+  return(out_val)
+}
+
+# get_stat_on_net: compute stats on NET
+get_upstream <- function(net_sf, upstream) {
+  # Extract upstream 
+  p_name <- sep_network_names(net_sf$network)
+  up_net <- upstream[upstream$network %in% p_name[[1]],]
+  if(nrow(up_net)>0){
+    up_bind <- st_union(up_net) %>% 
+      st_as_sf()%>% 
+      mutate(network = net_sf$network)
+    return(up_bind)
+  }else{
+    return(NULL)
+  } 
 }
 
