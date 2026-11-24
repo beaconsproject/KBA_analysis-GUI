@@ -207,7 +207,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       "Please wait...",
       footer = NULL
     ))
-    browser()
+    
     builder_tab <- NULL
     tryCatch({
       builder_tab <- builder(catchments_sf = rv$layers_rv$catchments,
