@@ -115,8 +115,44 @@ check_shp <- function(shapefile_path) {
   return(TRUE)  # Return TRUE if all files exist
 }
 
+# check_layer_crs: warn the user at upload if a layer has no CRS, a CRS that doesn't match
+# its coordinates, or doesn't overlap the reference layer (bnd = Canada by default).
+# crs: sf crs object; bb: sf bbox of the layer; label: layer name shown in the pop-up.
+# Returns TRUE if all checks pass, FALSE (after showing a pop-up) otherwise.
+check_layer_crs <- function(crs, bb, label, ref = bnd) {
+  warn <- function(title, msg) {
+    showModal(modalDialog(title = title, msg, easyClose = TRUE, footer = modalButton("OK")))
+    FALSE
+  }
+  # 1. No CRS: .prj missing, empty or not recognised
+  if (is.na(crs)) {
+    return(warn(paste0(label, ": no projection"),
+                "This layer has no coordinate reference system (projection). Define its projection in QGIS or ArcGIS and upload it again."))
+  }
+  # Empty layer: no extent to check
+  if (any(is.na(bb))) return(TRUE)
+  # 2. CRS says longitude/latitude but the coordinates are out of range (likely metres)
+  if (isTRUE(crs$IsGeographic) &&
+      (any(abs(bb[c("xmin", "xmax")]) > 180) || any(abs(bb[c("ymin", "ymax")]) > 90))) {
+    return(warn(paste0(label, ": wrong projection"),
+                "The layer projection is longitude/latitude, but its coordinates are not in degrees. Check the projection of the layer (.prj file) in QGIS or ArcGIS."))
+  }
+  # 3. Layer extent doesn't overlap the reference layer
+  if (!is.null(ref)) {
+    overlap <- tryCatch({
+      box <- sf::st_transform(sf::st_as_sfc(bb), sf::st_crs(ref))
+      sf::st_intersects(box, sf::st_as_sfc(sf::st_bbox(ref)), sparse = FALSE)[1, 1]
+    }, error = function(e) FALSE)
+    if (!isTRUE(overlap)) {
+      return(warn(paste0(label, ": outside the study region"),
+                  "This layer does not overlap Canada. Check that it has the right projection (.prj file)."))
+    }
+  }
+  TRUE
+}
+
 # read_shp_from_csv: read layer from path found in csv uploaded with fileInput
-read_shp_from_csv <- function(csv_file, layer_name) {
+read_shp_from_csv <- function(csv_file, layer_name, crs = NULL) {
   req(csv_file)
   
   csv_data <- read.csv(csv_file$datapath, stringsAsFactors = FALSE)
@@ -148,11 +184,16 @@ read_shp_from_csv <- function(csv_file, layer_name) {
   # If everything is okay, read the shapefile
   la <- sf::st_read(path) %>%
     dplyr::select(-any_of(c("fid", "FID")))
+  # Stop here (after a pop-up) if the projection is missing or wrong
+  req(check_layer_crs(sf::st_crs(la), sf::st_bbox(la), layer_name))
+  if (!is.null(crs) && sf::st_crs(la) != crs) {
+    la <- sf::st_transform(la, crs)
+  }
   return(la)
 }
 
 # read_shp_from_upload: read a shapefile from fileInput
-read_shp_from_upload <- function(upload_input) {
+read_shp_from_upload <- function(upload_input, crs = NULL) {
   req(upload_input)
   required_extensions <- c("shp", "shx", "dbf", "prj")
   infile <- upload_input
@@ -167,6 +208,11 @@ read_shp_from_upload <- function(upload_input) {
       shp <- sf::st_read(shp_path) %>%
         dplyr::select(-any_of(c("fid", "FID"))) %>%
         sf::st_zm(drop = TRUE, what = "ZM")
+      # Stop here (after a pop-up) if the projection is missing or wrong
+      req(check_layer_crs(sf::st_crs(shp), sf::st_bbox(shp), name))
+      if (!is.null(crs) && sf::st_crs(shp) != crs) {
+        la <- sf::st_transform(shp, crs)
+      }
       attr(shp, "name") <- name
       return(shp)
     } else {
@@ -188,21 +234,48 @@ read_shp_from_upload <- function(upload_input) {
   }
 }
 
+# check_raster_crs: check_layer_crs() for a terra raster, plus same projection as the catchments.
+# catch_crs: catchments CRS (sf crs object or WKT string), NULL to skip that test.
+# Returns TRUE if all checks pass, FALSE (after showing a pop-up) otherwise.
+check_raster_crs <- function(r, label, catch_crs = NULL) {
+  r_crs <- if (terra::crs(r) == "") sf::NA_crs_ else sf::st_crs(terra::crs(r))
+  e <- as.vector(terra::ext(r))
+  bb <- sf::st_bbox(c(xmin = e[["xmin"]], ymin = e[["ymin"]], xmax = e[["xmax"]], ymax = e[["ymax"]]),
+                    crs = r_crs)
+  if (!check_layer_crs(r_crs, bb, label)) return(FALSE)
+  if (inherits(catch_crs, "crs")) catch_crs <- catch_crs$wkt
+  if (!is.null(catch_crs) && !terra::same.crs(r, catch_crs)) {
+    showModal(modalDialog(
+      title = paste0(label, ": projection differs from the other layers"),
+      "Please provide a raster using the same projection as the catchments.",
+      easyClose = TRUE,
+      footer = modalButton("OK")
+    ))
+    return(FALSE)
+  }
+  TRUE
+}
+
 # read_tif_from_csv: Read raster file from CSV
-read_tif_from_csv <- function(csv_file, layer_name) {
+read_tif_from_csv <- function(csv_file, layer_name, catch_crs) {
   req(csv_file)  # Ensure the CSV file is provided
   csv_data <- read.csv(csv_file$datapath)
   
-  path <- csv_data$Path[csv_data$Layer == layer_name]
-  return(terra::rast(path))  # Load raster using the terra package
+  la <- terra::rast(csv_data$Path[csv_data$Layer == layer_name])
+  # Stop the observer here (after a pop-up) if the projection is missing, wrong or differs from catchments
+  req(check_raster_crs(la, layer_name, catch_crs))
+  return(la)
 }
 
 # read_tif_from_upload: Read raster file from fileInput
-read_tif_from_upload <- function(upload_input) {
+read_tif_from_upload <- function(upload_input, catch_crs = NULL) {
   req(upload_input)  # Ensure the file is uploaded
   path <- upload_input$datapath
   if (file.exists(path)) {
-    return(terra::rast(path))  # Load terra using the raster package
+    r <- terra::rast(path)
+    # Stop the observer here (after a pop-up) if the projection is missing, wrong or differs from catchments
+    req(check_raster_crs(r, upload_input$name, catch_crs))
+    return(r)
   } else {
     showModal(modalDialog(
       title = "The uploaded raster file does not exist.",

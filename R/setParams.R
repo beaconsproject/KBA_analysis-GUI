@@ -441,22 +441,20 @@ setParamsServer <- function(input, output, session, project, map, rv){
     
     csv_data <- read.csv(input$csv_file$datapath)
     layer_paths <- setNames(csv_data$Path, csv_data$Layer)
-    
-    rv$layer_paths(layer_paths)
-    write.csv(csv_data, file.path(rv$outdir(), "data/layer_paths.csv"))
-    
-    rv$layers_rv$catchments  <- read_shp_from_csv(input$csv_file, "catchments")
 
-    rv$layers_rv$streams     <- read_shp_from_csv(input$csv_file, "stream")
-    rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
-    
-    rv$layers_rv$planreg     <- read_shp_from_csv(input$csv_file, "planning region")
-    rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
-    
+    # 1. Read and check every layer into local variables first.
+    #    If a layer fails, its read function shows a pop-up and stops this observer (req(FALSE))
+    #    before anything is stored in rv: no half-loaded layers, no other observer is triggered
+    #    and the error pop-up stays on screen.
+    catchments <- read_shp_from_csv(input$csv_file, "catchments")
+    catch_crs  <- sf::st_crs(catchments)
+    streams    <- read_shp_from_csv(input$csv_file, "stream", crs = catch_crs)
+    planreg    <- read_shp_from_csv(input$csv_file, "planning region", crs = catch_crs)
+
     ## OPTIONAL: protected areas ----
+    pas_sf <- NULL
     if ("protected areas" %in% csv_data$Layer) {
-      pas_sf <- read_shp_from_csv(input$csv_file, "protected areas")
-      
+      pas_sf <- read_shp_from_csv(input$csv_file, "protected areas", crs = catch_crs)
       n <- nrow(pas_sf)
       if (!"PA_ID" %in% colnames(pas_sf)) {
         pas_sf$PA_ID <- seq_len(n)
@@ -464,53 +462,73 @@ setParamsServer <- function(input, output, session, project, map, rv){
       if (!"NAME" %in% colnames(pas_sf)) {
         pas_sf$NAME <- NA_character_
       }
-      
-      rv$layers_rv$pas_sf <- pas_sf
-      rv$layers_rv_4326$pas_sf <- sf::st_transform(rv$layers_rv$pas_sf, 4326)
-    } else {
-      rv$layers_rv$pas_sf <- NULL
-      rv$layers_rv_4326$pas_sf <- NULL
     }
-    
+
     ## OPTIONAL: reference area ----
+    refarea <- NULL
     if ("reference area" %in% csv_data$Layer) {
-      rv$refarea_reactive(
-        read_shp_from_csv(input$csv_file, "reference area")
-      )
-      st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
-    } else {
-      rv$refarea_reactive(NULL)
+      refarea <- read_shp_from_csv(input$csv_file, "reference area", crs = catch_crs)
     }
-    
-    rv$layers_rv$lcc         <- read_tif_from_csv(input$csv_file, "LCC")
-    rv$layers_rv$led         <- read_tif_from_csv(input$csv_file, "LED")
-    rv$layers_rv$gpp         <- read_tif_from_csv(input$csv_file, "GPP")
-    rv$layers_rv$cmi         <- read_tif_from_csv(input$csv_file, "CMI")
-    
-    #criteria 5
+
+    ## Criteria rasters ----
+    lcc <- read_tif_from_csv(input$csv_file, "LCC", catch_crs)
+    led <- read_tif_from_csv(input$csv_file, "LED", catch_crs)
+    gpp <- read_tif_from_csv(input$csv_file, "GPP", catch_crs)
+    cmi <- read_tif_from_csv(input$csv_file, "CMI", catch_crs)
+
+    ## OPTIONAL: criteria 5 (one custom layer) ----
     req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
     unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
-    if (length(unexpected_layers)>0) {
-      if(length(unexpected_layers)==1){
-        path <- csv_data$Path[csv_data$Layer == unexpected_layers]
-        if (file.exists(path)) {
-          rv$criteria5name(unexpected_layers)
-          rv$layers_rv$criteria5 <- read_tif_from_csv(input$csv_file, unexpected_layers)
-          updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = unexpected_layers)
-          updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = unexpected_layers)
-        } else {
-          stop("The custom variable path in the CSV does not exist.")
-        }
-      }else{
-        # show pop-up ...
+    criteria5 <- NULL
+    if (length(unexpected_layers) > 1) {
+      showModal(modalDialog(
+        title = "Provided layer csv pathways include more than one custom layer.", "The app allow only the addtion of one custom layer at the moment. Please fix the csv.",
+        easyClose = TRUE,
+        footer = modalButton("OK"))
+      )
+      req(FALSE)
+    }
+    if (length(unexpected_layers) == 1) {
+      path <- csv_data$Path[csv_data$Layer == unexpected_layers]
+      if (!file.exists(path)) {
         showModal(modalDialog(
-          title = "Provided layer csv pathways include more than one custom layer.", "The app allow only the addtion of one custom layer at the moment. Please fix the csv.",
+          title = "Invalid layer path", paste("The path for", unexpected_layers, "does not exist."),
           easyClose = TRUE,
-          footer = NULL)
+          footer = modalButton("OK"))
         )
+        req(FALSE)
       }
-    }else{
-      return(NULL) 
+      criteria5 <- read_tif_from_csv(input$csv_file, unexpected_layers, catch_crs)
+    }
+
+    # 2. All layers passed: store them
+    rv$layer_paths(layer_paths)
+    write.csv(csv_data, file.path(rv$outdir(), "data/layer_paths.csv"))
+
+    rv$layers_rv$catchments   <- catchments
+    rv$layers_rv$streams      <- streams
+    rv$layers_rv_4326$streams <- streams %>% st_transform(4326)
+    rv$layers_rv$planreg      <- planreg
+    rv$layers_rv_4326$planreg <- planreg %>% st_transform(4326)
+
+    rv$layers_rv$pas_sf      <- pas_sf
+    rv$layers_rv_4326$pas_sf <- if (!is.null(pas_sf)) sf::st_transform(pas_sf, 4326) else NULL
+
+    rv$refarea_reactive(refarea)
+    if (!is.null(refarea)) {
+      st_write(refarea, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
+    }
+
+    rv$layers_rv$lcc <- lcc
+    rv$layers_rv$led <- led
+    rv$layers_rv$gpp <- gpp
+    rv$layers_rv$cmi <- cmi
+
+    if (!is.null(criteria5)) {
+      rv$criteria5name(unexpected_layers)
+      rv$layers_rv$criteria5 <- criteria5
+      updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = unexpected_layers)
+      updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = unexpected_layers)
     }
   })
   
@@ -524,21 +542,21 @@ setParamsServer <- function(input, output, session, project, map, rv){
   })
   
   observeEvent(input$upload_stream, {
-    rv$layers_rv$streams <- read_shp_from_upload(input$upload_stream)
+    rv$layers_rv$streams <- read_shp_from_upload(input$upload_stream, sf::st_crs(rv$layers_rv$catchments))
     st_write(rv$layers_rv$streams, file.path(rv$outdir(), "data/stream.shp"), append = FALSE)
     rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
     paths <- rv$layer_paths()
   })
   
   observeEvent(input$upload_planreg, {
-    rv$layers_rv$planreg <- read_shp_from_upload(input$upload_planreg)
+    rv$layers_rv$planreg <- read_shp_from_upload(input$upload_planreg, sf::st_crs(rv$layers_rv$catchments))
     st_write(rv$layers_rv$planreg, file.path(rv$outdir(), "data/planning region.shp"), append = FALSE)
     rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
     paths <- rv$layer_paths()
   })
   
   observeEvent(input$upload_pas, {
-    pas_sf <- read_shp_from_upload(input$upload_pas)
+    pas_sf <- read_shp_from_upload(input$upload_pas, sf::st_crs(rv$layers_rv$catchments))
     n <- nrow(pas_sf)
     if (!"PA_ID" %in% colnames(pas_sf)) {
       pas_sf$PA_ID <- seq_len(n)
@@ -554,27 +572,27 @@ setParamsServer <- function(input, output, session, project, map, rv){
   
   # --- Individual raster uploads
   observeEvent(input$upload_lcc, {
-    rv$layers_rv$lcc <- read_tif_from_upload(input$upload_lcc)
+    rv$layers_rv$lcc <- read_tif_from_upload(input$upload_lcc, sf::st_crs(rv$layers_rv$catchments)$wkt)
     writeRaster(rv$layers_rv$lcc, file.path(rv$outdir(), "data/LCC.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_led, {
-    rv$layers_rv$led <- read_tif_from_upload(input$upload_led)
+    rv$layers_rv$led <- read_tif_from_upload(input$upload_led, sf::st_crs(rv$layers_rv$catchments)$wkt)
     writeRaster(rv$layers_rv$led, file.path(rv$outdir(), "data/LED.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_cmi, {
-    rv$layers_rv$cmi <- read_tif_from_upload(input$upload_cmi)
+    rv$layers_rv$cmi <- read_tif_from_upload(input$upload_cmi, sf::st_crs(rv$layers_rv$catchments)$wkt)
     writeRaster(rv$layers_rv$cmi, file.path(rv$outdir(), "data/CMI.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_gpp, {
-    rv$layers_rv$gpp <- read_tif_from_upload(input$upload_gpp)
+    rv$layers_rv$gpp <- read_tif_from_upload(input$upload_gpp, sf::st_crs(rv$layers_rv$catchments)$wkt)
     writeRaster(rv$layers_rv$gpp, file.path(rv$outdir(), "data/GPP.tif"), overwrite = TRUE)
   })
   
   observeEvent(input$upload_custom, {
-    rv$layers_rv$criteria5 <- read_tif_from_upload(input$upload_custom)
+    rv$layers_rv$criteria5 <- read_tif_from_upload(input$upload_custom, sf::st_crs(rv$layers_rv$catchments)$wkt)
     rastName <- sub("\\..*$", "", input$upload_custom$name)
     rv$criteria5name(rastName)
     writeRaster(rv$layers_rv$criteria5, file.path(rv$outdir(), "data", paste0(rastName,".tif")), overwrite = TRUE)
@@ -732,7 +750,7 @@ setParamsServer <- function(input, output, session, project, map, rv){
         pas <- merge(pas_sf[,c("network", "NAME", "area_km2")], area_catch[,c("network", "intact_km2")], by = "network", all.x = TRUE)
         pas$AWI <- round(pas$intact_km2/pas$area_km2, 3)
         
-        pas$dci <- calc_dci(conservation_area_sf = pas, stream_sf = rv$layers_rv$streams)
+        pas$dci <- calc_dci(conservation_areas_sf = pas, stream_sf = rv$layers_rv$streams)
       }
       
       if (any(!c("up_km2", "up_AWI") %in% pas_colnames)){
