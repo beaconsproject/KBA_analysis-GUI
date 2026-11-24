@@ -397,7 +397,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
         networks_sf <- networks_sf %>%
           left_join(upstream_att[, c("network", "up_km2", "up_AWI")], by = "network")
         # DCI (ON HOLD)
-        #networks_sf$dci <- calc_dci(conservation_area_sf = networks_sf, stream_sf = streams())
+        #networks_sf$dci <- calc_dci(conservation_areas_sf = networks_sf, stream_sf = streams())
         
         # calculate dissimilarity metric 
         error_occurred <- FALSE

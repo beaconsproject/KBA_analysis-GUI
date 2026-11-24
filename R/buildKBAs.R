@@ -440,7 +440,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       value = 0,
       {
         
-        calc_dci(conservation_area_sf = poly_sf, stream_sf = rv$layers_rv$streams, progress = function(value, detail) {
+        calc_dci(conservation_areas_sf = poly_sf, stream_sf = rv$layers_rv$streams, progress = function(value, detail) {
             shiny::setProgress(value = value, detail = detail)
           })
       }
