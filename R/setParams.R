@@ -29,8 +29,15 @@ setParamsServer <- function(input, output, session, project, map, rv){
     folders <- list.dirs(rv$dirpath(), full.names = FALSE, recursive = FALSE)
     folders
   })
+  
+  output$conf_dir <- renderUI({
+    req(rv$dirpath())
+    actionButton("set_wd", "Confirm", class = "btn-warning", style="width:200px")
+  }) 
+  
   ## Observe on actionButton
   observeEvent(input$set_wd, {
+    
     # check no spaces
     if(grepl(" ", rv$dirpath())){
       showModal(modalDialog(
