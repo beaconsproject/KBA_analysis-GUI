@@ -385,15 +385,15 @@ assessRepServer <- function(input, output, session, project, map, rv){
           value = 0,
           {
             tryCatch({
-              kba_sf$cmi <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "cmi"), progress = metric_progress("CMI"))
-              kba_sf$lcc <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
+              kba_sf$cmi <- calc_dissimilarity(conservation_areas_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "cmi"), progress = metric_progress("CMI"))
+              kba_sf$lcc <- calc_dissimilarity(conservation_areas_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
                                                plot_out_dir = file.path(plot_dir, "lcc"), categorical_class_labels = df_label, progress = metric_progress("LCC"))
-              kba_sf$led <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "led"), progress = metric_progress("LED"))
-              kba_sf$gpp <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "gpp"), progress = metric_progress("GPP"))
+              kba_sf$led <- calc_dissimilarity(conservation_areas_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "led"), progress = metric_progress("LED"))
+              kba_sf$gpp <- calc_dissimilarity(conservation_areas_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "gpp"), progress = metric_progress("GPP"))
               
               if (!is.null(rv$layers_rv$criteria5)) {
                 criteria_name <- rv$criteria5name()
-                kba_sf[[criteria_name]] <- calc_dissimilarity(reserves_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(plot_dir, criteria_name), progress = metric_progress(criteria_name))
+                kba_sf[[criteria_name]] <- calc_dissimilarity(conservation_areas_sf = kba_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(plot_dir, criteria_name), progress = metric_progress(criteria_name))
               }
               NULL
             }, error = function(e) {
@@ -453,15 +453,15 @@ assessRepServer <- function(input, output, session, project, map, rv){
           value = 0,
           {
             tryCatch({
-              pas_sf$cmi <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "cmi"), progress = metric_progress("CMI"))
-              pas_sf$lcc <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
+              pas_sf$cmi <- calc_dissimilarity(conservation_areas_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "cmi"), progress = metric_progress("CMI"))
+              pas_sf$lcc <- calc_dissimilarity(conservation_areas_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
                                                plot_out_dir = file.path(plot_dir, "lcc"), categorical_class_labels = df_label, progress = metric_progress("LCC"))
-              pas_sf$led <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "led"), progress = metric_progress("LED"))
-              pas_sf$gpp <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "gpp"), progress = metric_progress("GPP"))
+              pas_sf$led <- calc_dissimilarity(conservation_areas_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "led"), progress = metric_progress("LED"))
+              pas_sf$gpp <- calc_dissimilarity(conservation_areas_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(plot_dir, "gpp"), progress = metric_progress("GPP"))
               
               if (!is.null(rv$layers_rv$criteria5)) {
                 criteria_name <- rv$criteria5name()
-                pas_sf[[criteria_name]] <- calc_dissimilarity(reserves_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(plot_dir, criteria_name), progress = metric_progress(criteria_name))
+                pas_sf[[criteria_name]] <- calc_dissimilarity(conservation_areas_sf = pas_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(plot_dir, criteria_name), progress = metric_progress(criteria_name))
               }
               NULL
             }, error = function(e) {
