@@ -3,8 +3,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
   observeEvent(input$tabs, {
     req(input$tabs == "tabNET", rv$outdir())
     
-    layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
+    layers  <- gpkg_layers(rv$outdir())
     rep_kba <- layers[grepl("^(KBAs_reduced)", layers)]
     pas_ls <- layers[grepl("^protected_areas", layers) & !grepl("protected_areas_upstream", layers)]
     net_list <- c(rep_kba, pas_ls)

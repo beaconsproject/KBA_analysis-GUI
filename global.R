@@ -93,6 +93,15 @@ isMappable <- function(x) {
   !is.null(x) && inherits(x, "sf") && nrow(x) > 0
 }
 
+# Layer names in the project's GeoPackage, or character(0) if it doesn't exist yet
+gpkg_path <- function(outdir) file.path(outdir, "output", "KBA_analysis.gpkg")
+
+gpkg_layers <- function(outdir) {
+  path <- gpkg_path(outdir)
+  if (!file.exists(path)) return(character(0))
+  sf::st_layers(path)$name
+}
+
 # Function to check if all required shapefile components exist
 check_shp <- function(shapefile_path) {
   folder_path <- dirname(shapefile_path)
