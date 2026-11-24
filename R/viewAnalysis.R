@@ -177,7 +177,15 @@ viewServer <- function(input, output, session, project, map, rv){
       actionButton("filterVIEW", "Apply filtering", icon = icon("filter"), class = "btn-primary", style = "width:250px"),
       
       div(style = "margin-top: 20px;", actionButton("downloadVIEW", "Download Filtered KBAs", icon = icon("download"), class = "btn-warning", style = "width:250px")))
-  })  
+  })
+
+  # Slider for the custom criterion (only when one was uploaded)
+  output$slidercrit5_view <- renderUI({
+    req(rv$layers_rv$criteria5, rv$criteria5name())
+    div(style = "margin-top: -30px;",
+        sliderInput("slidecrit5_view", label = paste0(rv$criteria5name(), ":"),
+                    min = 0, max = 1, value = 0.2, step = 0.001, ticks = FALSE))
+  })
   
   #######################################
   ### Render map, tables and plot based on select KBA/PA
@@ -388,7 +396,7 @@ viewServer <- function(input, output, session, project, map, rv){
                       "_lcc", as.character(input$slideLCC_view))
     
     if(!is.null(rv$layers_rv$criteria5)){
-      outName <- paste0(outName, "_", rv$criteria5name(), as.character(input$slideNETcrit5_view))
+      outName <- paste0(outName, "_", rv$criteria5name(), as.character(input$slidecrit5_view))
       subfolders <- c("cmi", "lcc", "gpp", "led", rv$criteria5name())
     }else{
       subfolders <- c("cmi", "lcc", "gpp", "led")
