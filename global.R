@@ -1,4 +1,22 @@
 # Load the packages
+TOOLS_REF     <- "v0.1.0"   # git tag of R_tools_public
+TOOLS_VERSION <- "0.1.0"    # Version: in its DESCRIPTION
+
+tools_dev <- Sys.getenv("BEACONS_TOOLS_DEV")
+if (nzchar(tools_dev)) {
+  # Developers only: use a local R_tools_public copy (unreleased changes)
+  pkgload::load_all(tools_dev, export_all = FALSE)
+} else {
+  if (!requireNamespace("beaconsRtools", quietly = TRUE) ||
+      utils::packageVersion("beaconsRtools") < TOOLS_VERSION) {
+    message("Installing beaconsRtools ", TOOLS_REF, " from GitHub...")
+    if (!requireNamespace("remotes", quietly = TRUE)) install.packages("remotes")
+    remotes::install_github(paste0("beaconsproject/R_tools_public@", TOOLS_REF),
+                            upgrade = "never")
+  }
+  library(beaconsRtools)
+}
+
 library(shiny)
 library(leaflet)
 library(sf)
