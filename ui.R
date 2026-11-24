@@ -185,16 +185,12 @@ ui = dashboardPage(skin="black",
                        # Link to custom CSS for the orange theme
                        tags$link(rel = "stylesheet", type = "text/css", href = "green-theme.css"),
                        tags$script(HTML("
-  // Disable PA choices
-  Shiny.addCustomMessageHandler('disablePAchoices', function(message) {
-    $('input[value=\"Only PAs\"]').prop('disabled', true);
-    $('input[value=\"Both KBAs and PAs\"]').prop('disabled', true);
-  });
-
-  // Enable PA choices
-  Shiny.addCustomMessageHandler('enablePAchoices', function(message) {
-    $('input[value=\"Only PAs\"]').prop('disabled', false);
-    $('input[value=\"Both KBAs and PAs\"]').prop('disabled', false);
+  // Assess representation: enable all choices, then disable the ones listed in message.disabled
+  Shiny.addCustomMessageHandler('setAssessChoices', function(message) {
+    var disabled = [].concat(message.disabled || []);
+    $('input[name=\"assessKBAs\"]').each(function() {
+      $(this).prop('disabled', disabled.indexOf(this.value) !== -1);
+    });
   });
 ")),
                        tags$style(HTML("

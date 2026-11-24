@@ -4,12 +4,20 @@ assessRepServer <- function(input, output, session, project, map, rv){
   req(input$tabs == "tabKBA", rv$outdir())
 
   gpkg_path <- file.path(rv$outdir(), "output/KBA_analysis.gpkg")
-  has_pas <- file.exists(gpkg_path) &&
-             "protected_areas" %in% sf::st_layers(gpkg_path)$name
+  layers <- if (file.exists(gpkg_path)) sf::st_layers(gpkg_path)$name else character(0)
+  has_kbas <- any(grepl("^KBAs_reduced", layers))
+  has_pas  <- "protected_areas" %in% layers
+
+  choices  <- c("Only KBAs", "Only PAs", "Both KBAs and PAs")
+  disabled <- c(if (!has_kbas) "Only KBAs",
+                if (!has_pas)  "Only PAs",
+                if (!(has_kbas && has_pas)) "Both KBAs and PAs")
+  available <- setdiff(choices, disabled)
 
   # Send after the UI reaches the browser, so the radio inputs exist
   session$onFlushed(function() {
-    session$sendCustomMessage(if (has_pas) "enablePAchoices" else "disablePAchoices", list())
+    session$sendCustomMessage("setAssessChoices", list(disabled = as.list(disabled)))
+    if (length(available) == 0) shinyjs::disable("runRep")
   }, once = TRUE)
 
   tagList(
@@ -19,7 +27,8 @@ assessRepServer <- function(input, output, session, project, map, rv){
     } else {
       div(HTML('<i class="fa fa-thumb-tack" style="color:#d9534f; "></i>'), "Reference area already uploaded.", style = "font-size: 12px; margin-top: 20px; margin-left: 30px;")
     },
-    div(style = "margin-top: 0px;", radioButtons("assessKBAs", "Assess representation using:", choices = c("Only KBAs", "Only PAs", "Both KBAs and PAs"))),
+    div(style = "margin-top: 0px;", radioButtons("assessKBAs", "Assess representation using:", choices = choices,
+                                                     selected = if (length(available) > 0) available[1] else character(0))),
     actionButton("runRep", "Run representation analysis", icon = icon("image"), class = "btn-warning", style="width:250px"),
   )
 })
@@ -64,15 +73,16 @@ assessRepServer <- function(input, output, session, project, map, rv){
   observeEvent(input$tabs, {
     req(input$tabs == "tabKBA")
     req(rv$layers_rv$catchments)
-    
+    browser()
     # Initialize KBA/PAs freq table
     x <- tibble(
       Variables = c("KBAs", "PAs", "Filtered KBAs", "Filtered PAs"),
       Count = c(NA, NA, NA, NA))  
     
-    layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-    layers <- layers_info$name
-
+    #layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
+    #layers <- layers_info$name
+    
+    layers  <- gpkg_layers(rv$outdir())
     reduced_kba <- layers[grepl("^KBAs_reduced", layers)]
     if (length(reduced_kba) > 0) { 
       if(paste0("KBAs_reduced", input$set_grid) %in% reduced_kba){
