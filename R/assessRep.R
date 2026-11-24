@@ -35,7 +35,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   
    
   observeEvent(input$upload_refarea, {
-    rv$refarea_reactive(read_shp_from_upload(input$upload_refarea))
+    rv$refarea_reactive(read_shp_from_upload(input$upload_refarea), sf::st_crs(rv$layers_rv$catchments))
     st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
   })
   
