@@ -207,6 +207,7 @@ buildKBAServer <- function(input, output, session, project, map, rv){
       "Please wait...",
       footer = NULL
     ))
+    browser()
     builder_tab <- NULL
     tryCatch({
       builder_tab <- builder(catchments_sf = rv$layers_rv$catchments,
@@ -258,6 +259,15 @@ buildKBAServer <- function(input, output, session, project, map, rv){
     })
     
     # Fix PB to KBA
+    if(is.null(builder_tab)){
+      showModal(modalDialog(
+        title = "No conservation areas to return.", 
+        "Try changing the BUILDER parameters by decreasing intactness and/or area requirements.",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return(NULL)
+    }
     req(builder_tab)
     builder_tab <- builder_tab %>%
       rename_with(~ str_replace(.x, "PB", "KBA"))
