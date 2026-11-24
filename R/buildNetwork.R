@@ -672,7 +672,7 @@ buildNetServer <- function(input, output, session, project, map, rv){
   ################################################################################################  
   observeEvent(input$downloadNET, {
     filtered_sf_rep <- rv$filtered_rep()
-    browser()
+    
     if(is.null(filtered_sf_rep)){
       showModal(modalDialog(
         title = "No filtering has been applied",
