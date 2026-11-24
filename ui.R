@@ -95,7 +95,7 @@ ui = dashboardPage(skin="black",
                        br(),
                        hr(),
                        br(),
-                       actionButton("confExtra", "Confirm", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:250px")
+                       uiOutput("conf_extra")
                      ),
                      conditionalPanel(
                        condition="input.tabs=='tabinput'",  

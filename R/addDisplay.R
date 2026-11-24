@@ -1,5 +1,11 @@
 addDisplayServer <- function(input, output, session, project, map, rv){
   
+  output$conf_extra <- renderUI({
+    req(isTruthy(input$display1) || isTruthy(input$display2) ||
+          isTruthy(input$display3) || isTruthy(input$display4))
+    actionButton("confExtra", "Confirm", icon = icon(name = "map-location-dot", lib = "font-awesome"), class = "btn-warning", style="width:250px")
+  })
+  
   ################################################################################################
   ################################################################################################
   # Add display elements
@@ -148,6 +154,7 @@ addDisplayServer <- function(input, output, session, project, map, rv){
   # Map viewer - display element
   ####################################################################################################
   observeEvent(input$confExtra,{ 
+    
     map <- leafletProxy("map") %>%
       clearGroup(rv$display1_name()) %>%
       clearGroup(rv$display2_name()) %>%
