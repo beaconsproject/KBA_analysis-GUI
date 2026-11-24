@@ -73,7 +73,7 @@ assessRepServer <- function(input, output, session, project, map, rv){
   observeEvent(input$tabs, {
     req(input$tabs == "tabKBA")
     req(rv$layers_rv$catchments)
-    browser()
+    
     # Initialize KBA/PAs freq table
     x <- tibble(
       Variables = c("KBAs", "PAs", "Filtered KBAs", "Filtered PAs"),
