@@ -37,7 +37,7 @@ setParamsServer <- function(input, output, session, rv){
   
   ## Observe on actionButton
   observeEvent(input$set_wd, {
-    
+    req(rv$dirpath())
     # check no spaces
     if(grepl(" ", rv$dirpath())){
       showModal(modalDialog(

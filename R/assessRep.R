@@ -79,9 +79,6 @@ assessRepServer <- function(input, output, session, rv){
       Variables = c("KBAs", "PAs", "Filtered KBAs", "Filtered PAs"),
       Count = c(NA, NA, NA, NA))  
     
-    #layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-    #layers <- layers_info$name
-    
     layers  <- gpkg_layers(rv$outdir())
     reduced_kba <- layers[grepl("^KBAs_reduced", layers)]
     if (length(reduced_kba) > 0) { 
@@ -125,8 +122,7 @@ assessRepServer <- function(input, output, session, rv){
         footer = modalButton("OK")
       ))
       
-      layers_info <- st_layers(file.path(rv$outdir(), "output/KBA_analysis.gpkg"))
-      layers <- layers_info$name
+      layers  <- gpkg_layers(rv$outdir())
       # Initialize kba_sf and pas_sf as NULL
       kba_sf <- NULL
       if (!(input$KBAlayer=="No KBA generated")){
