@@ -128,44 +128,110 @@ check_shp <- function(shapefile_path) {
   return(TRUE)  # Return TRUE if all files exist
 }
 
-# check_layer_crs: warn the user at upload if a layer has no CRS, a CRS that doesn't match
-# its coordinates, or doesn't overlap the reference layer (bnd = Canada by default).
-# crs: sf crs object; bb: sf bbox of the layer; label: layer name shown in the pop-up.
-# Returns TRUE if all checks pass, FALSE (after showing a pop-up) otherwise.
-check_layer_crs <- function(crs, bb, label, ref = bnd) {
-  warn <- function(title, msg) {
-    showModal(modalDialog(title = title, msg, easyClose = TRUE, footer = modalButton("OK")))
-    FALSE
+#########################################################
+# Projection (CRS) check across all input layers
+#########################################################
+# The app never reprojects input layers: all of them must already share one projection.
+
+# layer_crs: sf crs of an sf object or a terra SpatRaster (NA if the layer has no projection)
+layer_crs <- function(x) {
+  if (inherits(x, "SpatRaster")) {
+    wkt <- terra::crs(x)
+    if (!nzchar(wkt)) return(sf::NA_crs_)
+    return(sf::st_crs(wkt))
   }
-  # 1. No CRS: .prj missing, empty or not recognised
-  if (is.na(crs)) {
-    return(warn(paste0(label, ": no projection"),
-                "This layer has no coordinate reference system (projection). Define its projection in QGIS or ArcGIS and upload it again."))
+  sf::st_crs(x)
+}
+
+# crs_label: readable projection name, e.g. "NAD83 / Canada Atlas Lambert (EPSG:3978)".
+# Without an EPSG code the name alone can hide differences (two custom projections both called
+# "NAD_1983_Albers" with different parameters), so the PROJ parameters are added.
+crs_label <- function(crs) {
+  if (is.na(crs)) return("No projection (.prj missing or not recognised)")
+  name <- crs$Name
+  if (is.null(name) || is.na(name) || !nzchar(name)) name <- crs$input
+  epsg <- crs$epsg
+  if (!is.null(epsg) && !is.na(epsg)) return(paste0(name, " (EPSG:", epsg, ")"))
+  proj <- crs$proj4string
+  if (!is.null(proj) && !is.na(proj) && nzchar(proj)) {
+    proj <- trimws(gsub("\\+(no_defs|type=crs)", "", proj))
+    name <- paste0(name, " [", proj, "]")
   }
-  # Empty layer: no extent to check
-  if (any(is.na(bb))) return(TRUE)
-  # 2. CRS says longitude/latitude but the coordinates are out of range (likely metres)
-  if (isTRUE(crs$IsGeographic) &&
-      (any(abs(bb[c("xmin", "xmax")]) > 180) || any(abs(bb[c("ymin", "ymax")]) > 90))) {
-    return(warn(paste0(label, ": wrong projection"),
-                "The layer projection is longitude/latitude, but its coordinates are not in degrees. Check the projection of the layer (.prj file) in QGIS or ArcGIS."))
-  }
-  # 3. Layer extent doesn't overlap the reference layer
-  if (!is.null(ref)) {
-    overlap <- tryCatch({
-      box <- sf::st_transform(sf::st_as_sfc(bb), sf::st_crs(ref))
-      sf::st_intersects(box, sf::st_as_sfc(sf::st_bbox(ref)), sparse = FALSE)[1, 1]
-    }, error = function(e) FALSE)
-    if (!isTRUE(overlap)) {
-      return(warn(paste0(label, ": outside the study region"),
-                  "This layer does not overlap Canada. Check that it has the right projection (.prj file)."))
+  name
+}
+
+# input_layers: named list of the input layers currently loaded (NULL = not loaded)
+input_layers <- function(rv) {
+  crit5_name <- rv$criteria5name()
+  if (is.null(crit5_name) || !nzchar(crit5_name)) crit5_name <- "Custom criterion"
+  layers <- list(
+    "Catchments"      = rv$layers_rv$catchments,
+    "Streams"         = rv$layers_rv$streams,
+    "Planning region" = rv$layers_rv$planreg,
+    "Protected areas" = rv$layers_rv$pas_sf,
+    "Reference area"  = rv$refarea_reactive(),
+    "LCC"             = rv$layers_rv$lcc,
+    "LED"             = rv$layers_rv$led,
+    "GPP"             = rv$layers_rv$gpp,
+    "CMI"             = rv$layers_rv$cmi
+  )
+  layers[[crit5_name]] <- rv$layers_rv$criteria5
+  layers
+}
+
+# check_crs_consistency: compare the projection of all layers (named list of sf / SpatRaster, NULLs ignored).
+# All the same -> TRUE, no pop-up.
+# Otherwise -> pop-up listing every layer with its projection, the ones that differ in red, and FALSE.
+check_crs_consistency <- function(layers) {
+  layers <- Filter(Negate(is.null), layers)
+  if (length(layers) == 0) return(TRUE)
+
+  crs_list <- lapply(layers, layer_crs)
+
+  # Group layers sharing the same projection (sf compares CRS by meaning, not by text)
+  group <- rep(NA_integer_, length(crs_list))
+  reps  <- list()
+  for (i in seq_along(crs_list)) {
+    if (is.na(crs_list[[i]])) next
+    hit <- which(vapply(reps, function(r) isTRUE(r == crs_list[[i]]), logical(1)))
+    if (length(hit) > 0) {
+      group[i] <- hit[1]
+    } else {
+      reps[[length(reps) + 1]] <- crs_list[[i]]
+      group[i] <- length(reps)
     }
   }
-  TRUE
+  if (!anyNA(group) && length(reps) <= 1) return(TRUE)
+
+  # The projection shared by most layers is the reference; the others are flagged
+  main    <- if (all(is.na(group))) NA_integer_ else as.integer(names(which.max(table(group))))
+  differs <- is.na(group) | group != main
+  differs[is.na(differs)] <- TRUE
+
+  rows <- lapply(seq_along(layers), function(i) {
+    style <- if (differs[i]) "color: #c0392b; font-weight: bold;" else ""
+    tags$tr(tags$td(style = style, names(layers)[i]),
+            tags$td(style = style, crs_label(crs_list[[i]])))
+  })
+
+  showModal(modalDialog(
+    title = "The layers do not all have the same projection",
+    size = "l",
+    tags$p("All input layers (shapefiles and rasters) must use the same projection.",
+           "The layers in red differ from the others:"),
+    tags$table(class = "table table-condensed",
+               tags$thead(tags$tr(tags$th("Layer"), tags$th("Projection"))),
+               tags$tbody(rows)),
+    tags$p("Please reproject these layers outside the app (e.g., in QGIS or ArcGIS) so that all layers",
+           "share the same projection, then upload them again."),
+    easyClose = TRUE,
+    footer = modalButton("OK")
+  ))
+  FALSE
 }
 
 # read_shp_from_csv: read layer from path found in csv uploaded with fileInput
-read_shp_from_csv <- function(csv_file, layer_name, crs = NULL) {
+read_shp_from_csv <- function(csv_file, layer_name) {
   req(csv_file)
   
   csv_data <- read.csv(csv_file$datapath, stringsAsFactors = FALSE)
@@ -197,16 +263,11 @@ read_shp_from_csv <- function(csv_file, layer_name, crs = NULL) {
   # If everything is okay, read the shapefile
   la <- sf::st_read(path) %>%
     dplyr::select(-any_of(c("fid", "FID")))
-  # Stop here (after a pop-up) if the projection is missing or wrong
-  req(check_layer_crs(sf::st_crs(la), sf::st_bbox(la), layer_name))
-  if (!is.null(crs) && sf::st_crs(la) != crs) {
-    la <- sf::st_transform(la, crs)
-  }
   return(la)
 }
 
 # read_shp_from_upload: read a shapefile from fileInput
-read_shp_from_upload <- function(upload_input, crs = NULL) {
+read_shp_from_upload <- function(upload_input) {
   req(upload_input)
   required_extensions <- c("shp", "shx", "dbf", "prj")
   infile <- upload_input
@@ -221,11 +282,6 @@ read_shp_from_upload <- function(upload_input, crs = NULL) {
       shp <- sf::st_read(shp_path) %>%
         dplyr::select(-any_of(c("fid", "FID"))) %>%
         sf::st_zm(drop = TRUE, what = "ZM")
-      # Stop here (after a pop-up) if the projection is missing or wrong
-      req(check_layer_crs(sf::st_crs(shp), sf::st_bbox(shp), name))
-      if (!is.null(crs) && sf::st_crs(shp) != crs) {
-        la <- sf::st_transform(shp, crs)
-      }
       attr(shp, "name") <- name
       return(shp)
     } else {
@@ -247,48 +303,19 @@ read_shp_from_upload <- function(upload_input, crs = NULL) {
   }
 }
 
-# check_raster_crs: check_layer_crs() for a terra raster, plus same projection as the catchments.
-# catch_crs: catchments CRS (sf crs object or WKT string), NULL to skip that test.
-# Returns TRUE if all checks pass, FALSE (after showing a pop-up) otherwise.
-check_raster_crs <- function(r, label, catch_crs = NULL) {
-  r_crs <- if (terra::crs(r) == "") sf::NA_crs_ else sf::st_crs(terra::crs(r))
-  e <- as.vector(terra::ext(r))
-  bb <- sf::st_bbox(c(xmin = e[["xmin"]], ymin = e[["ymin"]], xmax = e[["xmax"]], ymax = e[["ymax"]]),
-                    crs = r_crs)
-  if (!check_layer_crs(r_crs, bb, label)) return(FALSE)
-  if (inherits(catch_crs, "crs")) catch_crs <- catch_crs$wkt
-  if (!is.null(catch_crs) && !terra::same.crs(r, catch_crs)) {
-    showModal(modalDialog(
-      title = paste0(label, ": projection differs from the other layers"),
-      "Please provide a raster using the same projection as the catchments.",
-      easyClose = TRUE,
-      footer = modalButton("OK")
-    ))
-    return(FALSE)
-  }
-  TRUE
-}
-
 # read_tif_from_csv: Read raster file from CSV
-read_tif_from_csv <- function(csv_file, layer_name, catch_crs) {
+read_tif_from_csv <- function(csv_file, layer_name) {
   req(csv_file)  # Ensure the CSV file is provided
   csv_data <- read.csv(csv_file$datapath)
-  
-  la <- terra::rast(csv_data$Path[csv_data$Layer == layer_name])
-  # Stop the observer here (after a pop-up) if the projection is missing, wrong or differs from catchments
-  req(check_raster_crs(la, layer_name, catch_crs))
-  return(la)
+  terra::rast(csv_data$Path[csv_data$Layer == layer_name])
 }
 
 # read_tif_from_upload: Read raster file from fileInput
-read_tif_from_upload <- function(upload_input, catch_crs = NULL) {
+read_tif_from_upload <- function(upload_input) {
   req(upload_input)  # Ensure the file is uploaded
   path <- upload_input$datapath
   if (file.exists(path)) {
-    r <- terra::rast(path)
-    # Stop the observer here (after a pop-up) if the projection is missing, wrong or differs from catchments
-    req(check_raster_crs(r, upload_input$name, catch_crs))
-    return(r)
+    return(terra::rast(path))
   } else {
     showModal(modalDialog(
       title = "The uploaded raster file does not exist.",
