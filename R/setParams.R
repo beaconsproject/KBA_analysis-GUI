@@ -1,4 +1,4 @@
-setParamsServer <- function(input, output, session, project, map, rv){
+setParamsServer <- function(input, output, session, rv){
   
   project_is_new <- reactiveVal(FALSE)
   
@@ -545,21 +545,18 @@ setParamsServer <- function(input, output, session, project, map, rv){
   observeEvent(input$upload_catch, {
     rv$layers_rv$catchments <- read_shp_from_upload(input$upload_catch)
     st_write(rv$layers_rv$catchments, file.path(rv$outdir(), "data/catchments.shp"), append = FALSE)
-    paths <- rv$layer_paths()
   })
   
   observeEvent(input$upload_stream, {
     rv$layers_rv$streams <- read_shp_from_upload(input$upload_stream, sf::st_crs(rv$layers_rv$catchments))
     st_write(rv$layers_rv$streams, file.path(rv$outdir(), "data/stream.shp"), append = FALSE)
     rv$layers_rv_4326$streams <- rv$layers_rv$streams %>% st_transform(4326)
-    paths <- rv$layer_paths()
   })
   
   observeEvent(input$upload_planreg, {
     rv$layers_rv$planreg <- read_shp_from_upload(input$upload_planreg, sf::st_crs(rv$layers_rv$catchments))
     st_write(rv$layers_rv$planreg, file.path(rv$outdir(), "data/planning region.shp"), append = FALSE)
     rv$layers_rv_4326$planreg <- rv$layers_rv$planreg %>% st_transform(4326)
-    paths <- rv$layer_paths()
   })
   
   observeEvent(input$upload_pas, {
@@ -574,7 +571,6 @@ setParamsServer <- function(input, output, session, project, map, rv){
     st_write(pas_sf, file.path(rv$outdir(), "data/protected areas.shp"), append = FALSE)
     rv$layers_rv$pas_sf <- pas_sf
     rv$layers_rv_4326$pas_sf <- sf::st_transform(pas_sf, 4326)
-    paths <- rv$layer_paths()
   })
   
   # --- Individual raster uploads

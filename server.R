@@ -120,27 +120,27 @@ server = function(input, output, session) {
   myMap <- leafletProxy("map", session)
   
   #Control on tab
-  modalServer(input, output, session, project, reactiveValsList)
+  modalServer(input, output, session, reactiveValsList)
   
   #Set input parameters
-  setParamsServer(input, output, session, project, myMap, reactiveValsList)
+  setParamsServer(input, output, session, reactiveValsList)
   
   # Add display layers
-  addDisplayServer(input, output, session, project, myMap, reactiveValsList)
+  addDisplayServer(input, output, session, reactiveValsList)
   
   #Run BUILDER
-  buildKBAServer(input, output, session, project, myMap, reactiveValsList)
+  buildKBAServer(input, output, session, reactiveValsList)
   
   #Assess representation
-  assessRepServer(input, output, session, project, myMap, reactiveValsList)
+  assessRepServer(input, output, session, reactiveValsList)
   
   #Build network
-  buildNetServer(input, output, session, project, myMap, reactiveValsList)
+  buildNetServer(input, output, session,reactiveValsList)
   
   #Build network
-  viewServer(input, output, session, project, myMap, reactiveValsList)
+  viewServer(input, output, session, reactiveValsList)
 
     #Convert to shp
-  convertServer(input, output, session, project, myMap, reactiveValsList)
+  convertServer(input, output, session, reactiveValsList)
   
 }

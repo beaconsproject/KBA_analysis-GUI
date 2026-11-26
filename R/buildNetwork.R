@@ -1,4 +1,4 @@
-buildNetServer <- function(input, output, session, project, map, rv){
+buildNetServer <- function(input, output, session, rv){
   
   observeEvent(input$tabs, {
     req(input$tabs == "tabNET", rv$outdir())

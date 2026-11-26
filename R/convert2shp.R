@@ -1,4 +1,4 @@
-convertServer <- function(input, output, session, project, map, rv){
+convertServer <- function(input, output, session, rv){
   
   observeEvent(input$dwdSHP,{
     

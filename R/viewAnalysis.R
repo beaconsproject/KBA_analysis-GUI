@@ -1,4 +1,4 @@
-viewServer <- function(input, output, session, project, map, rv){
+viewServer <- function(input, output, session, rv){
   
   observeEvent(input$tabs, {
     req(input$tabs == "tabVIEW", rv$outdir())

@@ -1,4 +1,4 @@
-assessRepServer <- function(input, output, session, project, map, rv){
+assessRepServer <- function(input, output, session, rv){
   # RENDER ASSESS REPRESENTATION UI
   output$assessRep <- renderUI({
   req(input$tabs == "tabKBA", rv$outdir())

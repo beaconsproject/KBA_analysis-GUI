@@ -1,4 +1,4 @@
-buildKBAServer <- function(input, output, session, project, map, rv){
+buildKBAServer <- function(input, output, session, rv){
   
   
   # RENDER ASSESS REPRESENTATION UI

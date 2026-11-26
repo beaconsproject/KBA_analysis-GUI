@@ -1,4 +1,4 @@
-addDisplayServer <- function(input, output, session, project, map, rv){
+addDisplayServer <- function(input, output, session, rv){
   
   output$conf_extra <- renderUI({
     req(isTruthy(input$display1) || isTruthy(input$display2) ||

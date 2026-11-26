@@ -1,4 +1,4 @@
-modalServer <- function(input, output, session, project, rv){
+modalServer <- function(input, output, session, rv){
   
   # Observe tab changes
   observeEvent(input$tabs, {
