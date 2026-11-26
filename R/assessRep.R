@@ -35,8 +35,14 @@ assessRepServer <- function(input, output, session, rv){
   
    
   observeEvent(input$upload_refarea, {
-    rv$refarea_reactive(read_shp_from_upload(input$upload_refarea), sf::st_crs(rv$layers_rv$catchments))
-    st_write(rv$refarea_reactive(), dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
+    refarea <- read_shp_from_upload(input$upload_refarea)
+    req(refarea)
+    # Same projection as the other layers? Otherwise the pop-up lists them and the layer is not stored.
+    layers <- input_layers(rv)
+    layers[["Reference area"]] <- refarea
+    req(check_crs_consistency(layers))
+    rv$refarea_reactive(refarea)
+    st_write(refarea, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
   })
   
   # RENDER KBA FILTERING UI
@@ -550,7 +556,7 @@ assessRepServer <- function(input, output, session, rv){
     if(input$assessKBAs == "Only PAs"){
       rv$upstream_reactive(pas_up)
       pas_sf <- pas_sf %>%
-        dplyr::select(-NAME, -intact_km2)
+        dplyr::select(-dplyr::any_of(c("NAME", "intact_km2")))
       rv$poly_reactive(pas_sf)
       
       # Update max upstream slider
