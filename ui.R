@@ -405,7 +405,12 @@ ui = dashboardPage(skin="black",
                                fluidRow(
                                  tabBox(id = "one", width = 8,
                                         tabPanel(HTML("Overview"), htmlOutput("overviewMD")),
-                                        tabPanel(HTML("User guide"), includeMarkdown("docs/user_guide.md")),
+                                        tabPanel(HTML("User guide"),
+                                                 div(id = "userguide", style = "position: relative;",
+                                                     downloadButton("dl_userguide", "Download PDF", icon = icon("file-pdf"),
+                                                                    class = "btn-warning btn-sm",
+                                                                    style = "position: absolute; top: 10px; right: 0; z-index: 10;"),
+                                                     includeMarkdown("docs/userguide.md"))),
                                         tabPanel(HTML("Dataset Requirements"), includeMarkdown("docs/datasets.md"))
                                  )
                                )

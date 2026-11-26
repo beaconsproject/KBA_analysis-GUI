@@ -17,7 +17,7 @@ the more representative the KBA or PA.
 
 <br>
 
-<img src="figure1_KSplot.png" width="30%">
+<img src="pics/figure1_KSplot.png" width="30%">
 
 <br>
 
@@ -25,7 +25,7 @@ the more representative the KBA or PA.
 
 <br>
 
-<img src="figure2_BCplot.png" width="30%">
+<img src="pics/figure2_BCplot.png" width="30%">
 
 <br>
 

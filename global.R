@@ -38,6 +38,10 @@ library(ggplot2)
 
 terra::terraOptions(tempdir = tempdir(), memfrac = 0.5)
 
+# Documentation images: kept in docs/pics and served at "pics/", so the same
+# src="pics/<file>.png" works in the app and when the .md files are read on GitHub.
+shiny::addResourcePath("pics", "docs/pics")
+
 for (f in list.files("R", pattern = "\\.R$", full.names = TRUE)) source(f)
 
 bnd <- st_read("./www/Canada_WGS84.shp")

@@ -77,6 +77,13 @@ server = function(input, output, session) {
   output$overviewMD <- renderUI({
     HTML(markdown::markdownToHTML(text = overview_md_text, fragment.only = TRUE))
   })
+
+  # User guide PDF (built by docs/build_userguide.R)
+  output$dl_userguide <- downloadHandler(
+    filename = "KBA_Analysis_User_Guide.pdf",
+    content = function(file) file.copy("docs/userguide.pdf", file),
+    contentType = "application/pdf"
+  )
   ################################################################################################
   # test if .Net Framework is installed
   if (!dotnet_installed()) {
