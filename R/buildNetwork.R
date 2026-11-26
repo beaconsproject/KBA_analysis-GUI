@@ -129,16 +129,8 @@ buildNetServer <- function(input, output, session, rv){
       pas_sf <- st_read(dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "protected_areas")
     }
     
-    if(input$forcePAs){
-      if (is.null(pas_sf)){
-        showModal(modalDialog(
-          title = "Hydrology metrics were not calclulated on protected areas layers", "Make sure protected areas are uploaded in the Set input parameters step",
-          easyClose = TRUE,
-          footer = modalButton("OK"))
-        )
-        return()
-      }else{
-        pas_sf <- pas_sf %>% 
+    if(isTRUE(input$forcePAs)){
+      pas_sf <- pas_sf %>% 
           dplyr::select(-NAME, -intact_km2) 
         
         agg_pa_name <- pas_sf %>%
@@ -151,8 +143,7 @@ buildNetServer <- function(input, output, session, rv){
           filter(!network %in% potential_kbas$network)
         
         potential_kbas <- rbind(potential_kbas, pas_sf)
-        rv$poly_reactive(potential_kbas)
-      }
+        rv$poly_reactive(potential_kbas)        
     } else {
       agg_pa_name <- NULL
       rv$poly_reactive(potential_kbas)
