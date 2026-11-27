@@ -113,6 +113,7 @@ buildNetServer <- function(input, output, session, rv){
     req(input$set_net)
     req(rv$layers_rv$catchments)
     req(!(input$KBArep==""))
+    req(rv$refarea_reactive())
     kba_sf <- NULL
     pas_sf <- NULL
     
@@ -130,10 +131,10 @@ buildNetServer <- function(input, output, session, rv){
     }
     
     if(isTRUE(input$forcePAs)){
-      pas_sf <- pas_sf %>% 
-          dplyr::select(-NAME, -intact_km2) 
+      pas_sf <- pas_sf %>%
+        dplyr::select(dplyr::any_of(c("network", "AWI", "area_km2", "up_km2", "up_AWI", "dci")))
         
-        agg_pa_name <- pas_sf %>%
+      agg_pa_name <- pas_sf %>%
           dplyr::pull(network) %>%     # Extract the `network` column
           unique() %>%                 # Get unique values
           sort() %>%                   # Sort values (optional)
@@ -156,7 +157,7 @@ buildNetServer <- function(input, output, session, rv){
     ))
     
     #Define outdir name
-    if(input$forcePAs){
+    if(isTRUE(input$forcePAs)){
       netName <- gsub("rep", "", input$KBArep)
       outName <- paste0("net",  netName, "_n", input$set_net, "_includePAs")
     }else{
@@ -168,7 +169,7 @@ buildNetServer <- function(input, output, session, rv){
     
     # Raise warning on `input$set_net`
     if (is.null(input$set_net) || as.integer(input$set_net) < 2) {
-      if(isFALSE(input$forcePAs)){
+      if(!isTRUE(input$forcePAs)){
         showModal(modalDialog(
           title = "A minimum of 2 potential KBAs per network is required",
           "Please adjust the network settings to include at least 2 KBAs.",
@@ -255,7 +256,7 @@ buildNetServer <- function(input, output, session, rv){
       
       if(nrow(potential_kbas)>0){
         
-        if(input$forcePAs){
+        if(isTRUE(input$forcePAs)){
           rep_pas <- layers[grepl("^repPAs", layers)]
           pas_ls <- layers[grepl("^protected_areas", layers) & !grepl("protected_areas_upstream", layers)]
           pas_list <- c(rep_pas, pas_ls)
@@ -397,15 +398,15 @@ buildNetServer <- function(input, output, session, rv){
           value = 0,
           {
             tryCatch({
-              networks_sf$cmi <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "cmi"), progress = metric_progress("CMI")),3)
-              networks_sf$lcc <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
+              networks_sf$cmi <- round(calc_dissimilarity(conservation_areas_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_cmi, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "cmi"), progress = metric_progress("CMI")),3)
+              networks_sf$lcc <- round(calc_dissimilarity(conservation_areas_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_lcc, raster_type = "categorical", categorical_class_values = df_label$values,
                                                plot_out_dir = file.path(rv$outdir(), network_dir, "lcc"), categorical_class_labels = df_label, progress = metric_progress("LCC")),3)
-              networks_sf$led <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "led"), progress = metric_progress("LED")),3)
-              networks_sf$gpp <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "gpp"), progress = metric_progress("GPP")),3)
+              networks_sf$led <- round(calc_dissimilarity(conservation_areas_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_led, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "led"), progress = metric_progress("LED")),3)
+              networks_sf$gpp <- round(calc_dissimilarity(conservation_areas_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_gpp, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, "gpp"), progress = metric_progress("GPP")),3)
               
               if (!is.null(rv$layers_rv$criteria5)) {
                 criteria_name <- rv$criteria5name()
-                networks_sf[[criteria_name]] <- round(calc_dissimilarity(reserves_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, criteria_name), progress = metric_progress(criteria_name)),3)
+                networks_sf[[criteria_name]] <- round(calc_dissimilarity(conservation_areas_sf = networks_sf, reserves_id = "network", reference_sf = rv$refarea_reactive(), raster_layer = kba_criteria5, raster_type = "continuous", plot_out_dir = file.path(rv$outdir(), network_dir, criteria_name), progress = metric_progress(criteria_name)),3)
               }
               NULL
             }, error = function(e) {
