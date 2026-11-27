@@ -123,7 +123,7 @@ setParamsServer <- function(input, output, session, rv){
     catch_nm <- colnames(rv$layers_rv$catchments)
     tagList(
       br(),
-      div(style = "margin-top: -40px;", selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = c("Please select", catch_nm))),
+      div(style = "margin-top: -20px;", selectInput("intactColname", label = div(style = "font-size:13px;margin-top: -10px;", "Specify intactness attribute"), choices = c("Please select", catch_nm))),
     )
   })
   
@@ -402,9 +402,16 @@ setParamsServer <- function(input, output, session, rv){
         div(style = "margin-top: -30px;",fileInput(inputId = "upload_cmi", label = "CMI", multiple = FALSE)),
         div(style = "margin-top: -30px;",fileInput(inputId = "upload_gpp", label = "GPP", multiple = FALSE)),
         div(style = "margin-top: -30px;",fileInput(inputId = "upload_custom", label = "Custom criteria", multiple = FALSE))
+      ),
+      # Nothing is read when a file is selected: the layers are read and checked on Confirm
+      conditionalPanel(
+        condition = "input.setUpload=='useCSV' || input.setUpload=='indUpload'",
+        div(style = "margin-top: -10px;",
+            actionButton("confirm_layers", "Confirm upload", 
+                         class = "btn-warning", style = "width:200px"))
       )
     )
-  }) 
+  })
   
   ################################################################################################
   # Validate csv
@@ -438,95 +445,135 @@ setParamsServer <- function(input, output, session, rv){
   }
   
   ################################################################################################
-  # Read CSV
-  observeEvent(input$csv_file, {
-    error_msg <- validate_csv(input$csv_file)
-    if (!is.null(error_msg)) {
-      showModal(
-        modalDialog(
-          title = "Invalid layer path",
-          error_msg,
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        )
-      )
+  # Confirm upload (CSV or individual layers)
+  # Nothing is read when a file is selected. On Confirm, every layer is read into local variables
+  # and checked, in this order, stopping at the first problem with a single pop-up:
+  #   1. required layers provided and readable
+  #   2. required columns in the catchments
+  #   3. same projection for all layers
+  # Only when everything passes are the layers stored in rv (which then shows the intactness
+  # selection, draws the map, ...). A failed check leaves nothing half-loaded.
+  required_catch_cols <- c("Isolated", "length_m", "FDA_M", "Area_land", "Area_water", "Area_total",
+                           "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "SKELUID", "STRAHLER")
+
+  show_upload_error <- function(title, msg) {
+    showModal(modalDialog(title = title, msg, easyClose = TRUE, footer = modalButton("OK")))
+  }
+
+  observeEvent(input$confirm_layers, {
+    req(input$setUpload, rv$outdir())
+
+    showModal(modalDialog(title = "Reading and checking layers. Please wait...", footer = NULL))
+
+    pas_sf    <- NULL
+    refarea   <- NULL
+    criteria5 <- NULL
+    crit5name <- NULL
+    csv_data  <- NULL
+
+    ## 1. Read the layers ----
+    if (input$setUpload == "useCSV") {
+      if (is.null(input$csv_file)) {
+        show_upload_error("No CSV selected", "Please select the CSV file with the layer pathways, then confirm.")
+        return()
+      }
+      error_msg <- validate_csv(input$csv_file)   # paths exist + required layers listed
+      if (!is.null(error_msg)) {
+        show_upload_error("Invalid layer path", error_msg)
+        return()
+      }
+      csv_data <- read.csv(input$csv_file$datapath)
+
+      # More than one custom layer?
+      known_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
+      unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% known_layers]
+      if (length(unexpected_layers) > 1) {
+        show_upload_error("Provided layer csv pathways include more than one custom layer.",
+                          "The app allows only one custom layer at the moment. Please fix the csv.")
+        return()
+      }
+
+      # read_*_from_csv show their own pop-up and stop (req(FALSE)) if a layer can't be read
+      catchments <- read_shp_from_csv(input$csv_file, "catchments")
+      streams    <- read_shp_from_csv(input$csv_file, "stream")
+      planreg    <- read_shp_from_csv(input$csv_file, "planning region")
+      if ("protected areas" %in% csv_data$Layer) pas_sf  <- read_shp_from_csv(input$csv_file, "protected areas")
+      if ("reference area"  %in% csv_data$Layer) refarea <- read_shp_from_csv(input$csv_file, "reference area")
+
+      lcc <- read_tif_from_csv(input$csv_file, "LCC")
+      led <- read_tif_from_csv(input$csv_file, "LED")
+      gpp <- read_tif_from_csv(input$csv_file, "GPP")
+      cmi <- read_tif_from_csv(input$csv_file, "CMI")
+      if (length(unexpected_layers) == 1) {
+        crit5name <- unexpected_layers
+        criteria5 <- read_tif_from_csv(input$csv_file, crit5name)
+      }
+
+    } else {
+      # Required uploads present?
+      required_uploads <- c("Catchments" = "upload_catch", "Streams" = "upload_stream", "Planning region" = "upload_planreg",
+                            "LCC" = "upload_lcc", "LED" = "upload_led", "GPP" = "upload_gpp", "CMI" = "upload_cmi")
+      not_uploaded <- names(required_uploads)[vapply(required_uploads, function(id) is.null(input[[id]]), logical(1))]
+      if (length(not_uploaded) > 0) {
+        show_upload_error("Missing layer(s)",
+                          paste("Please select the following layer(s) before confirming:", paste(not_uploaded, collapse = ", ")))
+        return()
+      }
+
+      # read_*_from_upload show their own pop-up and return NULL if a layer can't be read
+      catchments <- read_shp_from_upload(input$upload_catch);   req(catchments)
+      streams    <- read_shp_from_upload(input$upload_stream);  req(streams)
+      planreg    <- read_shp_from_upload(input$upload_planreg); req(planreg)
+
+      lcc <- read_tif_from_upload(input$upload_lcc); req(lcc)
+      led <- read_tif_from_upload(input$upload_led); req(led)
+      gpp <- read_tif_from_upload(input$upload_gpp); req(gpp)
+      cmi <- read_tif_from_upload(input$upload_cmi); req(cmi)
+      if (!is.null(input$upload_custom)) {
+        crit5name <- sub("\\..*$", "", input$upload_custom$name)
+        criteria5 <- read_tif_from_upload(input$upload_custom); req(criteria5)
+      }
+    }
+
+    ## 2. Required columns in the catchments ----
+    missing_cols <- check_colnames(catchments, required_catch_cols)
+    if (length(missing_cols) > 0) {
+      show_upload_error("Missing required column",
+                        paste0("In the catchments layer, the following column(s) are missing: ", paste(missing_cols, collapse = ", "),
+                               ". Please fix the catchments layer outside the app, then confirm again."))
       return()
     }
-    
-    csv_data <- read.csv(input$csv_file$datapath)
-    layer_paths <- setNames(csv_data$Path, csv_data$Layer)
 
-    # 1. Read and check every layer into local variables first.
-    #    If a layer fails, its read function shows a pop-up and stops this observer (req(FALSE))
-    #    before anything is stored in rv: no half-loaded layers, no other observer is triggered
-    #    and the error pop-up stays on screen.
-    catchments <- read_shp_from_csv(input$csv_file, "catchments")
-    streams    <- read_shp_from_csv(input$csv_file, "stream")
-    planreg    <- read_shp_from_csv(input$csv_file, "planning region")
-
-    ## OPTIONAL: protected areas ----
-    pas_sf <- NULL
-    if ("protected areas" %in% csv_data$Layer) {
-      pas_sf <- read_shp_from_csv(input$csv_file, "protected areas")
-      n <- nrow(pas_sf)
-      if (!"PA_ID" %in% colnames(pas_sf)) {
-        pas_sf$PA_ID <- seq_len(n)
-      }
-      if (!"NAME" %in% colnames(pas_sf)) {
-        pas_sf$NAME <- NA_character_
-      }
-    }
-
-    ## OPTIONAL: reference area ----
-    refarea <- NULL
-    if ("reference area" %in% csv_data$Layer) {
-      refarea <- read_shp_from_csv(input$csv_file, "reference area")
-    }
-
-    ## Criteria rasters ----
-    lcc <- read_tif_from_csv(input$csv_file, "LCC")
-    led <- read_tif_from_csv(input$csv_file, "LED")
-    gpp <- read_tif_from_csv(input$csv_file, "GPP")
-    cmi <- read_tif_from_csv(input$csv_file, "CMI")
-
-    ## OPTIONAL: criteria 5 (one custom layer) ----
-    req_layers <- c("CMI", "LED", "GPP", "LCC", "catchments", "stream", "planning region", "protected areas", "reference area")
-    unexpected_layers <- csv_data$Layer[!csv_data$Layer %in% req_layers]
-    criteria5 <- NULL
-    if (length(unexpected_layers) > 1) {
-      showModal(modalDialog(
-        title = "Provided layer csv pathways include more than one custom layer.", "The app allow only the addtion of one custom layer at the moment. Please fix the csv.",
-        easyClose = TRUE,
-        footer = modalButton("OK"))
-      )
-      req(FALSE)
-    }
-    if (length(unexpected_layers) == 1) {
-      path <- csv_data$Path[csv_data$Layer == unexpected_layers]
-      if (!file.exists(path)) {
-        showModal(modalDialog(
-          title = "Invalid layer path", paste("The path for", unexpected_layers, "does not exist."),
-          easyClose = TRUE,
-          footer = modalButton("OK"))
-        )
-        req(FALSE)
-      }
-      criteria5 <- read_tif_from_csv(input$csv_file, unexpected_layers)
-    }
-
-    ## All layers read: compare their projections. If they differ, the pop-up lists them and
-    ## nothing is stored, so the user fixes the layers outside the app and loads the CSV again.
+    ## 3. Same projection for all layers ----
     crs_layers <- list(
-      "catchments" = catchments, "stream" = streams, "planning region" = planreg,
-      "protected areas" = pas_sf, "reference area" = refarea,
+      "Catchments" = catchments, "Streams" = streams, "Planning region" = planreg,
+      "Protected areas" = pas_sf, "Reference area" = refarea,
       "LCC" = lcc, "LED" = led, "GPP" = gpp, "CMI" = cmi
     )
-    if (!is.null(criteria5)) crs_layers[[unexpected_layers]] <- criteria5
-    req(check_crs_consistency(crs_layers))
+    if (!is.null(criteria5)) crs_layers[[crit5name]] <- criteria5
+    if (!check_crs_consistency(crs_layers)) return()   # pop-up shown by check_crs_consistency
 
-    # 2. All layers passed: store them
-    rv$layer_paths(layer_paths)
-    write.csv(csv_data, file.path(rv$outdir(), "data/layer_paths.csv"))
+    ## 4. Everything passed: store ----
+    if (!is.null(pas_sf)) {
+      if (!"PA_ID" %in% colnames(pas_sf)) pas_sf$PA_ID <- seq_len(nrow(pas_sf))
+      if (!"NAME"  %in% colnames(pas_sf)) pas_sf$NAME  <- NA_character_
+    }
+
+    if (!is.null(csv_data)) {
+      # CSV: keep the pathways so the project can be reopened from the original files
+      rv$layer_paths(setNames(csv_data$Path, csv_data$Layer))
+      write.csv(csv_data, file.path(rv$outdir(), "data/layer_paths.csv"))
+    } else {
+      # Individual uploads: keep a copy in data/ so the project can be reopened
+      st_write(catchments, file.path(rv$outdir(), "data/catchments.shp"), append = FALSE, quiet = TRUE)
+      st_write(streams,    file.path(rv$outdir(), "data/stream.shp"), append = FALSE, quiet = TRUE)
+      st_write(planreg,    file.path(rv$outdir(), "data/planning region.shp"), append = FALSE, quiet = TRUE)
+      writeRaster(lcc, file.path(rv$outdir(), "data/LCC.tif"), overwrite = TRUE)
+      writeRaster(led, file.path(rv$outdir(), "data/LED.tif"), overwrite = TRUE)
+      writeRaster(gpp, file.path(rv$outdir(), "data/GPP.tif"), overwrite = TRUE)
+      writeRaster(cmi, file.path(rv$outdir(), "data/CMI.tif"), overwrite = TRUE)
+      if (!is.null(criteria5)) writeRaster(criteria5, file.path(rv$outdir(), "data", paste0(crit5name, ".tif")), overwrite = TRUE)
+    }
 
     rv$layers_rv$catchments   <- catchments
     rv$layers_rv$streams      <- streams
@@ -539,7 +586,8 @@ setParamsServer <- function(input, output, session, rv){
 
     rv$refarea_reactive(refarea)
     if (!is.null(refarea)) {
-      st_write(refarea, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area", driver = "GPKG", append = FALSE)
+      st_write(refarea, dsn = file.path(rv$outdir(), "output/KBA_analysis.gpkg"), layer = "reference area",
+               driver = "GPKG", append = FALSE, quiet = TRUE)
     }
 
     rv$layers_rv$lcc <- lcc
@@ -548,16 +596,19 @@ setParamsServer <- function(input, output, session, rv){
     rv$layers_rv$cmi <- cmi
 
     if (!is.null(criteria5)) {
-      rv$criteria5name(unexpected_layers)
+      rv$criteria5name(crit5name)
       rv$layers_rv$criteria5 <- criteria5
-      updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = unexpected_layers)
-      updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = unexpected_layers)
+      updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = crit5name)
+      updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = crit5name)
     }
+
+    # Close "Reading and checking layers"; the intactness selection now appears
+    # (the map observers show and close their own "Please wait" pop-up)
+    removeModal()
   })
-  
+
   ################################################################################################
-  # Observe on independent file upload
-  # --- Individual shapefile uploads
+  # Layers uploaded after the Confirm (protected areas here, reference area in Assess/Builder tabs)
   # check_new_layer: compare the projection of a newly uploaded layer with the layers already loaded.
   # Stops the observer (after the pop-up listing the projections) if it differs, so it is not stored.
   # replaces: name of a loaded layer the new one replaces (left out of the comparison)
@@ -569,29 +620,7 @@ setParamsServer <- function(input, output, session, rv){
     req(check_crs_consistency(layers))
   }
 
-  observeEvent(input$upload_catch, {
-    catchments <- read_shp_from_upload(input$upload_catch)
-    check_new_layer("Catchments", catchments)
-    rv$layers_rv$catchments <- catchments
-    st_write(catchments, file.path(rv$outdir(), "data/catchments.shp"), append = FALSE)
-  })
-
-  observeEvent(input$upload_stream, {
-    streams <- read_shp_from_upload(input$upload_stream)
-    check_new_layer("Streams", streams)
-    rv$layers_rv$streams <- streams
-    st_write(streams, file.path(rv$outdir(), "data/stream.shp"), append = FALSE)
-    rv$layers_rv_4326$streams <- streams %>% st_transform(4326)
-  })
-
-  observeEvent(input$upload_planreg, {
-    planreg <- read_shp_from_upload(input$upload_planreg)
-    check_new_layer("Planning region", planreg)
-    rv$layers_rv$planreg <- planreg
-    st_write(planreg, file.path(rv$outdir(), "data/planning region.shp"), append = FALSE)
-    rv$layers_rv_4326$planreg <- planreg %>% st_transform(4326)
-  })
-
+  # Protected areas (optional, uploaded after the main layers): checked against the loaded layers
   observeEvent(input$upload_pas, {
     pas_sf <- read_shp_from_upload(input$upload_pas)
     check_new_layer("Protected areas", pas_sf)
@@ -607,66 +636,6 @@ setParamsServer <- function(input, output, session, rv){
     rv$layers_rv_4326$pas_sf <- sf::st_transform(pas_sf, 4326)
   })
   
-  # --- Individual raster uploads
-  observeEvent(input$upload_lcc, {
-    lcc <- read_tif_from_upload(input$upload_lcc)
-    check_new_layer("LCC", lcc)
-    rv$layers_rv$lcc <- lcc
-    writeRaster(lcc, file.path(rv$outdir(), "data/LCC.tif"), overwrite = TRUE)
-  })
-
-  observeEvent(input$upload_led, {
-    led <- read_tif_from_upload(input$upload_led)
-    check_new_layer("LED", led)
-    rv$layers_rv$led <- led
-    writeRaster(led, file.path(rv$outdir(), "data/LED.tif"), overwrite = TRUE)
-  })
-
-  observeEvent(input$upload_cmi, {
-    cmi <- read_tif_from_upload(input$upload_cmi)
-    check_new_layer("CMI", cmi)
-    rv$layers_rv$cmi <- cmi
-    writeRaster(cmi, file.path(rv$outdir(), "data/CMI.tif"), overwrite = TRUE)
-  })
-
-  observeEvent(input$upload_gpp, {
-    gpp <- read_tif_from_upload(input$upload_gpp)
-    check_new_layer("GPP", gpp)
-    rv$layers_rv$gpp <- gpp
-    writeRaster(gpp, file.path(rv$outdir(), "data/GPP.tif"), overwrite = TRUE)
-  })
-
-  observeEvent(input$upload_custom, {
-    criteria5 <- read_tif_from_upload(input$upload_custom)
-    rastName <- sub("\\..*$", "", input$upload_custom$name)
-    check_new_layer(rastName, criteria5, replaces = rv$criteria5name())
-    rv$layers_rv$criteria5 <- criteria5
-    rv$criteria5name(rastName)
-    writeRaster(criteria5, file.path(rv$outdir(), "data", paste0(rastName,".tif")), overwrite = TRUE)
-    
-    updateSliderInput(session = getDefaultReactiveDomain(), "slidecrit5", label = rastName)
-    updateSliderInput(session = getDefaultReactiveDomain(), "slideNETcrit5", label = rastName)
-  })
-  
-  ####################################################################################################
-  #  Test on required attributes
-  ####################################################################################################
-  observeEvent(rv$layers_rv$catchments, {
-    req(rv$layers_rv$catchments)
-    missing_cols <- check_colnames(rv$layers_rv$catchments, c("Isolated", "length_m", "FDA_M", "Area_land", "Area_water", "Area_total", "CATCHNUM", "ORDER1", "ORDER2", "ORDER3", "BASIN", "SKELUID", "STRAHLER"))
-    
-    if (length(missing_cols) > 0) {
-      showModal(modalDialog(
-        title = "Missing required column",
-        paste0("In the catchments layer, the following column(s) are missing: ",  paste(missing_cols, collapse = ", ")),
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      )
-      )
-      rv$layers_rv$catchments <- NULL
-    }
-    
-  }, ignoreNULL = TRUE)
   ####################################################################################################
   # Map viewer
   ####################################################################################################
@@ -675,18 +644,7 @@ setParamsServer <- function(input, output, session, rv){
   rv$overlayGroups(init_legend)
   
   observeEvent(rv$layers_rv$planreg, {
-    #Test if catchments are uploaded
-    if (is.null(rv$layers_rv$catchments)) {
-      # Create the modal dialog
-      showModal(modalDialog(
-        title = "Missing Data",
-        "Catchments layers is missing. Please go back to Set input parameters to upload catchments layer.",
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return()
-    }
-    
+    # Catchments and planning region are stored together on Confirm, after their checks
     req(rv$layers_rv$catchments)
     req(rv$layers_rv$planreg)
     planreg_4326 <- rv$layers_rv_4326$planreg
@@ -785,7 +743,7 @@ setParamsServer <- function(input, output, session, rv){
       if (any(!required_cols %in% pas_colnames)) {
         catchments <- rv$layers_rv$catchments
         pas_sf <- pas %>%
-          mutate(network = sprintf("PA_%02d", row_number()),
+          mutate(network = sprintf("PA_%03d", row_number()),
                  area_km2 = st_area(.)/1000000)
         
         pas_catch <- st_intersection(pas_sf, catchments)

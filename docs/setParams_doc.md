@@ -64,6 +64,16 @@ Template can be downloaded [here](./accessPath.csv)
 
 Datasets are uploaded by navigating to the shapefile or tif, select the dataset, and click open. A shapefile consists of multiple files with the same name but different extensions. All files associated with the shapefile must be selected before clicking "Open".  
 
+**Confirm the upload**
+
+With either option, selecting the files does not load them yet. Click **Confirm upload**: the app reads every layer and checks, in this order:
+
+1. all required layers are provided (catchments, streams, planning region, LCC, LED, GPP, CMI) and can be read;
+2. the catchments contain the required columns (Isolated, length_m, FDA_M, Area_land, Area_water, Area_total, CATCHNUM, ORDER1, ORDER2, ORDER3, BASIN, SKELUID, STRAHLER);
+3. all layers use the same projection.
+
+If a check fails, a pop-up explains the problem and no layer is loaded. Fix the layers outside the app, select them again if needed, and click **Confirm upload** again. When all checks pass, the layers are drawn on the map and the intactness attribute can be selected.
+
 <br>
 
 ### 3. Specify the intactness attribute
