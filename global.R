@@ -94,7 +94,7 @@ get_available_drives <- function() {
 
 # test prior to map that layer is not null, sf and has rows
 isMappable <- function(x) {
-  !is.null(x) && inherits(x, "sf") && nrow(x) > 0
+  !is.null(x) && inherits(x, "sf") && nrow(x) > 0 && !is.na(sf::st_crs(x))
 }
 
 # Layer names in the project's GeoPackage, or character(0) if it doesn't exist yet
